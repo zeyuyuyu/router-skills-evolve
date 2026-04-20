@@ -49,14 +49,29 @@ python3 experiments/extract_training_data.py \
     --output data/training_data.jsonl
 ```
 
-### 5. 训练小模型
+### 5. 训练小模型（3 种方法可选）
+
+**查看对比**: [docs/TRAINING_METHODS.md](docs/TRAINING_METHODS.md)
 
 ```bash
-# 需要 GPU
+# 方案 A: SFT (快, 简单, 推荐 PoC)
 python3 experiments/train_small_model.py \
-    --base_model deepseek-ai/deepseek-v3.2 \
     --data data/training_data.jsonl \
-    --output outputs/deepseek-finetuned
+    --base-model "MiniMaxAI/MiniMax-M2" \
+    --use-4bit
+
+# 方案 B: DPO (偏好学习, 利用 chosen/rejected 对)
+python3 experiments/extract_dpo_data.py  # 先生成 DPO 数据
+python3 experiments/train_small_model_dpo.py \
+    --data data/dpo_data.jsonl \
+    --base-model "MiniMaxAI/MiniMax-M2" \
+    --use-4bit
+
+# 方案 C: GRPO (真正的 RL, DeepSeek-R1 方法)
+python3 experiments/train_small_model_grpo.py \
+    --tasks data/HumanEval.jsonl \
+    --base-model "MiniMaxAI/MiniMax-M2" \
+    --n-generations 4 --use-4bit
 ```
 
 ---
@@ -73,10 +88,12 @@ router_skills_evolve/
 │   ├── router.py             ← Router + Skills 路由决策
 │   └── evaluator.py          ← 代码评估 (跑 pytest)
 ├── experiments/              ← 运行脚本
-│   ├── run_baseline.py       ← 5 种策略 baseline 对比
-│   ├── run_evolve.py         ← Evolve 主实验
-│   ├── extract_training_data.py  ← 从 traces 提取训练集
-│   └── train_small_model.py  ← LoRA fine-tuning
+│   ├── run_evolve.py         ← Evolve 主实验 (路由 + 收 trace)
+│   ├── extract_training_data.py  ← 从 traces 提 SFT 数据
+│   ├── extract_dpo_data.py   ← 从 traces 提 DPO 数据 (chosen/rejected)
+│   ├── train_small_model.py      ← SFT + LoRA (推荐 PoC)
+│   ├── train_small_model_dpo.py  ← DPO + LoRA (偏好学习)
+│   └── train_small_model_grpo.py ← GRPO (真 RL, DeepSeek-R1 方法)
 ├── data/
 │   ├── traces/               ← 收集的 traces (prompt+model+success)
 │   └── skills/               ← 学到的 skills (JSON)
