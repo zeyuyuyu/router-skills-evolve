@@ -1,0 +1,52 @@
+{
+  "skills": [
+    {
+      "signature": "M|bool/list/num",
+      "stats": {
+        "deepseek/deepseek-v3.2": [
+          1,
+          1
+        ]
+      },
+      "history": [
+        {
+          "task_id": "HumanEval/0",
+          "model": "deepseek/deepseek-v3.2",
+          "success": true
+        }
+      ]
+    },
+    {
+      "signature": "L|list/str",
+      "stats": {
+        "deepseek/deepseek-v3.2": [
+          1,
+          1
+        ]
+      },
+      "history": [
+        {
+          "task_id": "HumanEval/1",
+          "model": "deepseek/deepseek-v3.2",
+          "success": true
+        }
+      ]
+    },
+    {
+      "signature": "M|num",
+      "stats": {
+        "deepseek/deepseek-v3.2": [
+          1,
+          1
+        ]
+      },
+      "history": [
+        {
+          "task_id": "HumanEval/2",
+          "model": "deepseek/deepseek-v3.2",
+          "success": true
+        }
+      ]
+    }
+  ]
+}

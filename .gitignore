@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# API keys / secrets
+.env
+secrets.json
+*.key
+
+# Training outputs (大文件)
+outputs/
+checkpoints/
+wandb/
+*.safetensors
+*.bin
+*.pt
+
+# 实验数据 (可选保留 - 如果不想提交大量 JSON 去掉下面几行的注释)
+# data/traces/*.jsonl
+# results/*.json
+
+# 但保留示例训练数据和 HumanEval
+# data/training_data.jsonl  是示例, 保留
+# data/HumanEval.jsonl      是公开数据集, 保留
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# 下载的模型权重
+models/
+hf_cache/

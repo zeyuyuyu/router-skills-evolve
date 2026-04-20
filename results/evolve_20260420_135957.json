@@ -1,0 +1,29 @@
+{
+  "args": {
+    "n": 3,
+    "rounds": 1,
+    "min_rate": 0.8,
+    "min_samples": 1,
+    "save_traces": true,
+    "start": 0
+  },
+  "round_stats": [
+    {
+      "round": 0,
+      "tasks": 3,
+      "skills_start": 0,
+      "skills_end": 3,
+      "success": 3,
+      "success_rate": 1.0,
+      "total_cost": 0.000285958,
+      "avg_cost": 9.531933333333333e-05,
+      "avg_attempts": 1.0
+    }
+  ],
+  "total_success": 3,
+  "total_tasks": 3,
+  "total_cost": 0.000285958,
+  "skills_summary": {
+    "\u2705 small ok": 3
+  }
+}
