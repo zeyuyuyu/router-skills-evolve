@@ -274,11 +274,13 @@ def main():
         report_to="none",
     )
     
+    # TRL 1.2+: use processing_class for tokenizer
     trainer = GRPOTrainer(
         model=model,
         args=training_args,
         train_dataset=dataset,
         reward_funcs=[reward_fn],
+        processing_class=tokenizer,
         peft_config=lora_config,
     )
     

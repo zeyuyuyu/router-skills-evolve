@@ -133,11 +133,10 @@ def main():
     import torch
     from datasets import Dataset
     from transformers import (
-        AutoModelForCausalLM, AutoTokenizer, 
-        TrainingArguments, BitsAndBytesConfig,
+        AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,
     )
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from trl import SFTTrainer
+    from trl import SFTTrainer, SFTConfig
 
     # ========================================================================
     # 1. 加载训练数据
@@ -252,7 +251,9 @@ def main():
         output_dir = Path(__file__).parent.parent / args.output
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    training_args = TrainingArguments(
+    # TRL 1.2+: SFTConfig 替代 TrainingArguments,
+    # dataset_text_field / max_length 都在 config 里
+    training_args = SFTConfig(
         output_dir=str(output_dir),
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
@@ -266,15 +267,16 @@ def main():
         bf16=True,
         gradient_checkpointing=True,
         report_to="none",
+        dataset_text_field="text",
+        max_length=args.max_seq_len,
     )
 
+    # TRL 1.2+: tokenizer → processing_class
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         args=training_args,
-        dataset_text_field="text",
-        max_seq_length=args.max_seq_len,
     )
 
     trainer.train()

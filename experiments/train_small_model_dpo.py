@@ -93,12 +93,27 @@ def main():
         for line in f:
             raw.append(json.loads(line.strip()))
     
-    print(f"✅ {len(raw)} 条 DPO 样本")
+    print(f"✅ 加载 {len(raw)} 条样本")
     
-    # 转 DPO 格式 (trl 要求的字段名: prompt, chosen, rejected)
+    # 检查格式: DPO 要求 prompt/chosen/rejected
+    sample = raw[0]
+    required = {"chosen", "rejected"}
+    has_prompt = "prompt" in sample or "instruction" in sample
+    has_pairs = required.issubset(sample.keys())
+    
+    if not has_prompt or not has_pairs:
+        print(f"\n❌ 数据格式不对!")
+        print(f"   DPO 需要字段: prompt (or instruction) + chosen + rejected")
+        print(f"   当前字段:    {sorted(sample.keys())}")
+        print(f"\n   如果这是 SFT 数据 (只有 instruction/output), 请先运行:")
+        print(f"   python3 experiments/extract_dpo_data.py --sft-data {args.data}")
+        sys.exit(1)
+    
+    # 转 DPO 格式 (trl 要求: prompt, chosen, rejected)
+    # 兼容两种 key: prompt 或 instruction
     dpo_data = [
         {
-            "prompt": format_prompt(s["prompt"]),
+            "prompt": format_prompt(s.get("prompt") or s["instruction"]),
             "chosen": s["chosen"],
             "rejected": s["rejected"],
         }
@@ -170,6 +185,7 @@ def main():
         output_dir = Path(__file__).parent.parent / args.output
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # DPOConfig: 注意 max_length/max_prompt_length 在 trl 1.2 依然在
     training_args = DPOConfig(
         output_dir=str(output_dir),
         num_train_epochs=args.epochs,
@@ -187,14 +203,14 @@ def main():
         bf16=True,
         gradient_checkpointing=True,
         report_to="none",
-        remove_unused_columns=False,
     )
     
+    # TRL 1.2+: tokenizer → processing_class
     trainer = DPOTrainer(
         model=model,
         args=training_args,
         train_dataset=dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         peft_config=lora_config,
     )
     
