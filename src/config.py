@@ -7,12 +7,16 @@ import os
 # ============================================================================
 
 COMMONSTACK_API_KEY = os.environ.get("COMMONSTACK_API_KEY", "")
-if not COMMONSTACK_API_KEY:
-    raise RuntimeError(
-        "COMMONSTACK_API_KEY 未设置!\n"
-        "请运行: export COMMONSTACK_API_KEY='your-key'\n"
-        "或在代码开头设置 os.environ['COMMONSTACK_API_KEY'] = '...'"
-    )
+
+
+def require_api_key():
+    """在需要 API 调用时调用此函数, 检查 key 是否设置"""
+    if not COMMONSTACK_API_KEY:
+        raise RuntimeError(
+            "COMMONSTACK_API_KEY 未设置!\n"
+            "请运行: export COMMONSTACK_API_KEY='your-key'\n"
+            "或在代码开头: os.environ['COMMONSTACK_API_KEY'] = '...'"
+        )
 
 COMMONSTACK_BASE_URL = "https://api.commonstack.ai/v1"
 PROXY_BASE_URL = "http://127.0.0.1:8403/v1"  # UncommonRoute proxy

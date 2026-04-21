@@ -7,15 +7,26 @@ from typing import Dict
 from openai import OpenAI
 
 from .config import (
-    COMMONSTACK_API_KEY, COMMONSTACK_BASE_URL, PROXY_BASE_URL, calc_cost
+    COMMONSTACK_API_KEY, COMMONSTACK_BASE_URL, PROXY_BASE_URL,
+    calc_cost, require_api_key,
 )
 
 
-# 两个 client:
-# 1. 直接调 CommonStack (普通模型)
-# 2. 通过 proxy (uncommon-route/auto 等)
-direct_client = OpenAI(api_key=COMMONSTACK_API_KEY, base_url=COMMONSTACK_BASE_URL)
-proxy_client = OpenAI(api_key=COMMONSTACK_API_KEY, base_url=PROXY_BASE_URL)
+# 懒加载 client (避免 import 时就需要 key)
+_direct_client = None
+_proxy_client = None
+
+
+def _get_client(use_proxy: bool = False) -> OpenAI:
+    global _direct_client, _proxy_client
+    require_api_key()
+    if use_proxy:
+        if _proxy_client is None:
+            _proxy_client = OpenAI(api_key=COMMONSTACK_API_KEY, base_url=PROXY_BASE_URL)
+        return _proxy_client
+    if _direct_client is None:
+        _direct_client = OpenAI(api_key=COMMONSTACK_API_KEY, base_url=COMMONSTACK_BASE_URL)
+    return _direct_client
 
 
 # ============================================================================
@@ -98,7 +109,7 @@ def call_llm(
           "error": str,          # 错误信息 (若有)
         }
     """
-    client = proxy_client if use_proxy else direct_client
+    client = _get_client(use_proxy)
     start = time.time()
 
     try:
