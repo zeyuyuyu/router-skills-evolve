@@ -175,6 +175,14 @@ def main():
     print(f"\n📝 训练文本示例 (前 200 字符):")
     print(formatted[0]["text"][:200] + "...")
 
+    # Dry-run 到这里就够了, 不用加载模型
+    if args.dry_run:
+        print(f"\n🏁 --dry-run: 数据加载 ✅, 格式化 ✅. 跳过模型加载和训练.")
+        print(f"   训练样本数: {len(raw_samples)}")
+        print(f"   Dataset columns: {dataset.column_names}")
+        print(f"   下一步: 去掉 --dry-run, 真实训练")
+        return
+
     # ========================================================================
     # 2. 加载 base model + tokenizer
     # ========================================================================
@@ -231,10 +239,6 @@ def main():
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total_params = sum(p.numel() for p in model.parameters())
     print(f"   可训练参数: {trainable_params:,} ({trainable_params/total_params*100:.2f}%)")
-
-    if args.dry_run:
-        print("\n🏁 --dry-run 模式, 跳过训练")
-        return
 
     # ========================================================================
     # 4. 训练

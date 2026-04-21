@@ -110,6 +110,10 @@ def main():
     print(f"  Prompt: {dpo_data[0]['prompt'][:80]}...")
     print(f"  Chosen ({len(dpo_data[0]['chosen'])} chars): {dpo_data[0]['chosen'][:60]}...")
     print(f"  Rejected ({len(dpo_data[0]['rejected'])} chars): {dpo_data[0]['rejected'][:60]}...")
+
+    if args.dry_run:
+        print(f"\n🏁 --dry-run: 数据 ✅ ({len(dpo_data)} 条). 跳过模型加载和训练.")
+        return
     
     # ========================================================================
     # 2. 加载模型
@@ -185,10 +189,6 @@ def main():
         report_to="none",
         remove_unused_columns=False,
     )
-    
-    if args.dry_run:
-        print("🏁 --dry-run 模式, 跳过训练")
-        return
     
     trainer = DPOTrainer(
         model=model,

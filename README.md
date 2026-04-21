@@ -16,6 +16,9 @@ pip install openai requests
 
 # 拿 CommonStack API key (团队群问)
 export COMMONSTACK_API_KEY="ak-f53d..."
+
+# 中国大陆: HuggingFace 镜像 (下模型权重要用)
+export HF_ENDPOINT=https://hf-mirror.com
 ```
 
 ### 2. 启动 UncommonRoute proxy (本地)

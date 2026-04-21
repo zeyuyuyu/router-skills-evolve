@@ -173,6 +173,10 @@ def main():
         {"prompt": format_prompt(t["prompt"]), "task_id": t["task_id"]}
         for t in tasks
     ])
+
+    if args.dry_run:
+        print(f"\n🏁 --dry-run: 数据 ✅ ({len(tasks)} tasks). 跳过模型加载和训练.")
+        return
     
     # ========================================================================
     # 2. 加载模型
@@ -269,10 +273,6 @@ def main():
         gradient_checkpointing=True,
         report_to="none",
     )
-    
-    if args.dry_run:
-        print("🏁 --dry-run, 跳过")
-        return
     
     trainer = GRPOTrainer(
         model=model,
