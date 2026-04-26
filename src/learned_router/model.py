@@ -57,7 +57,7 @@ class BertRouter:
     def from_pretrained_base(cls, config: BertRouterConfig) -> "BertRouter":
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-        tokenizer = AutoTokenizer.from_pretrained(config.base_model)
+        tokenizer = AutoTokenizer.from_pretrained(config.base_model, use_fast=False)
         model = AutoModelForSequenceClassification.from_pretrained(
             config.base_model,
             num_labels=2,
@@ -73,7 +73,7 @@ class BertRouter:
 
         path = Path(path)
         config = BertRouterConfig.load(path / cls.config_filename)
-        tokenizer = AutoTokenizer.from_pretrained(path)
+        tokenizer = AutoTokenizer.from_pretrained(path, use_fast=False)
         model = AutoModelForSequenceClassification.from_pretrained(path)
         if device:
             model.to(torch.device(device))
