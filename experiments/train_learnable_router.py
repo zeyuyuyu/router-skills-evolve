@@ -10,6 +10,7 @@ fine-tune the generator; this script trains the router itself.
 """
 
 import argparse
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -175,15 +176,21 @@ def main():
         fp16=torch.cuda.is_available(),
     )
 
-    trainer = Trainer(
-        model=router.model,
-        args=train_args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        tokenizer=router.tokenizer,
-        data_collator=DataCollatorWithPadding(router.tokenizer),
-        compute_metrics=compute_metrics_fn() if eval_dataset is not None else None,
-    )
+    trainer_kwargs = {
+        "model": router.model,
+        "args": train_args,
+        "train_dataset": train_dataset,
+        "eval_dataset": eval_dataset,
+        "data_collator": DataCollatorWithPadding(router.tokenizer),
+        "compute_metrics": compute_metrics_fn() if eval_dataset is not None else None,
+    }
+    trainer_params = inspect.signature(Trainer.__init__).parameters
+    if "processing_class" in trainer_params:
+        trainer_kwargs["processing_class"] = router.tokenizer
+    else:
+        trainer_kwargs["tokenizer"] = router.tokenizer
+
+    trainer = Trainer(**trainer_kwargs)
     trainer.train()
     metrics = trainer.evaluate() if eval_dataset is not None else {}
 
