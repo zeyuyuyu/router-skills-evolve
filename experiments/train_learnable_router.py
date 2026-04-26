@@ -84,6 +84,35 @@ def compute_metrics_fn():
     return compute_metrics
 
 
+def make_weighted_trainer_class(class_weights):
+    """Return a Trainer subclass that applies class weights when requested."""
+    import torch
+    from transformers import Trainer
+
+    class WeightedTrainer(Trainer):
+        def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+            labels = inputs.pop("labels")
+            outputs = model(**inputs)
+            weights = class_weights.to(outputs.logits.device)
+            loss_fn = torch.nn.CrossEntropyLoss(weight=weights)
+            loss = loss_fn(outputs.logits.view(-1, model.config.num_labels), labels.view(-1))
+            return (loss, outputs) if return_outputs else loss
+
+    return WeightedTrainer
+
+
+def balanced_class_weights(examples):
+    counts = {0: 0, 1: 0}
+    for example in examples:
+        counts[example.label] += 1
+    total = max(1, sum(counts.values()))
+    num_classes = 2
+    return [
+        total / (num_classes * max(1, counts[0])),
+        total / (num_classes * max(1, counts[1])),
+    ]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train a learnable BERT router from traces")
     parser.add_argument(
@@ -106,6 +135,12 @@ def main():
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=2e-5)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--class-weight",
+        choices=["none", "balanced"],
+        default="none",
+        help="Use balanced loss weights to avoid collapsing to the majority route.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -176,6 +211,13 @@ def main():
         fp16=torch.cuda.is_available(),
     )
 
+    class_weights = None
+    trainer_cls = Trainer
+    if args.class_weight == "balanced":
+        class_weights = torch.tensor(balanced_class_weights(train_examples), dtype=torch.float32)
+        trainer_cls = make_weighted_trainer_class(class_weights)
+        print(f"Using balanced class weights: small={class_weights[0]:.3f}, large={class_weights[1]:.3f}")
+
     trainer_kwargs = {
         "model": router.model,
         "args": train_args,
@@ -190,7 +232,7 @@ def main():
     else:
         trainer_kwargs["tokenizer"] = router.tokenizer
 
-    trainer = Trainer(**trainer_kwargs)
+    trainer = trainer_cls(**trainer_kwargs)
     trainer.train()
     metrics = trainer.evaluate() if eval_dataset is not None else {}
 
@@ -202,6 +244,8 @@ def main():
                 "train_examples": len(train_examples),
                 "eval_examples": len(eval_examples),
                 "class_counts": class_counts(examples),
+                "class_weight": args.class_weight,
+                "class_weights": class_weights.tolist() if class_weights is not None else None,
                 "metrics": metrics,
                 "args": vars(args),
             },
