@@ -22,7 +22,7 @@ pip install torch transformers datasets scikit-learn
 python3 experiments/train_learnable_router.py \
   --traces "data/traces/*.jsonl" \
   --tasks data/HumanEval.jsonl \
-  --base-model prajjwal1/bert-tiny \
+  --base-model google/bert_uncased_L-2_H-128_A-2 \
   --output outputs/learned-router \
   --epochs 8
 ```

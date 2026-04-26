@@ -92,7 +92,11 @@ def main():
         help="Trace JSONL path(s) or glob(s)",
     )
     parser.add_argument("--tasks", default="data/HumanEval.jsonl", help="HumanEval JSONL path")
-    parser.add_argument("--base-model", default="prajjwal1/bert-tiny", help="HF encoder model")
+    parser.add_argument(
+        "--base-model",
+        default="google/bert_uncased_L-2_H-128_A-2",
+        help="HF encoder model",
+    )
     parser.add_argument("--output", default="outputs/learned-router", help="Output directory")
     parser.add_argument("--max-length", type=int, default=256)
     parser.add_argument("--threshold", type=float, default=0.5)

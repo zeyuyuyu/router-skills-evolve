@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 class BertRouterConfig:
     """Configuration needed to train and reload a router."""
 
-    base_model: str = "prajjwal1/bert-tiny"
+    base_model: str = "google/bert_uncased_L-2_H-128_A-2"
     max_length: int = 256
     small_model: str = "deepseek/deepseek-v3.2"
     large_model: str = "openai/gpt-5.4-2026-03-05"
