@@ -19,8 +19,13 @@ label is `large`.
 ```bash
 pip install torch transformers datasets scikit-learn
 
+python3 experiments/import_uncommonroute_bench.py \
+  --files bench/data/all.jsonl \
+  --output data/router_training/uncommonroute_bench.jsonl
+
 python3 experiments/train_learnable_router.py \
   --traces "data/traces/*.jsonl" \
+  --router-data data/router_training/uncommonroute_bench.jsonl \
   --tasks data/HumanEval.jsonl \
   --base-model google/bert_uncased_L-2_H-128_A-2 \
   --output outputs/learned-router \
@@ -41,6 +46,7 @@ python3 experiments/train_learnable_router.py \
 python3 experiments/evaluate_learnable_router.py \
   --model outputs/learned-router \
   --traces "data/traces/*.jsonl" \
+  --router-data data/router_training/uncommonroute_bench.jsonl \
   --tasks data/HumanEval.jsonl \
   --output results/learned_router_eval.json
 ```

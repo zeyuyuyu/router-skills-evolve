@@ -197,6 +197,85 @@ def load_router_examples(
     return examples
 
 
+def load_router_data_examples(
+    data_patterns: Sequence[str],
+    *,
+    root: Optional[Path] = None,
+    dedupe_by_task: bool = True,
+) -> List[RouterTraceExample]:
+    """Load pre-labelled router examples from JSONL files.
+
+    This is used for weak-supervision imports such as UncommonRoute bench data.
+    Rows may contain either ``label`` (0/1) or ``label_name`` (small/large).
+    """
+    data_paths = expand_trace_paths(data_patterns, root=root)
+    if not data_paths:
+        raise FileNotFoundError(f"No router data files matched: {data_patterns}")
+
+    examples: List[RouterTraceExample] = []
+    seen = set()
+    for data_path in data_paths:
+        for row in load_jsonl(data_path):
+            prompt = row.get("prompt", "")
+            if not prompt:
+                continue
+
+            label = row.get("label")
+            label_name = str(row.get("label_name", "")).lower()
+            if label is None and label_name in ROUTE_TO_LABEL:
+                label = ROUTE_TO_LABEL[label_name]
+            if label not in {ROUTE_SMALL, ROUTE_LARGE}:
+                continue
+
+            label = int(label)
+            task_id = row.get("task_id") or f"{data_path.stem}:{len(examples)}"
+            dedupe_key = task_id if dedupe_by_task else prompt
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+
+            examples.append(
+                RouterTraceExample(
+                    task_id=task_id,
+                    prompt=prompt,
+                    label=label,
+                    label_name=LABEL_TO_ROUTE[label],
+                    signature=row.get("signature") or extract_signature(prompt),
+                    source_trace=row.get("source_trace") or str(data_path),
+                    small_success=label == ROUTE_SMALL,
+                    large_success=True if label == ROUTE_LARGE else None,
+                )
+            )
+    return examples
+
+
+def load_combined_router_examples(
+    trace_patterns: Sequence[str],
+    tasks_path: Path,
+    *,
+    router_data_patterns: Sequence[str] | None = None,
+    root: Optional[Path] = None,
+    small_model: str = SMALL_MODEL,
+    large_model: str = LARGE_MODEL,
+) -> List[RouterTraceExample]:
+    """Load real trace examples plus optional pre-labelled router examples."""
+    examples = load_router_examples(
+        trace_patterns,
+        tasks_path,
+        root=root,
+        small_model=small_model,
+        large_model=large_model,
+    )
+    if router_data_patterns:
+        examples.extend(
+            load_router_data_examples(
+                router_data_patterns,
+                root=root,
+            )
+        )
+    return examples
+
+
 def split_examples(
     examples: Sequence[RouterTraceExample],
     eval_ratio: float = 0.2,

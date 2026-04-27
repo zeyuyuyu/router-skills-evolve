@@ -23,7 +23,7 @@ from src.learned_router.data import (
     ROUTE_SMALL,
     class_counts,
     estimate_attempt_costs,
-    load_router_examples,
+    load_combined_router_examples,
 )
 from src.learned_router.policy import LearnedRouterPolicy
 
@@ -32,6 +32,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate a trained learnable router offline")
     parser.add_argument("--model", required=True, help="Trained router directory")
     parser.add_argument("--traces", nargs="+", default=["data/traces/*.jsonl"])
+    parser.add_argument(
+        "--router-data",
+        nargs="*",
+        default=[],
+        help="Additional supervised router JSONL files.",
+    )
     parser.add_argument("--tasks", default="data/HumanEval.jsonl")
     parser.add_argument("--threshold", type=float, default=None)
     parser.add_argument("--batch-size", type=int, default=64)
@@ -44,7 +50,12 @@ def main() -> None:
     if not tasks_path.is_absolute():
         tasks_path = root / tasks_path
 
-    examples = load_router_examples(args.traces, tasks_path, root=root)
+    examples = load_combined_router_examples(
+        trace_patterns=args.traces,
+        tasks_path=tasks_path,
+        router_data_patterns=args.router_data,
+        root=root,
+    )
     if not examples:
         raise RuntimeError("No labelled router examples found")
 

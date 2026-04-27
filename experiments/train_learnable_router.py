@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.config import LARGE_MODEL, SMALL_MODEL
 from src.learned_router.data import (
     class_counts,
-    load_router_examples,
+    load_combined_router_examples,
     split_examples,
 )
 from src.learned_router.model import BertRouter, BertRouterConfig
@@ -121,6 +121,12 @@ def main():
         default=["data/traces/*.jsonl"],
         help="Trace JSONL path(s) or glob(s)",
     )
+    parser.add_argument(
+        "--router-data",
+        nargs="*",
+        default=[],
+        help="Additional supervised router JSONL path(s), e.g. imported UncommonRoute bench data",
+    )
     parser.add_argument("--tasks", default="data/HumanEval.jsonl", help="HumanEval JSONL path")
     parser.add_argument(
         "--base-model",
@@ -152,7 +158,12 @@ def main():
     if not output_dir.is_absolute():
         output_dir = root / output_dir
 
-    examples = load_router_examples(args.traces, tasks_path, root=root)
+    examples = load_combined_router_examples(
+        trace_patterns=args.traces,
+        tasks_path=tasks_path,
+        router_data_patterns=args.router_data,
+        root=root,
+    )
     if not examples:
         raise RuntimeError("No supervised router examples could be built from traces")
 
