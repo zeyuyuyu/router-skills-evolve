@@ -42,16 +42,14 @@ def tier_to_label(tier: str) -> int:
 
 def download_via_gh(repo: str, path: str) -> str:
     """Fetch a file from GitHub using gh when available."""
+    url = ""
     try:
         url = subprocess.check_output(
             ["gh", "api", f"repos/{repo}/contents/{path}", "--jq", ".download_url"],
             text=True,
         ).strip()
-    except Exception as exc:
-        raise RuntimeError(
-            "Failed to resolve GitHub download URL. Ensure gh is installed/authenticated "
-            f"or pass a local file path. repo={repo} path={path}"
-        ) from exc
+    except Exception:
+        url = f"https://raw.githubusercontent.com/{repo}/main/{path}"
     with urllib.request.urlopen(url) as response:
         return response.read().decode("utf-8")
 
