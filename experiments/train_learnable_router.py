@@ -12,6 +12,7 @@ fine-tune the generator; this script trains the router itself.
 import argparse
 import inspect
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -113,6 +114,23 @@ def balanced_class_weights(examples):
     ]
 
 
+def build_local_vocab(examples, max_vocab_size: int = 30000):
+    """Build a small WordPiece-compatible vocab for offline random init."""
+    from collections import Counter
+
+    special = ["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"]
+    counter = Counter()
+    token_re = re.compile(r"[A-Za-z0-9_]+|[^\sA-Za-z0-9_]", re.UNICODE)
+    for example in examples:
+        for token in token_re.findall(example.prompt.lower()):
+            counter[token] += 1
+    vocab = list(special)
+    for token, _ in counter.most_common(max_vocab_size - len(special)):
+        if token not in special:
+            vocab.append(token)
+    return vocab
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train a learnable BERT router from traces")
     parser.add_argument(
@@ -131,7 +149,7 @@ def main():
     parser.add_argument(
         "--base-model",
         default="google/bert_uncased_L-2_H-128_A-2",
-        help="HF encoder model, local model dir, or 'random-tiny-bert' for offline init",
+        help="HF encoder model, local model dir, or 'random-tiny-bert'/'local-random-bert' for offline init",
     )
     parser.add_argument(
         "--tokenizer-model",
@@ -203,7 +221,14 @@ def main():
         large_model=LARGE_MODEL,
         threshold=args.threshold,
     )
-    router = BertRouter.from_pretrained_base(cfg)
+    if args.base_model in {"random-tiny-bert", "local-random-bert"}:
+        router = BertRouter.from_scratch(
+            cfg,
+            vocab_tokens=build_local_vocab(train_examples),
+            work_dir=output_dir / "random_init_vocab",
+        )
+    else:
+        router = BertRouter.from_pretrained_base(cfg)
 
     train_dataset = examples_to_dataset(train_examples, router.tokenizer, args.max_length)
     eval_dataset = examples_to_dataset(eval_examples, router.tokenizer, args.max_length) if eval_examples else None
