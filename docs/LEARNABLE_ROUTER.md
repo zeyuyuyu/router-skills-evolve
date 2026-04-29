@@ -54,3 +54,20 @@ python3 experiments/evaluate_learnable_router.py \
 Offline evaluation replays labelled traces without calling LLMs. It estimates
 route accuracy, fallback count, and cost compared with always using the large
 model or always trying small with fallback.
+
+## Threshold tuning
+
+The classifier outputs `p_large`. The default threshold is `0.5`, but production
+usually needs an explicit cost/quality trade-off:
+
+```bash
+python3 experiments/tune_learnable_router_threshold.py \
+  --model outputs/learned-router \
+  --traces "data/traces/*.jsonl" \
+  --router-data data/router_training/uncommonroute_bench.jsonl \
+  --max-fallback-rate 0.02 \
+  --output results/learned_router_thresholds.json
+```
+
+The tuner scans thresholds and recommends the lowest-cost setting that satisfies
+the requested fallback-rate cap.
