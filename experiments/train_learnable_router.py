@@ -131,7 +131,12 @@ def main():
     parser.add_argument(
         "--base-model",
         default="google/bert_uncased_L-2_H-128_A-2",
-        help="HF encoder model",
+        help="HF encoder model, local model dir, or 'random-tiny-bert' for offline init",
+    )
+    parser.add_argument(
+        "--tokenizer-model",
+        default=None,
+        help="Optional tokenizer source when --base-model=random-tiny-bert",
     )
     parser.add_argument("--output", default="outputs/learned-router", help="Output directory")
     parser.add_argument("--max-length", type=int, default=256)
@@ -192,6 +197,7 @@ def main():
 
     cfg = BertRouterConfig(
         base_model=args.base_model,
+        tokenizer_model=args.tokenizer_model,
         max_length=args.max_length,
         small_model=SMALL_MODEL,
         large_model=LARGE_MODEL,

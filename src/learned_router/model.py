@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 
 @dataclass
@@ -64,6 +64,38 @@ class BertRouter:
             id2label={0: "SMALL", 1: "LARGE"},
             label2id={"SMALL": 0, "LARGE": 1},
         )
+        return cls(model=model, tokenizer=tokenizer, config=config)
+
+    @classmethod
+    def from_scratch(
+        cls,
+        config: BertRouterConfig,
+        vocab_tokens: Sequence[str],
+        work_dir: str | Path,
+    ) -> "BertRouter":
+        """Initialize a tiny BERT router without downloading a HF checkpoint."""
+        from transformers import BertConfig, BertForSequenceClassification, BertTokenizer
+
+        work_dir = Path(work_dir)
+        work_dir.mkdir(parents=True, exist_ok=True)
+        vocab_file = work_dir / "vocab.txt"
+        with open(vocab_file, "w") as f:
+            for token in vocab_tokens:
+                f.write(f"{token}\n")
+
+        tokenizer = BertTokenizer(vocab_file=str(vocab_file), do_lower_case=True)
+        model_config = BertConfig(
+            vocab_size=len(vocab_tokens),
+            hidden_size=128,
+            num_hidden_layers=2,
+            num_attention_heads=2,
+            intermediate_size=512,
+            max_position_embeddings=max(512, config.max_length + 2),
+            num_labels=2,
+            id2label={0: "SMALL", 1: "LARGE"},
+            label2id={"SMALL": 0, "LARGE": 1},
+        )
+        model = BertForSequenceClassification(model_config)
         return cls(model=model, tokenizer=tokenizer, config=config)
 
     @classmethod
