@@ -17,6 +17,7 @@ class BertRouterConfig:
     small_model: str = "deepseek/deepseek-v3.2"
     large_model: str = "openai/gpt-5.4-2026-03-05"
     threshold: float = 0.5
+    tokenizer_model: str = "bert-base-uncased"
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
