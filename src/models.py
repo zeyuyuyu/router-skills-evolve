@@ -45,11 +45,15 @@ def extract_code(response: str, entry_point: str, original_prompt: str = "") -> 
     # 提取 markdown 代码块
     if "```python" in response:
         start = response.index("```python") + len("```python")
-        end = response.index("```", start)
+        end = response.find("```", start)
+        if end == -1:
+            end = len(response)
         code = response[start:end].strip()
     elif "```" in response:
         start = response.index("```") + 3
-        end = response.index("```", start)
+        end = response.find("```", start)
+        if end == -1:
+            end = len(response)
         code = response[start:end].strip()
     else:
         code = response.strip()

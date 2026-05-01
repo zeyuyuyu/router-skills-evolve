@@ -71,3 +71,25 @@ python3 experiments/tune_learnable_router_threshold.py \
 
 The tuner scans thresholds and recommends the lowest-cost setting that satisfies
 the requested fallback-rate cap.
+
+## Joint evolver experiment
+
+The current evolver loop can run three tracks side by side:
+
+1. SkillBook statistics: existing signature-based routing.
+2. Learnable router: `train_learnable_router.py` + threshold tuning.
+3. Small LLM fine-tuning: `train_small_model.py` on hard examples, then
+   `evaluate_finetuned_model.py` on the same HumanEval tasks.
+
+Example fine-tuned model evaluation:
+
+```bash
+python3 experiments/evaluate_finetuned_model.py \
+  --base-model MiniMaxAI/MiniMax-M2 \
+  --adapter outputs/minimax-m2-finetuned \
+  --data data/training_data.jsonl \
+  --output results/finetuned_eval.json
+```
+
+Use this to compare base small-model pass rate against the fine-tuned adapter
+before updating the router's small-model success assumptions.
