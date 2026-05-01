@@ -32,6 +32,7 @@ wandb/
 *.bin
 *.pt
 data/router_training/
+data/mbpp/
 
 # 实验数据 (可选保留 - 如果不想提交大量 JSON 去掉下面几行的注释)
 # data/traces/*.jsonl
