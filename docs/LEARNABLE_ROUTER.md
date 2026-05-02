@@ -93,3 +93,15 @@ python3 experiments/evaluate_finetuned_model.py \
 
 Use this to compare base small-model pass rate against the fine-tuned adapter
 before updating the router's small-model success assumptions.
+
+To add more code-supervision data for the LLM track, import MBPP-style tasks:
+
+```bash
+python3 experiments/import_mbpp_training_data.py \
+  --train-output data/llm_training/mbpp_train.jsonl \
+  --eval-output data/llm_training/mbpp_eval.jsonl
+```
+
+The generated JSONL uses the same `instruction` / `output` / `test` /
+`entry_point` schema as `data/training_data.jsonl`, so it can be passed to
+`train_small_model.py` and `evaluate_finetuned_model.py`.
