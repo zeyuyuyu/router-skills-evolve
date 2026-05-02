@@ -204,6 +204,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--llm-max-seq-len", type=int, default=1024)
     parser.add_argument("--llm-max-new-tokens", type=int, default=384)
     parser.add_argument("--llm-use-4bit", action="store_true")
+    parser.add_argument(
+        "--llm-prompt-style",
+        choices=["code", "alpaca"],
+        default="code",
+        help="Prompt format for SFT/evaluation. 'code' constrains output to Python code only.",
+    )
 
     return parser
 
@@ -330,6 +336,8 @@ def run_cycle(args: argparse.Namespace, cycle_idx: int, runner: Runner, workdir:
             base_eval,
             "--max-new-tokens",
             str(args.llm_max_new_tokens),
+            "--prompt-style",
+            args.llm_prompt_style,
         )
         if args.llm_eval_limit:
             cmd.extend(["--limit", str(args.llm_eval_limit)])
@@ -355,6 +363,8 @@ def run_cycle(args: argparse.Namespace, cycle_idx: int, runner: Runner, workdir:
             str(args.llm_lr),
             "--max-seq-len",
             str(args.llm_max_seq_len),
+            "--prompt-style",
+            args.llm_prompt_style,
         )
         if args.llm_use_4bit:
             cmd.append("--use-4bit")
@@ -372,6 +382,8 @@ def run_cycle(args: argparse.Namespace, cycle_idx: int, runner: Runner, workdir:
             adapter_eval,
             "--max-new-tokens",
             str(args.llm_max_new_tokens),
+            "--prompt-style",
+            args.llm_prompt_style,
         )
         if args.llm_eval_limit:
             cmd.extend(["--limit", str(args.llm_eval_limit)])
