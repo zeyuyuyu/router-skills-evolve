@@ -1,0 +1,54 @@
+{
+  "date": "2026-05-02",
+  "host": "8x A800",
+  "repo_commit": "4a712ad",
+  "summary": {
+    "end_to_end_runner": "experiments/run_joint_evolver.py",
+    "status": "completed",
+    "interpretation": "The joint runner works end-to-end. Router evolution is positive; current LoRA SFT does not improve the small code model yet."
+  },
+  "full_joint_run": {
+    "manifest": "/data0/home/zeyuwang/router-skills-evolve-runs/joint_evolver_real_20260502_050032/joint_evolver_manifest.json",
+    "router": {
+      "threshold": 0.53,
+      "accuracy": 0.9236213506340313,
+      "precision_large": 0.8401332223147377,
+      "recall_large": 0.9377323420074349,
+      "f1_large": 0.8862538427755818,
+      "fallback_count": 67,
+      "fallback_rate": 0.01975818342671778,
+      "learned_vs_always_large": 0.38565667326677755
+    },
+    "llm": {
+      "base_model": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+      "eval_subset": "first 20 MBPP eval samples",
+      "base_success": 3,
+      "base_total": 20,
+      "base_success_rate": 0.15,
+      "adapter_success": 2,
+      "adapter_total": 20,
+      "adapter_success_rate": 0.1,
+      "adapter_path": "/data0/home/zeyuwang/router-skills-evolve-runs/joint_evolver_real_20260502_050032/cycle_00/llm/small_model_lora"
+    }
+  },
+  "code_prompt_llm_run": {
+    "manifest": "/data0/home/zeyuwang/router-skills-evolve-runs/joint_evolver_real_codeprompt_20260502_051749/joint_evolver_manifest.json",
+    "prompt_style": "code",
+    "llm": {
+      "base_model": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+      "eval_subset": "first 20 MBPP eval samples",
+      "base_success": 7,
+      "base_total": 20,
+      "base_success_rate": 0.35,
+      "adapter_success": 1,
+      "adapter_total": 20,
+      "adapter_success_rate": 0.05,
+      "adapter_path": "/data0/home/zeyuwang/router-skills-evolve-runs/joint_evolver_real_codeprompt_20260502_051749/cycle_00/llm/small_model_lora"
+    }
+  },
+  "next_steps": [
+    "Keep the learnable-router track as the current positive path.",
+    "Do not promote the current LoRA adapters.",
+    "Improve LLM evolution with better output constraints, more held-out data, and DPO/GRPO-style training."
+  ]
+}
