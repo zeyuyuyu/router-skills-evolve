@@ -1,0 +1,61 @@
+{
+  "date": "2026-05-02",
+  "host": "A800",
+  "purpose": "Improve the LLM SFT line by aligning prompts with Qwen Instruct chat format.",
+  "model": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+  "dataset": {
+    "train": "MBPP sanitized train, 120 examples",
+    "eval": "MBPP sanitized test, first 20 examples"
+  },
+  "experiments": [
+    {
+      "name": "code_prompt_base",
+      "prompt_style": "code",
+      "adapter": null,
+      "success": 7,
+      "total": 20,
+      "success_rate": 0.35
+    },
+    {
+      "name": "code_prompt_lora",
+      "prompt_style": "code",
+      "adapter": "joint_evolver_real_codeprompt_20260502_051749/cycle_00/llm/small_model_lora",
+      "success": 1,
+      "total": 20,
+      "success_rate": 0.05
+    },
+    {
+      "name": "qwen_chat_base",
+      "prompt_style": "qwen-chat",
+      "adapter": null,
+      "success": 10,
+      "total": 20,
+      "success_rate": 0.5
+    },
+    {
+      "name": "qwen_chat_lora_standard",
+      "prompt_style": "qwen-chat",
+      "adapter": "joint_evolver_real_qwenchat_20260502_084947/cycle_00/llm/small_model_lora",
+      "success": 9,
+      "total": 20,
+      "success_rate": 0.45
+    },
+    {
+      "name": "qwen_chat_lora_conservative",
+      "prompt_style": "qwen-chat",
+      "adapter": "llm_mbpp_qwenchat/qwen25_coder_05b_lora_mbpp120_lr2e5_e1",
+      "success": 9,
+      "total": 20,
+      "success_rate": 0.45
+    }
+  ],
+  "interpretation": [
+    "Qwen chat formatting improves base model evaluation substantially compared with the generic code prompt.",
+    "LoRA SFT no longer collapses as badly as the previous prompt styles, but it still does not beat the base model on the held-out MBPP subset.",
+    "The current LLM train line should move to DPO/GRPO or stronger data filtering/augmentation before promoting an adapter."
+  ],
+  "artifact_paths": {
+    "qwen_chat_joint_manifest": "/data0/home/zeyuwang/router-skills-evolve-runs/joint_evolver_real_qwenchat_20260502_084947/joint_evolver_manifest.json",
+    "conservative_lora_eval": "/data0/home/zeyuwang/router-skills-evolve-results/llm_mbpp_qwenchat/qwen25_coder_05b_lora_mbpp_eval20_lr2e5_e1.json"
+  }
+}

@@ -50,12 +50,32 @@ for the LLM track.
 | LLM base | MBPP eval20 pass rate | 7/20 = 35% |
 | LLM LoRA | MBPP eval20 pass rate | 1/20 = 5% |
 
+## Run 3: Qwen chat-style LLM prompt
+
+Manifest on A800:
+
+```text
+/data0/home/zeyuwang/router-skills-evolve-runs/joint_evolver_real_qwenchat_20260502_084947/joint_evolver_manifest.json
+```
+
+This run used Qwen Instruct chat tokens for both SFT and evaluation:
+`--llm-prompt-style qwen-chat`.
+
+| Track | Metric | Value |
+| --- | --- | --- |
+| LLM base | MBPP eval20 pass rate | 10/20 = 50% |
+| LLM LoRA, 3 epochs | MBPP eval20 pass rate | 9/20 = 45% |
+| LLM LoRA, conservative 1 epoch | MBPP eval20 pass rate | 9/20 = 45% |
+
 ## Interpretation
 
 - The end-to-end runner works and produces a manifest with all stage commands,
   artifact paths, and key metrics.
 - The router track remains the positive signal.
-- The stricter code prompt improves base-model evaluation substantially.
-- The current LoRA SFT recipe still degrades adapter performance; next iterations
-  should focus on DPO/GRPO or larger held-out SFT data with stronger output
-  constraints.
+- Prompt formatting matters: code-style prompting improved base-model evaluation
+  from 15% to 35%, and Qwen chat-style prompting improved it to 50%.
+- Qwen chat-style SFT avoids the catastrophic syntax-error regression seen with
+  earlier prompts, but the current LoRA adapter still does not beat the base
+  model on the held-out MBPP slice.
+- Next iterations should focus on DPO/GRPO or better data filtering/augmentation
+  rather than promoting the current SFT adapter.
