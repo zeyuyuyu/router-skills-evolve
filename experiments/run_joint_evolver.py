@@ -206,8 +206,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--llm-use-4bit", action="store_true")
     parser.add_argument(
         "--llm-prompt-style",
-        choices=["code", "alpaca"],
-        default="code",
+        choices=["code", "alpaca", "qwen-chat"],
+        default="qwen-chat",
         help="Prompt format for SFT/evaluation. 'code' constrains output to Python code only.",
     )
 

@@ -78,6 +78,18 @@ def format_prompt(instruction: str, input_text: str = "", style: str = "alpaca")
             f"Task:\n{instruction}{extra}\n\n"
             "Python code:\n"
         )
+    if style == "qwen-chat":
+        extra = f"\n\nAdditional input:\n{input_text}" if input_text else ""
+        return (
+            "<|im_start|>system\n"
+            "You are a Python coding assistant. Return only valid Python code. "
+            "Do not include Markdown fences, explanations, examples, or tests."
+            "<|im_end|>\n"
+            "<|im_start|>user\n"
+            f"{instruction}{extra}\n"
+            "<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
 
     if input_text:
         return f"""### Instruction:
@@ -98,10 +110,13 @@ def format_prompt(instruction: str, input_text: str = "", style: str = "alpaca")
 def format_training_sample(sample: dict, prompt_style: str = "alpaca") -> dict:
     """把训练样本转成 (prompt, completion) 对"""
     prompt = format_prompt(sample["instruction"], sample.get("input", ""), style=prompt_style)
+    completion = sample["output"]
+    if prompt_style == "qwen-chat":
+        completion = completion.rstrip() + "\n<|im_end|>\n"
     return {
         "prompt": prompt,
-        "completion": sample["output"],
-        "text": prompt + sample["output"],  # 拼接后的完整训练文本
+        "completion": completion,
+        "text": prompt + completion,  # 拼接后的完整训练文本
     }
 
 
@@ -129,7 +144,7 @@ def main():
     parser.add_argument("--max-seq-len", type=int, default=2048)
     parser.add_argument(
         "--prompt-style",
-        choices=["alpaca", "code"],
+        choices=["alpaca", "code", "qwen-chat"],
         default="alpaca",
         help="Prompt template used for SFT. Evaluation must use the same style.",
     )
