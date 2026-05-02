@@ -69,7 +69,7 @@ def main() -> None:
     parser.add_argument("--top-p", type=float, default=1.0)
     parser.add_argument(
         "--prompt-style",
-        choices=["alpaca", "code"],
+        choices=["alpaca", "code", "qwen-chat"],
         default="alpaca",
         help="Prompt template; must match SFT training prompt style.",
     )
@@ -133,6 +133,10 @@ def main() -> None:
             "pad_token_id": tokenizer.pad_token_id,
             "eos_token_id": tokenizer.eos_token_id,
         }
+        stop_token = "<|im_end|>" if args.prompt_style == "qwen-chat" else None
+        stop_token_id = tokenizer.convert_tokens_to_ids(stop_token) if stop_token else None
+        if isinstance(stop_token_id, int) and stop_token_id >= 0:
+            generation_kwargs["eos_token_id"] = stop_token_id
         if args.temperature > 0:
             generation_kwargs["temperature"] = args.temperature
             generation_kwargs["top_p"] = args.top_p
