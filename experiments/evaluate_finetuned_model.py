@@ -67,6 +67,12 @@ def main() -> None:
     parser.add_argument("--max-new-tokens", type=int, default=768)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--top-p", type=float, default=1.0)
+    parser.add_argument(
+        "--prompt-style",
+        choices=["alpaca", "code"],
+        default="alpaca",
+        help="Prompt template; must match SFT training prompt style.",
+    )
     parser.add_argument("--use-4bit", action="store_true")
     parser.add_argument("--device-map", default="auto")
     parser.add_argument("--trust-remote-code", action="store_true", default=True)
@@ -119,7 +125,7 @@ def main() -> None:
 
     results = []
     for idx, task in enumerate(tasks, start=1):
-        prompt = format_prompt(task["prompt"])
+        prompt = format_prompt(task["prompt"], style=args.prompt_style)
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         generation_kwargs = {
             "max_new_tokens": args.max_new_tokens,

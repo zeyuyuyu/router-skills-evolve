@@ -58,6 +58,25 @@ def extract_code(response: str, entry_point: str, original_prompt: str = "") -> 
     else:
         code = response.strip()
 
+    # Some local code models echo the prompt or wrap code in prose. Keep the
+    # first plausible Python block before deciding whether it is complete.
+    markers = ["\n### Instruction:", "\n### Response:", "\nExplanation:", "\nThe code"]
+    for marker in markers:
+        idx = code.find(marker)
+        if idx > 0:
+            code = code[:idx].strip()
+
+    starts = [
+        idx for idx in (
+            code.find(f"def {entry_point}"),
+            code.find("import "),
+            code.find("from "),
+        )
+        if idx >= 0
+    ]
+    if starts:
+        code = code[min(starts):].strip()
+
     # 判断是完整函数还是只有函数体
     if f"def {entry_point}" in code:
         return code

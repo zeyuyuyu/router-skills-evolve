@@ -64,11 +64,21 @@ def check_deps():
         sys.exit(1)
 
 
-def format_prompt(instruction: str, input_text: str = "") -> str:
+def format_prompt(instruction: str, input_text: str = "", style: str = "alpaca") -> str:
     """
-    统一的 prompt 格式 (Alpaca 风格).
+    统一的 prompt 格式.
     训练时和推理时必须一致!
     """
+    if style == "code":
+        extra = f"\n\nAdditional input:\n{input_text}" if input_text else ""
+        return (
+            "You are a Python coding assistant.\n"
+            "Complete the following task by returning only valid Python code.\n"
+            "Do not include Markdown fences, explanations, examples, or tests.\n\n"
+            f"Task:\n{instruction}{extra}\n\n"
+            "Python code:\n"
+        )
+
     if input_text:
         return f"""### Instruction:
 {instruction}
@@ -85,9 +95,9 @@ def format_prompt(instruction: str, input_text: str = "") -> str:
 """
 
 
-def format_training_sample(sample: dict) -> dict:
+def format_training_sample(sample: dict, prompt_style: str = "alpaca") -> dict:
     """把训练样本转成 (prompt, completion) 对"""
-    prompt = format_prompt(sample["instruction"], sample.get("input", ""))
+    prompt = format_prompt(sample["instruction"], sample.get("input", ""), style=prompt_style)
     return {
         "prompt": prompt,
         "completion": sample["output"],
@@ -118,6 +128,12 @@ def main():
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--max-seq-len", type=int, default=2048)
     parser.add_argument(
+        "--prompt-style",
+        choices=["alpaca", "code"],
+        default="alpaca",
+        help="Prompt template used for SFT. Evaluation must use the same style.",
+    )
+    parser.add_argument(
         "--use-4bit", action="store_true",
         help="Use 4-bit quantization (省显存, 适合单卡)",
     )
@@ -126,17 +142,6 @@ def main():
         help="只加载数据和模型, 不真的训练 (测试环境)",
     )
     args = parser.parse_args()
-
-    check_deps()
-
-    # 导入 (延迟到这里, 因为 check_deps 要先通过)
-    import torch
-    from datasets import Dataset
-    from transformers import (
-        AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,
-    )
-    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from trl import SFTTrainer, SFTConfig
 
     # ========================================================================
     # 1. 加载训练数据
@@ -168,8 +173,7 @@ def main():
         print("  2. 混入 MBPP / HumanEval+ 等更难的题")
 
     # 转成训练格式
-    formatted = [format_training_sample(s) for s in raw_samples]
-    dataset = Dataset.from_list(formatted)
+    formatted = [format_training_sample(s, prompt_style=args.prompt_style) for s in raw_samples]
 
     print(f"\n📝 训练文本示例 (前 200 字符):")
     print(formatted[0]["text"][:200] + "...")
@@ -178,9 +182,22 @@ def main():
     if args.dry_run:
         print(f"\n🏁 --dry-run: 数据加载 ✅, 格式化 ✅. 跳过模型加载和训练.")
         print(f"   训练样本数: {len(raw_samples)}")
-        print(f"   Dataset columns: {dataset.column_names}")
+        print(f"   Dataset columns: {list(formatted[0].keys())}")
         print(f"   下一步: 去掉 --dry-run, 真实训练")
         return
+
+    check_deps()
+
+    # 导入 (延迟到这里, 因为 check_deps 要先通过)
+    import torch
+    from datasets import Dataset
+    from transformers import (
+        AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,
+    )
+    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+    from trl import SFTTrainer, SFTConfig
+
+    dataset = Dataset.from_list(formatted)
 
     # ========================================================================
     # 2. 加载 base model + tokenizer
@@ -293,6 +310,7 @@ def main():
             "lora_alpha": args.lora_alpha,
             "epochs": args.epochs,
             "learning_rate": args.lr,
+            "prompt_style": args.prompt_style,
         }, f, indent=2)
 
     print(f"\n✅ 训练完成!")
