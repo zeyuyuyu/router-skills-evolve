@@ -53,6 +53,8 @@ def build_lora_config(rank: int, alpha: int):
 
 def completion_logprob(model, input_ids, attention_mask, prompt_len: int):
     """Average log-probability of generated tokens only."""
+    import torch
+
     outputs = model(input_ids=input_ids, attention_mask=attention_mask)
     logits = outputs.logits[:, :-1, :]
     labels = input_ids[:, 1:]
