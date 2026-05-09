@@ -1,0 +1,39 @@
+{
+  "run": "qwen25_coder_15b_grpo_200x4",
+  "date": "2026-05-09",
+  "host": "A800",
+  "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+  "task": "MBPP test_eval_all first 100",
+  "training": {
+    "algorithm": "local GRPO / REINFORCE",
+    "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+    "train_task_limit": 200,
+    "epochs": 1,
+    "rollouts_per_prompt": 4,
+    "max_new_tokens": 192,
+    "temperature": 0.8,
+    "top_p": 0.95,
+    "learning_rate": 0.000005,
+    "lora_r": 16,
+    "prompt_style": "qwen-chat",
+    "reward": "binary executable test pass/fail"
+  },
+  "results": {
+    "base": {
+      "pass": 47,
+      "total": 100,
+      "pass_rate": 0.47,
+      "artifact": "/data0/home/zeyuwang/router-skills-evolve-results/rl_15b/qwen25_coder_15b_base_eval100.json"
+    },
+    "grpo_adapter": {
+      "pass": 49,
+      "total": 100,
+      "pass_rate": 0.49,
+      "artifact": "/data0/home/zeyuwang/router-skills-evolve-results/rl_15b/qwen25_coder_15b_grpo_eval100.json",
+      "adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4"
+    },
+    "absolute_gain": 0.02,
+    "relative_gain": 0.0425531914893617
+  },
+  "takeaway": "Using a larger 1.5B code model and 100-example held-out evaluation, local GRPO improves over base from 47/100 to 49/100. The gain is modest but positive and stronger than the earlier 20-example smoke test."
+}

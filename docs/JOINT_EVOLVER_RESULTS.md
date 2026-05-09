@@ -67,6 +67,43 @@ This run used Qwen Instruct chat tokens for both SFT and evaluation:
 | LLM LoRA, 3 epochs | MBPP eval20 pass rate | 9/20 = 45% |
 | LLM LoRA, conservative 1 epoch | MBPP eval20 pass rate | 9/20 = 45% |
 
+## Run 4: larger-model GRPO on A800
+
+This run moved beyond the 0.5B smoke setup and used a larger code model:
+
+```text
+Qwen/Qwen2.5-Coder-1.5B-Instruct
+```
+
+Training:
+
+```text
+local GRPO / REINFORCE
+200 MBPP augmented train tasks
+4 rollouts per prompt
+1 epoch
+LoRA rank 16
+```
+
+Held-out evaluation:
+
+```text
+MBPP test_eval_all first 100
+```
+
+| Track | Metric | Value |
+| --- | --- | --- |
+| LLM base 1.5B | MBPP eval100 pass rate | 47/100 = 47% |
+| LLM GRPO 1.5B | MBPP eval100 pass rate | **49/100 = 49%** |
+
+Artifact paths:
+
+```text
+/data0/home/zeyuwang/router-skills-evolve-results/rl_15b/qwen25_coder_15b_base_eval100.json
+/data0/home/zeyuwang/router-skills-evolve-results/rl_15b/qwen25_coder_15b_grpo_eval100.json
+/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4
+```
+
 ## Interpretation
 
 - The end-to-end runner works and produces a manifest with all stage commands,
@@ -77,5 +114,7 @@ This run used Qwen Instruct chat tokens for both SFT and evaluation:
 - Qwen chat-style SFT avoids the catastrophic syntax-error regression seen with
   earlier prompts, but the current LoRA adapter still does not beat the base
   model on the held-out MBPP slice.
-- Next iterations should focus on DPO/GRPO or better data filtering/augmentation
-  rather than promoting the current SFT adapter.
+- Larger-model GRPO gives a positive model-evolution signal: 1.5B GRPO improves
+  from 47/100 to 49/100 on a 100-example held-out slice.
+- Next iterations should focus on making the GRPO/DPO margin larger with more
+  rollouts, KL/reference stabilization, and larger held-out evaluations.
