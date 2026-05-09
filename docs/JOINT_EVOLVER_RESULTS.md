@@ -104,6 +104,23 @@ Artifact paths:
 /data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4
 ```
 
+### Additional scaling attempts
+
+We also tried increasing training budget or model size. These runs did not
+improve over their own base models:
+
+| Model | Method | Base | Adapter | Result |
+| --- | --- | ---: | ---: | --- |
+| Qwen2.5-Coder-1.5B-Instruct | GRPO 400 tasks x 4 rollouts | 47/100 | 46/100 | degraded |
+| Qwen2.5-Coder-3B-Instruct | GRPO 200 tasks x 4 rollouts | 62/100 | 60/100 | degraded |
+| Qwen2.5-Coder-3B-Instruct | conservative SFT 400 tasks | 62/100 | 62/100 | tied |
+| Qwen2.5-Coder-7B-Instruct | GRPO 100 tasks x 4 rollouts | 77/100 | 75/100 | degraded |
+
+The current best positive LLM-training case is therefore the 1.5B GRPO 200x4
+run. Scaling model size or training budget alone is not sufficient; the next
+step should tune the RL objective, add KL/reference stabilization, and improve
+reward/data selection.
+
 ## Interpretation
 
 - The end-to-end runner works and produces a manifest with all stage commands,

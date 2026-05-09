@@ -1,0 +1,63 @@
+{
+  "date": "2026-05-09",
+  "best_positive_case": {
+    "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+    "method": "local GRPO / REINFORCE with executable-test reward",
+    "train_data": "MBPP augmented train tasks",
+    "train_task_limit": 200,
+    "rollouts_per_prompt": 4,
+    "epochs": 1,
+    "lora_rank": 16,
+    "learning_rate": 0.000005,
+    "prompt_style": "qwen-chat",
+    "eval": "MBPP test_eval_all first 100",
+    "base": {
+      "pass": 47,
+      "total": 100,
+      "pass_rate": 0.47
+    },
+    "adapter": {
+      "pass": 49,
+      "total": 100,
+      "pass_rate": 0.49
+    },
+    "absolute_gain": 0.02,
+    "relative_gain": 0.0425531914893617
+  },
+  "comparison_runs": [
+    {
+      "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+      "method": "local GRPO 400 tasks x 4 rollouts",
+      "base": "47/100",
+      "adapter": "46/100",
+      "result": "degraded"
+    },
+    {
+      "model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+      "method": "local GRPO 200 tasks x 4 rollouts",
+      "base": "62/100",
+      "adapter": "60/100",
+      "result": "degraded"
+    },
+    {
+      "model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+      "method": "conservative SFT 400 tasks",
+      "base": "62/100",
+      "adapter": "62/100",
+      "result": "tied"
+    },
+    {
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "method": "local GRPO 100 tasks x 4 rollouts",
+      "base": "77/100",
+      "adapter": "75/100",
+      "result": "degraded"
+    }
+  ],
+  "artifacts": {
+    "base_eval": "/data0/home/zeyuwang/router-skills-evolve-results/rl_15b/qwen25_coder_15b_base_eval100.json",
+    "adapter_eval": "/data0/home/zeyuwang/router-skills-evolve-results/rl_15b/qwen25_coder_15b_grpo_eval100.json",
+    "adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4"
+  },
+  "takeaway": "The current best positive LLM-training result is Qwen2.5-Coder-1.5B-Instruct with local GRPO, improving from 47/100 to 49/100 on MBPP eval100. Larger models or more GRPO steps did not automatically improve, so future work should tune the RL recipe rather than only scaling model size or data."
+}
