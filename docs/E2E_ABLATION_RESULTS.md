@@ -40,6 +40,32 @@ Interpretation:
 - Learned router is the strongest positive ablation: it sharply reduces
   fallback while preserving low cost.
 
+## Component ablation table
+
+This is the paper-facing version of the ablation. It asks what happens when we
+remove each evolver component from the current end-to-end system. Routing
+metrics are evaluated on the 848-example router split. LLM metrics use the
+larger 1.5B code-model run on MBPP eval100 when available.
+
+| System variant | Skills evolve | Router training | LLM training | Routing accuracy | Fallback rate | Cost vs always-large | Code pass rate |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: |
+| Base: always-small + fallback | ✗ | ✗ | ✗ | 68.28% | 31.72% | **33.54%** | 47/100 = 47% |
+| + Skills evolve | ✓ | ✗ | ✗ | 69.46% | 26.65% | 37.27% | 47/100 = 47% |
+| + Router training | ✓ | ✓ | ✗ | **93.04%** | 2.12% | 37.75% | 47/100 = 47% |
+| Full: + Router + LLM GRPO | ✓ | ✓ | ✓ | **93.04%** | 2.12% | 37.75% | **49/100 = 49%** |
+
+Read this as an offline end-to-end proxy:
+
+- **Removing router training** causes the largest drop: fallback rises from
+  2.12% to 26.65% and large-class F1 drops sharply.
+- **Removing skills evolve** leaves only the base fallback policy in this table;
+  SkillBook gives a small but visible gain over base.
+- **Removing LLM training** keeps routing unchanged but code pass rate drops
+  from 49% to 47% in the 1.5B GRPO experiment.
+- **Full system** is currently best on quality, while base is cheapest because
+  it delays large-model calls until fallback. The cost/quality trade-off should
+  be reported jointly.
+
 ## LLM training ablation
 
 | Variant | Eval | Pass Rate |
@@ -47,6 +73,8 @@ Interpretation:
 | Qwen2.5-Coder-0.5B-Instruct base, qwen-chat prompt | MBPP eval20 | **10/20 = 50%** |
 | SFT LoRA adapter, qwen-chat prompt | MBPP eval20 | 9/20 = 45% |
 | Local GRPO LoRA smoke run | MBPP eval20 on 8x4090 | 9/20 = 45% |
+| Qwen2.5-Coder-1.5B-Instruct base | MBPP eval100 | 47/100 = 47% |
+| Qwen2.5-Coder-1.5B-Instruct + local GRPO | MBPP eval100 | **49/100 = 49%** |
 
 Interpretation:
 

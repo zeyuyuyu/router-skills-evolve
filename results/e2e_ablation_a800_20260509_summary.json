@@ -70,6 +70,48 @@
       }
     }
   },
+  "component_ablation": {
+    "base_always_small_fallback": {
+      "skills_evolve": false,
+      "router_training": false,
+      "llm_training": false,
+      "routing_accuracy": 0.6827830188679245,
+      "fallback_rate": 0.31721698113207547,
+      "cost_vs_always_large": 0.33537304462413203,
+      "code_pass_rate": 0.47,
+      "code_pass": "47/100"
+    },
+    "skills_only": {
+      "skills_evolve": true,
+      "router_training": false,
+      "llm_training": false,
+      "routing_accuracy": 0.6945754716981132,
+      "fallback_rate": 0.2665094339622642,
+      "cost_vs_always_large": 0.37266094459418325,
+      "code_pass_rate": 0.47,
+      "code_pass": "47/100"
+    },
+    "skills_plus_router": {
+      "skills_evolve": true,
+      "router_training": true,
+      "llm_training": false,
+      "routing_accuracy": 0.9304245283018868,
+      "fallback_rate": 0.02122641509433962,
+      "cost_vs_always_large": 0.3774702491763946,
+      "code_pass_rate": 0.47,
+      "code_pass": "47/100"
+    },
+    "full_with_grpo": {
+      "skills_evolve": true,
+      "router_training": true,
+      "llm_training": true,
+      "routing_accuracy": 0.9304245283018868,
+      "fallback_rate": 0.02122641509433962,
+      "cost_vs_always_large": 0.3774702491763946,
+      "code_pass_rate": 0.49,
+      "code_pass": "49/100"
+    }
+  },
   "takeaways": [
     "Learned router is the strongest positive ablation: 93.0% routing accuracy and 2.1% fallback rate on the unified eval split.",
     "SkillBook alone improves over base slightly but does not solve hard-route recall.",
