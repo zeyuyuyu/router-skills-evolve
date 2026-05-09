@@ -1,0 +1,79 @@
+{
+  "run": "e2e_ablation_router_sft_qwenchat",
+  "date": "2026-05-09",
+  "host": "A800",
+  "artifacts": {
+    "json": "/data0/home/zeyuwang/router-skills-evolve-results/e2e_ablation/e2e_ablation_router_sft_qwenchat.json",
+    "markdown": "/data0/home/zeyuwang/router-skills-evolve-results/e2e_ablation/e2e_ablation_router_sft_qwenchat.md",
+    "learned_router": "/data0/home/zeyuwang/router-skills-evolve-runs/learned-router-mixed-pretrained",
+    "llm_base_eval": "/data0/home/zeyuwang/router-skills-evolve-runs/joint_evolver_real_qwenchat_20260502_084947/cycle_00/results/llm_base_eval.json",
+    "llm_adapter_eval": "/data0/home/zeyuwang/router-skills-evolve-runs/joint_evolver_real_qwenchat_20260502_084947/cycle_00/results/llm_adapter_eval.json"
+  },
+  "dataset": {
+    "all_examples": 3391,
+    "train_examples": 2543,
+    "eval_examples": 848,
+    "eval_class_counts": {
+      "small": 579,
+      "large": 269
+    }
+  },
+  "routing_ablation": {
+    "base_always_small_fallback": {
+      "accuracy": 0.6827830188679245,
+      "large_f1": 0.0,
+      "fallback_rate": 0.31721698113207547,
+      "cost_vs_always_large": 0.33537304462413203,
+      "predicted_large": 0
+    },
+    "skillbook_signature": {
+      "accuracy": 0.6945754716981132,
+      "large_f1": 0.2492753623188406,
+      "fallback_rate": 0.2665094339622642,
+      "cost_vs_always_large": 0.37266094459418325,
+      "predicted_large": 76
+    },
+    "learned_router": {
+      "accuracy": 0.9304245283018868,
+      "large_f1": 0.894830659536542,
+      "fallback_rate": 0.02122641509433962,
+      "cost_vs_always_large": 0.3774702491763946,
+      "predicted_large": 292,
+      "threshold": 0.57
+    }
+  },
+  "llm_ablation": {
+    "base_qwen_chat": {
+      "model": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+      "eval": "MBPP eval20",
+      "pass": 10,
+      "total": 20,
+      "pass_rate": 0.5
+    },
+    "sft_adapter_qwen_chat": {
+      "model": "Qwen/Qwen2.5-Coder-0.5B-Instruct + LoRA",
+      "eval": "MBPP eval20",
+      "pass": 9,
+      "total": 20,
+      "pass_rate": 0.45
+    },
+    "grpo_adapter_smoke": {
+      "model": "Qwen/Qwen2.5-Coder-0.5B-Instruct + local GRPO LoRA",
+      "eval": "MBPP eval20 on 8x4090",
+      "pass": 9,
+      "total": 20,
+      "pass_rate": 0.45,
+      "base_for_same_run": {
+        "pass": 8,
+        "total": 20,
+        "pass_rate": 0.4
+      }
+    }
+  },
+  "takeaways": [
+    "Learned router is the strongest positive ablation: 93.0% routing accuracy and 2.1% fallback rate on the unified eval split.",
+    "SkillBook alone improves over base slightly but does not solve hard-route recall.",
+    "Naive SFT remains below the qwen-chat base model on MBPP eval20.",
+    "Local GRPO gives a small positive signal over its measured base in a smoke run, but the margin is still small."
+  ]
+}
