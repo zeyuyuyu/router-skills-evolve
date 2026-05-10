@@ -1,0 +1,131 @@
+{
+  "date": "2026-05-10",
+  "summary": "LLM training experiments across SFT, DPO data construction, and local GRPO/RL.",
+  "best_positive_case": {
+    "model": "Qwen2.5-Coder-1.5B-Instruct",
+    "training_paradigm": "local GRPO",
+    "configuration": {
+      "train_tasks": 200,
+      "rollouts_per_prompt": 4,
+      "epochs": 1,
+      "lora_rank": 16,
+      "learning_rate": 0.000005,
+      "prompt_style": "qwen-chat"
+    },
+    "eval": "MBPP eval100",
+    "base": "47/100",
+    "trained": "49/100",
+    "absolute_gain": "2 percentage points"
+  },
+  "experiments": [
+    {
+      "model": "Qwen2.5-Coder-0.5B-Instruct",
+      "training_paradigm": "SFT",
+      "configuration": "6 hard examples, LoRA r=16, 8 epochs",
+      "eval": "HumanEval hard 6",
+      "base": "4/6",
+      "trained": "2/6",
+      "result": "degraded"
+    },
+    {
+      "model": "Qwen2.5-Coder-0.5B-Instruct",
+      "training_paradigm": "SFT",
+      "configuration": "MBPP train120, LoRA r=16, 3 epochs",
+      "eval": "MBPP eval20",
+      "base": "3/20",
+      "trained": "2/20",
+      "result": "degraded"
+    },
+    {
+      "model": "Qwen2.5-Coder-0.5B-Instruct",
+      "training_paradigm": "SFT + qwen-chat prompt",
+      "configuration": "MBPP train120, LoRA r=16, 3 epochs",
+      "eval": "MBPP eval20",
+      "base": "10/20",
+      "trained": "9/20",
+      "result": "close_but_below_base"
+    },
+    {
+      "model": "Qwen2.5-Coder-0.5B-Instruct",
+      "training_paradigm": "conservative SFT",
+      "configuration": "MBPP train120, LoRA r=8, lr=2e-5, 1 epoch",
+      "eval": "MBPP eval20",
+      "base": "10/20",
+      "trained": "9/20",
+      "result": "below_base"
+    },
+    {
+      "model": "Qwen2.5-Coder-0.5B-Instruct",
+      "training_paradigm": "expanded-data SFT",
+      "configuration": "MBPP augmented 400, LoRA r=16, lr=5e-5, 2 epochs",
+      "eval": "MBPP eval20",
+      "base": "10/20",
+      "trained": "9/20",
+      "result": "below_base"
+    },
+    {
+      "model": "Qwen2.5-Coder-0.5B-Instruct",
+      "training_paradigm": "local GRPO",
+      "configuration": "MBPP train40, 4 rollouts, 1 epoch, LoRA r=8",
+      "eval": "MBPP eval20",
+      "base": "8/20",
+      "trained": "9/20",
+      "result": "small_gain"
+    },
+    {
+      "model": "Qwen2.5-Coder-0.5B-Instruct",
+      "training_paradigm": "local GRPO",
+      "configuration": "MBPP train120, 4 rollouts, 1 epoch",
+      "eval": "MBPP eval20",
+      "base": "8/20",
+      "trained": "9/20",
+      "result": "small_gain_replicated"
+    },
+    {
+      "model": "Qwen2.5-Coder-1.5B-Instruct",
+      "training_paradigm": "local GRPO",
+      "configuration": "MBPP train200, 4 rollouts, 1 epoch, LoRA r=16",
+      "eval": "MBPP eval100",
+      "base": "47/100",
+      "trained": "49/100",
+      "result": "best_positive_case"
+    },
+    {
+      "model": "Qwen2.5-Coder-1.5B-Instruct",
+      "training_paradigm": "local GRPO",
+      "configuration": "MBPP train400, 4 rollouts, 1 epoch",
+      "eval": "MBPP eval100",
+      "base": "47/100",
+      "trained": "46/100",
+      "result": "degraded"
+    },
+    {
+      "model": "Qwen2.5-Coder-3B-Instruct",
+      "training_paradigm": "local GRPO",
+      "configuration": "MBPP train200, 4 rollouts, 1 epoch",
+      "eval": "MBPP eval100",
+      "base": "62/100",
+      "trained": "60/100",
+      "result": "degraded"
+    },
+    {
+      "model": "Qwen2.5-Coder-3B-Instruct",
+      "training_paradigm": "conservative SFT",
+      "configuration": "MBPP train400, LoRA r=8, lr=1e-5, 1 epoch",
+      "eval": "MBPP eval100",
+      "base": "62/100",
+      "trained": "62/100",
+      "result": "tied"
+    },
+    {
+      "model": "Qwen2.5-Coder-7B-Instruct",
+      "training_paradigm": "local GRPO",
+      "configuration": "MBPP train100, 4 rollouts, 1 epoch",
+      "eval": "MBPP eval100",
+      "base": "77/100",
+      "trained": "75/100",
+      "result": "degraded"
+    }
+  ],
+  "conclusion": "The current LLM training line has one reproducible positive case: Qwen2.5-Coder-1.5B-Instruct with local GRPO improves from 47/100 to 49/100. Naive SFT does not reliably beat base, and larger base models need stronger RL/DPO recipes."
+}
