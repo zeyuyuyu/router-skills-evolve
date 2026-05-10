@@ -27,6 +27,10 @@ import json
 import argparse
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from experiments.train_small_model import format_prompt
+
 
 def check_deps():
     missing = []
@@ -41,9 +45,12 @@ def check_deps():
         sys.exit(1)
 
 
-def format_prompt(instruction: str) -> str:
-    """Alpaca 风格"""
-    return f"### Instruction:\n{instruction}\n\n### Response:\n"
+def format_completion(text: str, prompt_style: str) -> str:
+    """Match completion format to the selected prompt template."""
+    text = str(text or "").strip()
+    if prompt_style == "qwen-chat":
+        return text + "\n<|im_end|>\n"
+    return text
 
 
 def main():
@@ -60,17 +67,15 @@ def main():
     parser.add_argument("--grad-accum", type=int, default=4)
     parser.add_argument("--lr", type=float, default=5e-6)  # DPO 用小 lr
     parser.add_argument("--max-seq-len", type=int, default=2048)
+    parser.add_argument(
+        "--prompt-style",
+        choices=["alpaca", "code", "qwen-chat"],
+        default="alpaca",
+        help="Prompt template used for DPO. Should match evaluation prompt style.",
+    )
     parser.add_argument("--use-4bit", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-
-    check_deps()
-
-    import torch
-    from datasets import Dataset
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-    from peft import LoraConfig, prepare_model_for_kbit_training
-    from trl import DPOTrainer, DPOConfig
 
     # ========================================================================
     # 1. 加载数据
@@ -113,13 +118,12 @@ def main():
     # 兼容两种 key: prompt 或 instruction
     dpo_data = [
         {
-            "prompt": format_prompt(s.get("prompt") or s["instruction"]),
-            "chosen": s["chosen"],
-            "rejected": s["rejected"],
+            "prompt": format_prompt(s.get("prompt") or s["instruction"], style=args.prompt_style),
+            "chosen": format_completion(s["chosen"], args.prompt_style),
+            "rejected": format_completion(s["rejected"], args.prompt_style),
         }
         for s in raw
     ]
-    dataset = Dataset.from_list(dpo_data)
     
     print(f"\n样本预览:")
     print(f"  Prompt: {dpo_data[0]['prompt'][:80]}...")
@@ -129,6 +133,16 @@ def main():
     if args.dry_run:
         print(f"\n🏁 --dry-run: 数据 ✅ ({len(dpo_data)} 条). 跳过模型加载和训练.")
         return
+
+    check_deps()
+
+    import torch
+    from datasets import Dataset
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from peft import LoraConfig, prepare_model_for_kbit_training
+    from trl import DPOTrainer, DPOConfig
+
+    dataset = Dataset.from_list(dpo_data)
     
     # ========================================================================
     # 2. 加载模型
@@ -230,6 +244,7 @@ def main():
             "beta": args.beta,
             "epochs": args.epochs,
             "learning_rate": args.lr,
+            "prompt_style": args.prompt_style,
         }, f, indent=2)
     
     print(f"\n✅ DPO 训练完成!")
