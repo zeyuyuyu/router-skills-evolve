@@ -1,0 +1,1 @@
+[2026-05-14T10:05:34Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attempts (15s, 30s). No state was read, no actions were taken. sshpass/openssh-client were not pre-installed in this environment and had to be fetched; that succeeded, but the remote host did not respond. Will retry on next shepherd cron tick. Actions: none.
