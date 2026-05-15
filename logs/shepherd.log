@@ -12,3 +12,11 @@
   Actions taken: none (cannot reach host).
   Note: shepherd.log on A800 was not updated. This entry is written to local fallback log.
   Next step: verify A800 power/network status manually before next shepherd cycle.
+[2026-05-15T08:14:07Z] SHEPHERD RUN — FAILED (6th consecutive)
+  Reason: A800 (117.74.66.181:50507) unreachable. This environment's outbound network policy returns HTTP 403 "host_not_allowed" for the A800 IP; SSH/TCP on port 50507 is firewalled at the runner level. paramiko installed successfully but connect() timed out (20s).
+  Actions taken: none. All checks (A/B/C/D/E) skipped.
+  ESCALATION: 6 consecutive shepherd failures spanning ~12 hours (since 2026-05-14T20:03Z). Auto-research system is unsupervised for this entire window. Manual intervention required:
+    1. Add 117.74.66.181 to this runner's outbound network allowlist, OR
+    2. Move the shepherd cron to a host that has direct A800 access (e.g., run it on A800 itself or a co-located jump host).
+    3. On next reachable run: check for crashed experiments, queue starvation, and disk pressure accumulated during the blind window.
+  Next: retry at next 2-hour tick; persistent failure = environment misconfiguration, not transient network hiccup.
