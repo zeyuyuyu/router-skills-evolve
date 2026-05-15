@@ -20,3 +20,8 @@
     2. Move the shepherd cron to a host that has direct A800 access (e.g., run it on A800 itself or a co-located jump host).
     3. On next reachable run: check for crashed experiments, queue starvation, and disk pressure accumulated during the blind window.
   Next: retry at next 2-hour tick; persistent failure = environment misconfiguration, not transient network hiccup.
+[2026-05-15T10:03:59Z] SHEPHERD RUN — FAILED (7th consecutive)
+  Reason: A800 (117.74.66.181:50507) still unreachable. TCP connect timed out after 10s (paramiko). Outbound SSH from this cloud runner is blocked; all 7 runs since 2026-05-14T20:03Z have failed identically.
+  Actions taken: none. All checks (A/B/C/D/E) skipped. shepherd.log on A800 not updated.
+  ESCALATION PERSISTS: ~14 hours of unsupervised auto-research. Queue starvation, crashed experiments, and disk pressure are all undetected risks.
+  Recommended next action: SSH into A800 manually and run the shepherd script locally, or reconfigure this runner's outbound network allowlist to permit 117.74.66.181:50507.
