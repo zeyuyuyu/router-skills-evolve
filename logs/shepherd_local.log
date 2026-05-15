@@ -1,0 +1,1 @@
+[2026-05-15T00:00:00Z SHEPHERD] FAILED: A800 unreachable. SSH connection to 117.74.66.181:50507 timed out. No state read, no actions taken. Skipping all steps (A–E). Will retry on next 2-hour cron tick.
