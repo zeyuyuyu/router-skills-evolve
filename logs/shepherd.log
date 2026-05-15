@@ -63,3 +63,18 @@
     All auto-research state (queue, running, GPU, disk) is unknown and unmonitored.
     Human action required. See prior entries for remediation options.
   DONE: actions=FAILED
+[2026-05-15T22:08:01Z] SHEPHERD RUN — FAILED (12th consecutive)
+  Reason: A800 (117.74.66.181:50507) unreachable. TCP probe timed out (3 attempts x 8s). No ssh binary on runner; paramiko also failed. Identical failure mode to all prior runs since 2026-05-14T20:03Z (~26 hours blind).
+  Actions taken: none. All checks (A/B/C/D/E) skipped. Remote shepherd.log not updated.
+  Local artifact status (Step E — checked against UTC 22:07):
+    - hotspots/2026-05-15.json: MISSING (expected by 06:00 UTC; now 22:07 UTC — 16h overdue).
+    - reports/ideas-2026-05-15.md: PRESENT (file exists locally).
+  ESCALATION — CRITICAL (12th failure, ~26 hours blind):
+    Root cause: runner outbound network policy permanently blocks port 50507 to 117.74.66.181.
+    All auto-research state (queue, running jobs, GPU util, disk) is unknown and unmonitored.
+    A/B/C/D/E checks all BLOCKED. Starvation, crashes, disk overrun, and surprise results go undetected.
+    Human action required — choose one remediation:
+      1. Add 117.74.66.181:50507 to this runner's outbound allowlist.
+      2. Move shepherd cron onto A800 directly or a co-located jump host.
+      3. Expose A800 state over HTTPS reachable from this runner.
+  DONE: actions=FAILED
