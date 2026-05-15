@@ -52,3 +52,14 @@
     2. Relocate shepherd cron to run on A800 directly or a co-located jump host.
     3. Expose A800 state via HTTPS endpoint reachable by this runner.
   DONE: actions=FAILED
+[2026-05-15T18:03:01Z] SHEPHERD RUN — FAILED (11th consecutive)
+  Reason: A800 (117.74.66.181:50507) unreachable. TCP probe via nc -zw10 timed out (no ssh binary on runner). Identical failure mode to all prior runs since 2026-05-14T20:03Z (~22 hours blind).
+  Actions taken: none. All checks (A/B/C/D/E) skipped. Remote shepherd.log not updated.
+  Local artifact status:
+    - hotspots/2026-05-15.json: NOT FOUND (expected by 06:00 UTC; now 18:03 UTC — MISSING, Step E).
+    - reports/ideas-2026-05-15.md: PRESENT (generated offline by prior run).
+  ESCALATION — CRITICAL (11th failure, ~22 hours blind):
+    Root cause confirmed: runner outbound network policy permanently blocks 117.74.66.181:50507.
+    All auto-research state (queue, running, GPU, disk) is unknown and unmonitored.
+    Human action required. See prior entries for remediation options.
+  DONE: actions=FAILED
