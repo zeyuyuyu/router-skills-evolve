@@ -2,3 +2,8 @@
 [2026-05-14T$(date -u +%H:%M:%S)Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable (SSH timeout). No state read, no actions taken. Will retry on next cron tick.
 [2026-05-14T22:02:46Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable (SSH timeout after 20s). No state read, no actions taken. Will retry on next cron tick.
 [2026-05-15T00:08:09Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connect to both port 22 and port 50507 timed out. sshpass/openssh-client installed on shepherd host. No state read, no actions taken. All checks (A/B/C/D/E) skipped. Will retry at next 2-hour tick.
+[2026-05-15T02:11:19Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable. TCP connect to port 50507 timed out after 20s. sshpass installed successfully but SSH handshake never completed.
+  Actions taken: none (cannot reach host).
+  Recommendation: verify A800 is powered on, SSH daemon is running on port 50507, and firewall allows inbound from this runner's egress IP.
+  Next: retry on next 2-hour shepherd tick; if still unreachable after 3 consecutive failures, escalate to manual check.
