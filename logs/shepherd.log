@@ -7,3 +7,8 @@
   Actions taken: none (cannot reach host).
   Recommendation: verify A800 is powered on, SSH daemon is running on port 50507, and firewall allows inbound from this runner's egress IP.
   Next: retry on next 2-hour shepherd tick; if still unreachable after 3 consecutive failures, escalate to manual check.
+[2026-05-15T06:10:01Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181) unreachable. TCP timeout on both port 22 and port 50507.
+  Actions taken: none (cannot reach host).
+  Note: shepherd.log on A800 was not updated. This entry is written to local fallback log.
+  Next step: verify A800 power/network status manually before next shepherd cycle.
