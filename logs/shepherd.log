@@ -36,3 +36,19 @@
     2. Relocate the shepherd cron to run directly on A800 or a co-located jump host.
     3. Expose A800 state via an HTTPS endpoint the runner can reach (e.g., nginx on A800 serving state.json).
   DONE: actions=FAILED
+[2026-05-15T16:08:01Z] SHEPHERD RUN — FAILED (10th consecutive)
+  Reason: A800 (117.74.66.181:50507) unreachable. TCP probe timed out after 10s; paramiko SSH also timed out. Identical failure mode to all prior runs since 2026-05-14T20:03Z (~20 hours of blind supervision).
+  Checks attempted: paramiko installed OK; TCP socket.create_connection(117.74.66.181, 50507, timeout=10) → timed out. No state.json read.
+  Actions taken: none. All checks (A/B/C/D/E) skipped. Remote shepherd.log not updated.
+  Local artifact status (from git checkout):
+    - hotspots/2026-05-15.json: NOT FOUND in local checkout (expected by 06:00 UTC; now 16:08 UTC — MISSING, Step E alert).
+    - reports/ideas-2026-05-15.md: PRESENT (generated as offline fallback by prior run).
+  ESCALATION — CRITICAL (10th failure, ~20 hours blind):
+    Queue starvation, crashed experiments, disk pressure, and result alerts are ALL undetected.
+    Root cause confirmed: this cloud runner's outbound network policy blocks TCP to 117.74.66.181:50507.
+    This is a permanent structural misconfiguration; retrying will not recover.
+  Required action (human intervention needed — choose one):
+    1. Add 117.74.66.181 to this runner's outbound network allowlist.
+    2. Relocate shepherd cron to run on A800 directly or a co-located jump host.
+    3. Expose A800 state via HTTPS endpoint reachable by this runner.
+  DONE: actions=FAILED
