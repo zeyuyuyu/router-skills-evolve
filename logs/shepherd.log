@@ -25,3 +25,4 @@
   Actions taken: none. All checks (A/B/C/D/E) skipped. shepherd.log on A800 not updated.
   ESCALATION PERSISTS: ~14 hours of unsupervised auto-research. Queue starvation, crashed experiments, and disk pressure are all undetected risks.
   Recommended next action: SSH into A800 manually and run the shepherd script locally, or reconfigure this runner's outbound network allowlist to permit 117.74.66.181:50507.
+[2026-05-15T12:18:03Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. All checks (queue, GPU, disk, artifacts, experiment health) skipped. Manual intervention may be required if server is down for extended period. DONE: actions=FAILED
