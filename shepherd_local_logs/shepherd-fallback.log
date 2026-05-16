@@ -1,0 +1,2 @@
+[2026-05-16T$(date -u +%H:%M:%S)Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — ssh timed out after 15s. No state read, no actions taken. All steps (queue check, stuck-pid check, disk check, artifact health check) skipped. Will retry on next 2-hour cron tick.
+[2026-05-16T04:09:38Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — ssh timed out after 15s. No state read, no actions taken. All steps (queue check, stuck-pid check, disk check, artifact health check) skipped. Will retry on next 2-hour cron tick.
