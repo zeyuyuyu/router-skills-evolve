@@ -80,3 +80,11 @@
   DONE: actions=FAILED
 [2026-05-16T00:09:10Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s. No state read, no actions taken. All steps skipped. Will retry on next 2-hour cron tick.
 [2026-05-16T02:03:23Z] SHEPHERD RUN FAILED — A800 unreachable. TCP connect to 117.74.66.181:50507 timed out (15s). sshpass installed but ssh binary absent in container; additionally raw TCP also failed, indicating network policy blocks egress to A800. No state read, no actions taken. This run is a NO-OP. Human follow-up required: verify A800 is online and that the execution environment has network egress to 117.74.66.181:50507.
+[2026-05-16T06:15:05Z] SHEPHERD RUN — FAILED (~19th consecutive)
+  Reason: A800 (117.74.66.181:50507) unreachable. TCP probes to ports 22 and 50507 both timed out (15s). paramiko installed but TCP-level connectivity absent — runner outbound network policy blocks egress to A800. Persistent failure since 2026-05-14T20:03Z (~34 hours blind).
+  Actions taken: none. All checks (A/B/C/D/E) skipped. Remote shepherd.log not updated.
+  Step E artifact check (UTC 2026-05-16T06:15:05Z):
+    - hotspots/2026-05-16.json: MISSING (expected by 06:00 UTC)
+    - reports/ideas-2026-05-16.md: MISSING (expected by 07:00 UTC)
+  ESCALATION — CRITICAL: Auto-research system has been fully blind for ~34 hours. Queue starvation, experiment crashes, disk overrun, and surprising results all go undetected. Human intervention required: verify A800 is reachable (check server power, SSH daemon on port 50507, and firewall egress rules from this runner). Consider moving shepherd cron to a co-located host or exposing state via HTTPS.
+  DONE: actions=FAILED
