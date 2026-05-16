@@ -78,3 +78,4 @@
       2. Move shepherd cron onto A800 directly or a co-located jump host.
       3. Expose A800 state over HTTPS reachable from this runner.
   DONE: actions=FAILED
+[2026-05-16T00:09:10Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s. No state read, no actions taken. All steps skipped. Will retry on next 2-hour cron tick.
