@@ -116,3 +116,4 @@ DONE: actions=FAILED
     3. Expose A800 state over an HTTPS endpoint reachable from this runner.
 DONE: actions=FAILED
 [2026-05-16T22:09:31Z] SHEPHERD RUN FAILED — A800 unreachable (117.74.66.181:50507). SSH timed out after 15s. sshpass was missing and had to be installed from apt; openssh-client (9.6p1-3ubuntu13) also had to be installed due to 404 on newer security-update version. No state was read, no actions taken. Remote shepherd.log could not be updated. Next shepherd run should retry connectivity; if A800 remains unreachable, investigate network policy / firewall on the cloud execution environment side.
+[2026-05-17T00:12:11Z] SHEPHERD RUN FAILED — A800 unreachable. TCP connect to 117.74.66.181:50507 timed out (10s). Likely outbound network policy blocks this remote execution environment from reaching the A800 SSH port. No state read, no actions taken. Skipping this cycle.
