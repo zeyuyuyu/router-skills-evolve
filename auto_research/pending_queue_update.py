@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Pending queue update — generated 2026-05-16 by autonomous research agent.
-Accumulates experiments from 2026-05-15 (5 entries) and 2026-05-16 (4 entries).
+Pending queue update — last updated 2026-05-17 by autonomous research agent.
+Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4).
+Total pending: 13 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -167,7 +168,7 @@ NEW_EXPERIMENTS = [
         },
         "gpu": "auto",
     },
-    # ── 2026-05-16 batch (4 experiments) ───────────────────────────────────
+    # ── 2026-05-16 batch (4 experiments) ────────────────────────────────────
     {
         "id": "exp_2026_05_16_001_pgrpo_partial_reward_15b",
         "priority": 9,
@@ -297,6 +298,155 @@ NEW_EXPERIMENTS = [
             "eval_limit": 100,
             "max_new_tokens": 192,
             "seeds": [42],
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-17 batch (4 experiments) ────────────────────────────────────
+    {
+        "id": "exp_2026_05_17_001_kl_curriculum_15b_300tasks",
+        "priority": 9,
+        "kind": "grpo_curriculum_continual",
+        "rationale": (
+            "The two strongest pending interventions — KL regularization (arxiv:2503.06639) "
+            "and easy-to-hard curriculum (arxiv:2605.00433) — are being tested in isolation "
+            "in exp_2026_05_15_002 and exp_2026_05_15_001 respectively. They address "
+            "orthogonal failure modes: KL prevents distribution collapse / reward hacking "
+            "during longer training runs, while curriculum prevents zero-gradient rollouts "
+            "on hard tasks seen before the model is ready. Combining both on 300 tasks tests "
+            "whether the gains are additive: KL stabilises the extra 100 tasks beyond the "
+            "safe 200-task ceiling, while curriculum ensures those 100 additional tasks are "
+            "introduced in the order the model can learn from. If each independently gives "
+            "+2–3pts, the combination on 300 tasks could reach +4–6pts — the target for a "
+            "paper-quality LLM training result. All other hyperparams match the best case "
+            "(lr=5e-6, LoRA r=16, 4 rollouts, qwen-chat, binary reward). Estimated: ~130 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 300,
+            "curriculum": "easy_to_hard",
+            "difficulty_metric": "base_model_solve_rate",
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "kl_coeff": 0.02,
+            "use_reference_model": True,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_17_002_grpo_15b_lr1e6_200x4",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Our best case uses lr=5e-6; the degradation at 400 tasks (same lr) implies "
+            "the policy update step is near the stability boundary. GRPO dynamics analysis "
+            "(arxiv:2503.06639) shows that the effective gradient magnitude scales as "
+            "lr × |advantage| and that for small models (<2B) the advantage signal is "
+            "noisier per rollout, amplifying instability at higher LRs. A 5× more "
+            "conservative lr=1e-6 keeps the update in a more stable regime without "
+            "requiring KL regularization or curriculum scheduling. If lr=1e-6 matches "
+            "+2pts with lower variance across seeds, it is a safer default than lr=5e-6 "
+            "and enables longer training runs. If it underperforms, lr=5e-6 is confirmed "
+            "as necessary for the model to escape local minima. This isolates the LR "
+            "effect cleanly: all other params identical to the best case (200 tasks, "
+            "4 rollouts, 1 epoch, LoRA r=16, qwen-chat, binary reward). Estimated: ~90 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 1e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_17_003_grpo_15b_lora_r32_200x4",
+        "priority": 6,
+        "kind": "grpo_continual",
+        "rationale": (
+            "History shows a clear monotonic trend in LoRA rank: r=8 gives +1pt on 0.5B "
+            "and r=16 gives +2pts on 1.5B. The LoRA paper (arxiv:2106.09685, Hu et al.) "
+            "demonstrates that for complex adaptation tasks the gain from rank increase is "
+            "significant up to r=32 and diminishes above r=64. For GRPO specifically, a "
+            "higher LoRA rank means the policy gradient can express richer weight-space "
+            "updates, which is important when the target behaviour (generating correct code "
+            "that passes test assertions) requires structural changes to the model's "
+            "generation distribution rather than surface-level token biases. With LoRA r=32 "
+            "on a 1.5B model the adapter adds ~52M trainable parameters (vs ~26M for r=16), "
+            "which at 80GB VRAM with 4 rollouts is safely within budget. All other params "
+            "identical to the best case (200 tasks, lr=5e-6, 4 rollouts, binary reward, "
+            "qwen-chat). Estimated: ~95 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 32,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_17_004_forgetting_eval_3b_grpo_adapter",
+        "priority": 5,
+        "kind": "forgetting_eval",
+        "rationale": (
+            "The 3B GRPO adapter (from the run that degraded: 62->60 MBPP eval100) has "
+            "never been evaluated on benchmarks other than MBPP. Before proposing further "
+            "3B training (exp_2026_05_16_002 is the 3B curriculum experiment), it is "
+            "essential to understand whether the 62->60 degradation is MBPP-specific or "
+            "whether the adapter also damaged HumanEval performance. Two contrasting "
+            "outcomes are informative: (a) if HumanEval also degrades by ~2pts, the 3B "
+            "GRPO recipe is uniformly harmful and the curriculum fix (exp_2026_05_16_002) "
+            "is the only path; (b) if HumanEval is preserved or improves, the degradation "
+            "is a dataset-distribution artefact, not a general forgetting problem, which "
+            "changes the interpretation of the 3B results significantly. HANDOFF section 6 "
+            "(open question 1) calls for quantifying forgetting before paper claims. "
+            "Eval-only; no training. Adapter path: "
+            "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_3b_grpo_200x4 "
+            "(created by the earlier degraded 3B run). Estimated: ~35 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+            "adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_3b_grpo_200x4",
+            "eval_sets": [
+                {
+                    "name": "HumanEval",
+                    "data": "data/HumanEval.jsonl",
+                    "limit": 164,
+                    "prompt_style": "qwen-chat",
+                },
+                {
+                    "name": "MBPP_ood",
+                    "data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+                    "limit": 50,
+                    "offset": 100,
+                    "prompt_style": "qwen-chat",
+                },
+            ],
+            "max_new_tokens": 384,
         },
         "gpu": "auto",
     },
