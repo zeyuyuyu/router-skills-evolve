@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-17 by autonomous research agent.
-Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4).
-Total pending: 13 experiments.
+Pending queue update — last updated 2026-05-18 by autonomous research agent.
+Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4).
+Total pending: 17 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -447,6 +447,170 @@ NEW_EXPERIMENTS = [
                 },
             ],
             "max_new_tokens": 384,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-18 batch (4 experiments) ────────────────────────────────────
+    {
+        "id": "exp_2026_05_18_001_fgrpo_focal_advantage_15b",
+        "priority": 9,
+        "kind": "grpo_continual",
+        "rationale": (
+            "F-GRPO (arxiv:2602.06717, Feb 2026) identifies a frequency bias in GRPO: "
+            "with small group sizes (G=4), updates concentrate probability mass on "
+            "already-common correct solutions, ignoring rare-correct trajectories on hard "
+            "tasks. The paper derives that the probability of a gradient update missing "
+            "rare-correct modes grows super-linearly as success rate increases. Our history "
+            "shows ~53/100 eval tasks are never solved across all 4 rollouts (zero-gradient "
+            "groups), while ~20/100 are consistently solved (near-zero advantage, noise "
+            "updates). F-GRPO introduces a Focal-loss-inspired difficulty-aware advantage "
+            "scaling coefficient: advantage_scaled = advantage × (1 - success_rate)^gamma, "
+            "which down-weights groups where the model already succeeds frequently (gamma "
+            "controls the down-weighting strength; gamma=2 from the paper). This gives the "
+            "47 hard tasks (1-4 successes in 4 rollouts) ~2-4× more gradient weight than "
+            "the 20 easy tasks, directly addressing the key failure mode identified in our "
+            "history without increasing compute cost. All other params match the best case "
+            "(1.5B, 200 tasks, 1 epoch, lr=5e-6, LoRA r=16, qwen-chat, binary reward, "
+            "eval@100). Requires adding focal_gamma field to runner.py grpo_continual kind. "
+            "Estimated wall-clock: ~90 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "advantage_scale": "focal",
+            "focal_gamma": 2.0,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_18_002_dapo_dynamic_sampling_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "DAPO (arxiv:2503.14476, ByteDance, March 2025) introduces dynamic sampling: "
+            "when all rollouts in a group either all pass or all fail, the advantage is "
+            "identically zero and the group contributes only gradient noise. DAPO discards "
+            "these uninformative groups and re-samples new prompts until every group "
+            "contains at least one passing and one failing rollout, guaranteeing non-zero "
+            "advantage and clean gradient signal throughout training. Our 200-task GRPO "
+            "baseline uses standard GRPO which includes all-fail groups (the ~53% "
+            "consistently-failing hard tasks) and all-pass groups (the ~20% trivially-easy "
+            "tasks), so roughly 73% of gradient updates are likely noise-dominated. DAPO "
+            "also replaces sample-level policy gradient loss with token-level loss "
+            "(normalised per-token rather than per-sample), shown in the paper to stabilise "
+            "training for variable-length code outputs. Combined, these two changes "
+            "require no extra parameters and add ~10% overhead for re-sampling but produce "
+            "much cleaner gradients — DAPO achieves 50pts on AIME2024 with Qwen2.5-32B, "
+            "and the same mechanism should help at 1.5B for MBPP. All other params match "
+            "the best case (200 tasks, 1 epoch, lr=5e-6, LoRA r=16, qwen-chat, binary "
+            "reward, eval@100). Requires runner.py support for dynamic_sampling and "
+            "loss_level fields. Estimated wall-clock: ~95 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "dynamic_sampling": True,
+            "loss_level": "token",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_18_003_scafgrpo_hint_injection_15b",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Scaf-GRPO (arxiv:2510.19807, Oct 2025 / Feb 2026) addresses the 'learning "
+            "cliff': tasks where the model consistently fails all rollouts, collapsing the "
+            "advantage to zero and making the task invisible to the policy gradient. Scaf-GRPO "
+            "monitors training progress per task and, when a task's rolling success rate "
+            "remains at 0 after a stagnation window (e.g., 3 consecutive gradient steps with "
+            "zero reward), injects a tiered in-prompt hint — first an abstract hint "
+            "('identify the core algorithmic pattern'), then if still failing a concrete hint "
+            "('use a sliding-window over the list') — that guides the rollout toward a valid "
+            "structure without prescribing the exact solution. On AIME24, Scaf-GRPO boosted "
+            "Qwen2.5-Math-7B by a relative 44.3% over vanilla GRPO. For our 1.5B MBPP case, "
+            "approximately 53/100 eval tasks are never solved in any rollout; scaffold hints "
+            "on those tasks would convert some from zero-reward to mixed-reward, providing "
+            "gradient signal on the hardest segment of the training distribution. All other "
+            "params match the best case (200 tasks, 1 epoch, lr=5e-6, LoRA r=16, qwen-chat, "
+            "binary reward, eval@100). Requires runner.py support for scaffold_stagnation_window "
+            "and scaffold_hint_levels fields. Estimated wall-clock: ~110 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "scaffold_stagnation_window": 3,
+            "scaffold_hint_levels": ["abstract", "concrete"],
+            "eval_limit": 100,
+            "max_new_tokens": 256,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_18_004_frpo_2epoch_15b_200x4",
+        "priority": 6,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Our entire history uses epochs=1. Multi-epoch RL training is the natural next "
+            "step to squeeze more learning from the same 200 tasks, but 'Mechanistic Analysis "
+            "of Catastrophic Forgetting in LLMs During Continual Fine-tuning' "
+            "(arxiv:2601.18699, Jan 2026) shows that forgetting accelerates dramatically in "
+            "later epochs (3-5): attention heads in lower layers show 15–23% severe disruption "
+            "correlated with forgetting onset. However, FRPO (arxiv:2602.08813, Feb 2026) "
+            "modifies GRPO with a max-min formulation that maximises the minimum reward over "
+            "a KL-bounded neighbourhood of policies — equivalently, an entropic-risk objective "
+            "that up-weights low-reward rollouts and penalises high-variance policies. FRPO "
+            "is proven to preserve performance under subsequent fine-tuning while adding no "
+            "extra computation. By running 2 epochs under the FRPO objective, we test whether "
+            "the frpo_mode can prevent the 2nd-epoch forgetting/collapse that standard GRPO "
+            "would likely exhibit. If 2-epoch FRPO beats 1-epoch standard GRPO (+2pts), it "
+            "opens the door to multi-epoch training at 0 additional data cost. All other "
+            "params match the best case (200 tasks, lr=5e-6, LoRA r=16, qwen-chat, binary "
+            "reward, eval@100). Requires runner.py support for frpo_mode field. "
+            "Estimated wall-clock: ~165 minutes (2× training; within 4h budget)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 2,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "frpo_mode": True,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
         },
         "gpu": "auto",
     },
