@@ -145,3 +145,4 @@ DONE: actions=FAILED
   sshpass installed, ssh client installed (v1:9.6p1-3ubuntu13), but outbound connection to port 50507 was blocked.
   No state was read. No actions taken.
   DONE: actions=none (A800 unreachable)
+[2026-05-19T18:04:20Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — ssh connection timed out after 15s. No state read, no actions taken. Skipping all Steps 1-3. Recommend checking A800 network/power and retrying next cycle.
