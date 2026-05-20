@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-19 by autonomous research agent.
+Pending queue update — last updated 2026-05-20 by autonomous research agent.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
-2026-05-19 (4).
-Total pending: 21 experiments.
+2026-05-19 (4), 2026-05-20 (2).
+Total pending: 23 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -782,6 +782,104 @@ NEW_EXPERIMENTS = [
             "seeds": [42, 123],
             "prompt_style": "qwen-chat",
             "eval_limit": 100,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-20 batch (2 experiments — queue > 20 cap) ──────────────────────
+    {
+        "id": "exp_2026_05_20_001_rloo_binary_reward_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Exploring Pass-Rate Reward in RL for Code Generation (arxiv:2605.02944, "
+            "May 2026) evaluates GRPO and RLOO in a strict on-policy regime on code "
+            "generation benchmarks and finds a key algorithmic difference: RLOO "
+            "(REINFORCE Leave-One-Out) uses a per-rollout leave-one-out baseline "
+            "A_i = r_i - mean(r_{j≠i}) rather than the group-level mean/std "
+            "normalisation in standard GRPO. Critically, the Sparse Policy Selection "
+            "paper (arxiv:2605.06241, May 2026) establishes that RL performs sparse "
+            "targeted edits at high-entropy token positions — not broad capability "
+            "acquisition. RLOO's per-rollout baseline is a lower-variance advantage "
+            "estimate than GRPO's group mean: with G=4, GRPO uses all 4 rewards for "
+            "normalisation and then for gradient, mixing these roles; RLOO uses 3 "
+            "as baseline for 1, isolating the gradient signal per rollout. In our "
+            "27/100 mixed-outcome tasks (1 pass, 3 fail), RLOO assigns the correct "
+            "rollout advantage = 1.0 - mean(0,0,0) = 1.0, while standard GRPO "
+            "normalises the whole group and may assign smaller magnitude advantages "
+            "due to std-scaling. Additionally, RLOO is unbiased (the leave-one-out "
+            "baseline is exact for on-policy objectives) whereas GRPO's group-relative "
+            "normalisation is biased when group size is small (G=4). arxiv:2605.02944 "
+            "shows that with binary reward, RLOO matches or slightly exceeds GRPO on "
+            "HumanEval and MBPP in strict on-policy settings. All params match best "
+            "case (1.5B, 200 tasks, 4 rollouts, 1 epoch, lr=5e-6, LoRA r=16, "
+            "qwen-chat, binary reward, eval@100). Runner changes: add "
+            "algorithm='rloo' field to grpo_continual kind; implement leave-one-out "
+            "advantage estimation (trivial change from group mean to leave-one-out). "
+            "Estimated wall-clock: ~90 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "algorithm": "rloo",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_20_002_passk_eval_grpo_adapter_15b",
+        "priority": 7,
+        "kind": "forgetting_eval",
+        "rationale": (
+            "Rethinking RL for LLM Reasoning: It's Sparse Policy Selection, Not "
+            "Capability Learning (arxiv:2605.06241, May 2026) provides a mechanistic "
+            "account of why our GRPO training produces only +2pts at pass@1: RL "
+            "redistributes probability mass at a sparse set of high-entropy token "
+            "positions rather than teaching new capabilities. Critically, this sparse "
+            "redistribution is predicted to compound with test-time compute: if the "
+            "adapter shifts even a small amount of probability mass toward correct "
+            "solutions at key decision points, sampling more solutions at inference "
+            "time (larger k) should show super-linear gain relative to the base model. "
+            "Concretely: if base pass@1=0.47 and adapter pass@1=0.49, but the adapter's "
+            "per-task probability of generating a correct solution increased from "
+            "base_p → adapter_p by +5-10% on average (not just +2% at k=1), then at "
+            "k=4 the gain would be visible as 1-(1-adapter_p)^4 vs 1-(1-base_p)^4. "
+            "This experiment evaluates the existing 1.5B GRPO adapter at pass@1, "
+            "pass@4, and pass@8 on the 100-task MBPP eval set (temperature=0.8, "
+            "multiple sample draws), comparing to the base model at the same k values. "
+            "Two outcomes are informative: (a) if adapter pass@k >> base pass@k for "
+            "k=4,8 despite small pass@1 gap, the RL training is succeeding silently "
+            "and the path forward is test-time compute rather than more training; "
+            "(b) if pass@k gain tracks pass@1 gain (stays near +2pts), the adapter "
+            "has made no deep structural improvement and the sparse-editing framing "
+            "predicts future GRPO variants will also plateau near +2pts, motivating "
+            "a fundamentally different approach (distillation, test-time tree search). "
+            "Pure eval — no training. Estimated wall-clock: ~35 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4",
+            "eval_sets": [
+                {
+                    "name": "MBPP_passk",
+                    "data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+                    "limit": 100,
+                    "offset": 0,
+                    "prompt_style": "qwen-chat",
+                    "pass_k_values": [1, 4, 8],
+                    "temperature": 0.8,
+                    "num_samples": 8,
+                },
+            ],
+            "max_new_tokens": 256,
         },
         "gpu": "auto",
     },
