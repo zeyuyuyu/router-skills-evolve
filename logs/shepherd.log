@@ -156,3 +156,4 @@ DONE: actions=FAILED
   sshpass installed OK; TCP connection never established.
   Actions taken : none (cannot reach A800).
   Next step     : verify A800 network / VPN / firewall; re-run shepherd once reachable.
+[2026-05-20T20:04:06Z] SHEPHERD RUN — FAILED: A800 unreachable (117.74.66.181:50507). TCP connect_ex=11 (EAGAIN) on all 3 probes; outbound SSH to non-standard port is blocked by this execution environment's network policy. No state read, no actions taken. Manual check required.
