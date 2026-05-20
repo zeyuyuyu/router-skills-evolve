@@ -156,3 +156,4 @@ DONE: actions=FAILED
   sshpass installed OK; TCP connection never established.
   Actions taken : none (cannot reach A800).
   Next step     : verify A800 network / VPN / firewall; re-run shepherd once reachable.
+[2026-05-20T22:07:37Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH/TCP connection timed out after 10s. Persistent outage continues (ongoing since ~2026-05-14T20:03Z, now day 5.9+). sshpass installed OK in container; TCP probe to port 50507 blocked by cloud runner outbound policy. No state read; all checks (A: queue starvation, B: stuck experiments, C: surprising results, D: disk pressure, E: daily artifact health) skipped. Today's artifacts (hotspots/2026-05-20.json, reports/ideas-2026-05-20.md) status unknown. No actions taken. ESCALATION CRITICAL — manual remediation required. DONE: actions=FAILED
