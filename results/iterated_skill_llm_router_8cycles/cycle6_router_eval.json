@@ -1,0 +1,6057 @@
+{
+  "metrics": {
+    "total_examples": 862,
+    "class_counts": {
+      "small": 495,
+      "large": 367
+    },
+    "threshold": 0.5,
+    "accuracy": 0.8526682134570766,
+    "predicted_small": 422,
+    "predicted_large": 440,
+    "fallback_count": 27,
+    "fallback_rate": 0.031322505800464036,
+    "avg_small_cost": 0.0002007,
+    "avg_large_cost": 0.0052499999999999995,
+    "learned_cost": 2.5364454,
+    "always_small_with_fallback_cost": 2.0997533999999765,
+    "always_large_cost": 4.525499999999999,
+    "learned_vs_always_large": 0.5604784885647995
+  },
+  "records": [
+    {
+      "task_id": "HumanEval/30",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5821666717529297,
+      "signature": "M|list/num"
+    },
+    {
+      "task_id": "HumanEval/31",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49282702803611755,
+      "signature": "M|bool/num/theory"
+    },
+    {
+      "task_id": "HumanEval/32",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5765469670295715,
+      "signature": "L|advanced/list/num"
+    },
+    {
+      "task_id": "HumanEval/33",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5681012272834778,
+      "signature": "M|list/sort"
+    },
+    {
+      "task_id": "HumanEval/34",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5730732083320618,
+      "signature": "S|list/sort"
+    },
+    {
+      "task_id": "HumanEval/35",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5757771730422974,
+      "signature": "S|list"
+    },
+    {
+      "task_id": "HumanEval/36",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5134201049804688,
+      "signature": "M|num"
+    },
+    {
+      "task_id": "HumanEval/37",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.556414008140564,
+      "signature": "M|list/sort"
+    },
+    {
+      "task_id": "HumanEval/38",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5779333710670471,
+      "signature": "L|crypto/str"
+    },
+    {
+      "task_id": "HumanEval/39",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49089285731315613,
+      "signature": "M|num/theory"
+    },
+    {
+      "task_id": "HumanEval/40",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.552992045879364,
+      "signature": "M|bool/list/num"
+    },
+    {
+      "task_id": "HumanEval/41",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5548935532569885,
+      "signature": "L|num/str"
+    },
+    {
+      "task_id": "HumanEval/42",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.58243727684021,
+      "signature": "M|list"
+    },
+    {
+      "task_id": "HumanEval/43",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5473400950431824,
+      "signature": "M|bool/list/num"
+    },
+    {
+      "task_id": "HumanEval/44",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5487663149833679,
+      "signature": "M|num/str"
+    },
+    {
+      "task_id": "HumanEval/45",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5503361225128174,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "HumanEval/46",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5538792014122009,
+      "signature": "M|advanced/num"
+    },
+    {
+      "task_id": "HumanEval/47",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.567514181137085,
+      "signature": "S|list"
+    },
+    {
+      "task_id": "HumanEval/48",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4767096936702728,
+      "signature": "M|bool/str"
+    },
+    {
+      "task_id": "HumanEval/49",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5499327182769775,
+      "signature": "M|general"
+    },
+    {
+      "task_id": "HumanEval/50",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5491340756416321,
+      "signature": "M|crypto/str"
+    },
+    {
+      "task_id": "HumanEval/51",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4816426932811737,
+      "signature": "M|str"
+    },
+    {
+      "task_id": "HumanEval/52",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5710178017616272,
+      "signature": "M|bool/list/num"
+    },
+    {
+      "task_id": "HumanEval/53",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5386010408401489,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "HumanEval/54",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4654722511768341,
+      "signature": "M|bool/str"
+    },
+    {
+      "task_id": "HumanEval/55",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5232270359992981,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "HumanEval/56",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5224115252494812,
+      "signature": "M|bool/str"
+    },
+    {
+      "task_id": "HumanEval/57",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5581493973731995,
+      "signature": "M|bool/list"
+    },
+    {
+      "task_id": "HumanEval/58",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.583596408367157,
+      "signature": "M|list/sort"
+    },
+    {
+      "task_id": "HumanEval/59",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.542969822883606,
+      "signature": "M|theory"
+    },
+    {
+      "task_id": "uncommonroute/all/2539",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4645352065563202,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2540",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4871297776699066,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2541",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4627402424812317,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/2542",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5305485129356384,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2543",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47056907415390015,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2544",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4620550870895386,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2545",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4905163645744324,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2546",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46967560052871704,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2547",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4812130033969879,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2548",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5135645866394043,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2549",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4698333740234375,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2550",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5132026672363281,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2551",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5061655044555664,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2552",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41700997948646545,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2553",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45725318789482117,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2554",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4775908887386322,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2555",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46107178926467896,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2556",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4377301335334778,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/2557",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.471457302570343,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2558",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4351385533809662,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2559",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4486035108566284,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2560",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4571796655654907,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2561",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45056435465812683,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/2562",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42810773849487305,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2563",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4419093132019043,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2564",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4489777386188507,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2565",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4546712636947632,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2566",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42856869101524353,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2567",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42025700211524963,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2568",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4421567916870117,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2569",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43746694922447205,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2570",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4429626166820526,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2571",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43488630652427673,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2572",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41937869787216187,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2573",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.451170951128006,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2574",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4106845259666443,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2575",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42577680945396423,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2576",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42168155312538147,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2577",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49908962845802307,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2578",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47474405169487,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2579",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4645027816295624,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2580",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47043585777282715,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2581",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43300116062164307,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2582",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47230908274650574,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2583",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4641018807888031,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2584",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4669078290462494,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2585",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4715302288532257,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/2586",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4977414608001709,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2587",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42699873447418213,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2588",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4779505729675293,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2589",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42652860283851624,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2590",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44202062487602234,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2591",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42006775736808777,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2592",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4346007704734802,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2593",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41065430641174316,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2594",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44504281878471375,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2595",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4551885426044464,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2596",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4157329201698303,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2597",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4539584815502167,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2598",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46212565898895264,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2599",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40522775053977966,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2600",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4207743704319,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2601",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43464186787605286,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2602",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47490784525871277,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2603",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44841134548187256,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2604",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4760802984237671,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2605",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4239058196544647,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2606",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4222501814365387,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2607",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4395996630191803,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2608",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4350900650024414,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2609",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4304808974266052,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2610",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4381556510925293,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2611",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4145071804523468,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2612",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44609278440475464,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2613",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4302280843257904,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2614",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46005329489707947,
+      "signature": "S|theory"
+    },
+    {
+      "task_id": "uncommonroute/all/2615",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45294561982154846,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2616",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42743706703186035,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2617",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.517030656337738,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2618",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5067077875137329,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2619",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48715877532958984,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2620",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5078904628753662,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2621",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47181254625320435,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2622",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5195603370666504,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2623",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49608784914016724,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2624",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4762449860572815,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2625",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5040197372436523,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2626",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5058982372283936,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2627",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5130034685134888,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2628",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4815196096897125,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2629",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5252856612205505,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2630",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5122851133346558,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2631",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47621950507164,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2632",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4837567210197449,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2633",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5448154211044312,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2634",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5824440121650696,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2635",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5837127566337585,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2636",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5446723699569702,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2637",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5498304963111877,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2638",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5432197451591492,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2639",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5243776440620422,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2640",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5267902612686157,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2641",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5059313178062439,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2642",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5498738288879395,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2643",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5108890533447266,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2644",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5086530447006226,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2645",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5641900300979614,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2646",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5867888331413269,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2647",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5540882349014282,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2648",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43250080943107605,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2649",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.519027054309845,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2650",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41841185092926025,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2651",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4741577208042145,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2652",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5344870090484619,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2653",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4451594650745392,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2654",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43853136897087097,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2655",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5358565449714661,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2656",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4446718394756317,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2657",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4523887634277344,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2658",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5078898072242737,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2659",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4229537844657898,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2660",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5205056071281433,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2661",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5182770490646362,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2662",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4706958830356598,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2663",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.531688928604126,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2664",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44183579087257385,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2665",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5094280242919922,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2666",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5016718506813049,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2667",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5252993702888489,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2668",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4357365369796753,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2669",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4353780448436737,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2670",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4364105463027954,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2671",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42844855785369873,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2672",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47630777955055237,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2673",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46887993812561035,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2674",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4637346863746643,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2675",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4543587565422058,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2676",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4356604814529419,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2677",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43266761302948,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2678",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45657461881637573,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2679",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4108319580554962,
+      "signature": "S|bool/list"
+    },
+    {
+      "task_id": "uncommonroute/all/2680",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45156627893447876,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2681",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4240816831588745,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2682",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45874521136283875,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2683",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4220154583454132,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2684",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4814634919166565,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2685",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4150460958480835,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2686",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42819663882255554,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2687",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47102779150009155,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2688",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42564234137535095,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2689",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49968960881233215,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2690",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43329817056655884,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2691",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.450802206993103,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2692",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45378220081329346,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2693",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5048393607139587,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/2694",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46536505222320557,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2695",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40060678124427795,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2696",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45390209555625916,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2697",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4716319441795349,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2698",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5612894892692566,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2699",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5404702425003052,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2700",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5635794997215271,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2701",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5348719358444214,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2702",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5447911024093628,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2703",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5451337695121765,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2704",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5397634506225586,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2705",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.52349853515625,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2706",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5307019948959351,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2707",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5323106646537781,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2708",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5222374200820923,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2709",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5506706833839417,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2710",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5434806942939758,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2711",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.52817302942276,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2712",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5403263568878174,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2713",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5411585569381714,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2714",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.534839391708374,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2715",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5547502636909485,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2716",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5524533987045288,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2717",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5605147480964661,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2718",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5751034021377563,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2719",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.481304794549942,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2720",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5220426917076111,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2721",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5231397151947021,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2722",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5469443202018738,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/2723",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5695245862007141,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2724",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5227319002151489,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2725",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5505082011222839,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2726",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5428539514541626,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2727",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5336188673973083,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2728",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5148122906684875,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2729",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5454884767532349,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2730",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5335770845413208,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2731",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5442324280738831,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2732",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5173678994178772,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2733",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5508896708488464,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2734",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5682186484336853,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2735",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5547270774841309,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2736",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5459099411964417,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2737",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5488250851631165,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2738",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5358389616012573,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2739",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5442917943000793,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2740",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5462985038757324,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2741",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5382040739059448,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2742",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5558935403823853,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2743",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5372728705406189,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2744",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5396804809570312,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2745",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5981248617172241,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2746",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5987646579742432,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2747",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5971911549568176,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2748",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5447627902030945,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2749",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5491101145744324,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2750",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6068537831306458,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2751",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6033748984336853,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2752",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.595964252948761,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2753",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5990270376205444,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2754",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6114873886108398,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2755",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5843003392219543,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2756",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.609795331954956,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2757",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6050261855125427,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2758",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5884479284286499,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2759",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5749807357788086,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2760",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.537021815776825,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2761",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5567752122879028,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2762",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5441679954528809,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2763",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5959634184837341,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2764",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.544451892375946,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2765",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5434129238128662,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2766",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.530440628528595,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2767",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.561775803565979,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2768",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5372668504714966,
+      "signature": "S|list"
+    },
+    {
+      "task_id": "uncommonroute/all/2769",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5203578472137451,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2770",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5193409323692322,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2771",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5391902327537537,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2772",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5615069270133972,
+      "signature": "S|crypto"
+    },
+    {
+      "task_id": "uncommonroute/all/2773",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5185726284980774,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2774",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5306333303451538,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2775",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5202572345733643,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2776",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5326955318450928,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2777",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5563265085220337,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2778",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5555675029754639,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2779",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5253732204437256,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2780",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5266265869140625,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2781",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5320706367492676,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2782",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5254788398742676,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2783",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5290183424949646,
+      "signature": "S|list"
+    },
+    {
+      "task_id": "uncommonroute/all/2784",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5341659784317017,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2785",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5486893653869629,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2786",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5301010012626648,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2787",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5344518423080444,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2788",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5345030426979065,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2789",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5424132943153381,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2790",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5267909169197083,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2791",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5538101196289062,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2792",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5344517827033997,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2793",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5536513924598694,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2794",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5449654459953308,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2795",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5417532920837402,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2796",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5191360116004944,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/2797",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5362082719802856,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2798",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5585067272186279,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2799",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5203620791435242,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2800",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5161027908325195,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2801",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.48337551951408386,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2803",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5537033081054688,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "uncommonroute/all/2804",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5270736217498779,
+      "signature": "S|crypto/sort"
+    },
+    {
+      "task_id": "uncommonroute/all/2806",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5274819135665894,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2807",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5233961343765259,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2808",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5717272758483887,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2809",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5490603446960449,
+      "signature": "S|num/str"
+    },
+    {
+      "task_id": "uncommonroute/all/2810",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5514207482337952,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2811",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5549255013465881,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "uncommonroute/all/2812",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5558763146400452,
+      "signature": "S|list"
+    },
+    {
+      "task_id": "uncommonroute/all/2813",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5669618248939514,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "uncommonroute/all/2814",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.559185802936554,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2815",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4823188781738281,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2816",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5412250757217407,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2817",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5560674071311951,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2818",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5131535530090332,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2819",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5219330191612244,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2820",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5296193957328796,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2821",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5626531839370728,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2822",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5303841233253479,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2823",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.504680871963501,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/2824",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.566838264465332,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2825",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5461385250091553,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2826",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.49017709493637085,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2827",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.512660026550293,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2828",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4966449439525604,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2829",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5001332759857178,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2830",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.49328532814979553,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2831",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5205989480018616,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2832",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5141316652297974,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2833",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5282177329063416,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2834",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5146879553794861,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2835",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5390093326568604,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2836",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5509734153747559,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2837",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5596874356269836,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2838",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5426522493362427,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2839",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5470178723335266,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2840",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5582320094108582,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2841",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5976084470748901,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2842",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.594379723072052,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2843",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5395593047142029,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2844",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5644989609718323,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2845",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5818211436271667,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2846",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5852029323577881,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2847",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5731774568557739,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2848",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5617349147796631,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2849",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5210540890693665,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2850",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5664235353469849,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2851",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5164304971694946,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2852",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5411644577980042,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2853",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.49219411611557007,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2854",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5816129446029663,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2858",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5084519982337952,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2859",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.49265241622924805,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2860",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5461053252220154,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2861",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5715113878250122,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2862",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.518671989440918,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2863",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5459880828857422,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2864",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5341750979423523,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2865",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5916852355003357,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2866",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5389226675033569,
+      "signature": "S|num/str"
+    },
+    {
+      "task_id": "uncommonroute/all/2867",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.534327507019043,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2868",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5563137531280518,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2869",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5368613004684448,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2870",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5626062750816345,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2871",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5209183692932129,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2873",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5156881809234619,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2874",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5209314823150635,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2875",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5457873344421387,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/2876",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5362022519111633,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2877",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.524958610534668,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2878",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3889719545841217,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2879",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.401923269033432,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2880",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3964904844760895,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2881",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42009785771369934,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2882",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4186449944972992,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2883",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4141928255558014,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2884",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4050827920436859,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2885",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43800094723701477,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2887",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4057016968727112,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2888",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42274102568626404,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2889",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.406921923160553,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2890",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3996407985687256,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2891",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4094773232936859,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2892",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43922942876815796,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2894",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4026592969894409,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2895",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.39883387088775635,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2896",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4183271825313568,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2897",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.393324077129364,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2898",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4536422789096832,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2899",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.39909881353378296,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2900",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3982892334461212,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2901",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3993799388408661,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2902",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41810840368270874,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/2903",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3944713771343231,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2904",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4695270359516144,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2905",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3991563618183136,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2906",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4359402656555176,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2907",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3945750296115875,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2908",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.404445618391037,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2909",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4147481918334961,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2910",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4365515112876892,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2912",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41188356280326843,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2913",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4282417297363281,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2914",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40957537293434143,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2915",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42510366439819336,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2916",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42162832617759705,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2917",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40180471539497375,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2918",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40215983986854553,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2919",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41648557782173157,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2920",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41237208247184753,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2921",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42982277274131775,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2922",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41146475076675415,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2923",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4077131450176239,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2924",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4304713010787964,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2925",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3873312473297119,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2926",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40239161252975464,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2927",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41523289680480957,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2928",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4216904938220978,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2929",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3980236053466797,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2930",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42181912064552307,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2931",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42276841402053833,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2932",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40441393852233887,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2933",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4102931320667267,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2934",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40191158652305603,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2935",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4170665144920349,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2936",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42676517367362976,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2937",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4260050654411316,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2938",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45088377594947815,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2939",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4552192687988281,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2940",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46403059363365173,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2941",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4291556775569916,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2943",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.39460769295692444,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2944",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.402847558259964,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2945",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4841674566268921,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2946",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42764049768447876,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2947",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4410167336463928,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2948",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41674482822418213,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2949",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4204128384590149,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2950",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44419142603874207,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2951",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4260405898094177,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2952",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4129166603088379,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2953",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44739970564842224,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2954",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44848838448524475,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2955",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4340587556362152,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2956",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41630664467811584,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2957",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43078163266181946,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2958",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4416903555393219,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2959",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41869470477104187,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2960",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4100610315799713,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2961",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4236360788345337,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2963",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43844571709632874,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2964",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4511449337005615,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2965",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4229111671447754,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2966",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4258531928062439,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2967",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.453495591878891,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2968",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4355247914791107,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2970",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44354718923568726,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2971",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.501754641532898,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2972",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4769642651081085,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2973",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4425135850906372,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2974",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4921601414680481,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2976",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45509082078933716,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2977",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4570155143737793,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2978",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43678027391433716,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2979",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40212056040763855,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2981",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4950319826602936,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2982",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5639060139656067,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2983",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5256178379058838,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2984",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49918413162231445,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2986",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40509194135665894,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2987",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44572484493255615,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2988",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42800137400627136,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2989",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40965503454208374,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2991",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43257588148117065,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2992",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4643212854862213,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2993",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.455226331949234,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2994",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43693578243255615,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2996",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4428149163722992,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2997",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4722878932952881,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/2998",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4495820999145508,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/2999",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43812888860702515,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3001",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41359084844589233,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3002",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48001521825790405,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3003",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4089200496673584,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3004",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4281782805919647,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3006",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4412059783935547,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3007",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4956529140472412,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3008",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43487879633903503,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3010",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4149565100669861,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3011",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4359014630317688,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3012",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.40316304564476013,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3014",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41290563344955444,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3015",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4349451959133148,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3016",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.418887197971344,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3018",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44335418939590454,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3019",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5092806220054626,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3020",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47540366649627686,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3022",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4780436158180237,
+      "signature": "S|advanced"
+    },
+    {
+      "task_id": "uncommonroute/all/3023",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5333748459815979,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "uncommonroute/all/3024",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47327303886413574,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3025",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48952871561050415,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3026",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4715718924999237,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3027",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4892148971557617,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3028",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4774571657180786,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3029",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48281168937683105,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3030",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4676383137702942,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3031",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5076362490653992,
+      "signature": "S|bool/num"
+    },
+    {
+      "task_id": "uncommonroute/all/3032",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4833826422691345,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3033",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3966520428657532,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3034",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4675447642803192,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3035",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47811734676361084,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3036",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.41443586349487305,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3037",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46963736414909363,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3038",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48365330696105957,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3039",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4872356355190277,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3040",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48570188879966736,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3041",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4670391082763672,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3042",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46458277106285095,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3043",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46308714151382446,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3044",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.476431667804718,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3045",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4577561020851135,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3046",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44502994418144226,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3047",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49621739983558655,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3048",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4686417877674103,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3049",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46132349967956543,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3050",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4361321032047272,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3051",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4509612023830414,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3052",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4468025267124176,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3053",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4549719989299774,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3054",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4769151210784912,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3055",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44893452525138855,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3056",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.510111391544342,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3057",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4510294198989868,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3058",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4732089936733246,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3059",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45002907514572144,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/3060",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4585420787334442,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3061",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49648818373680115,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3062",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49195823073387146,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3063",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49624696373939514,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3064",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5055024027824402,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3065",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4915524423122406,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3066",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48716968297958374,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3067",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49061715602874756,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3068",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48387080430984497,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3069",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.483440637588501,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3070",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4736306965351105,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3071",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47751688957214355,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3072",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5147392749786377,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3073",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.541096568107605,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3074",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43217703700065613,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3075",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4917128384113312,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3076",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4433521330356598,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3077",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49248024821281433,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3078",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4980503022670746,
+      "signature": "S|theory"
+    },
+    {
+      "task_id": "uncommonroute/all/3079",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4841192066669464,
+      "signature": "S|advanced"
+    },
+    {
+      "task_id": "uncommonroute/all/3080",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5141705870628357,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3081",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4646458625793457,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3082",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4465409815311432,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3083",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44693487882614136,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3084",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4437626600265503,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3085",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4590104818344116,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3086",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48917701840400696,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3087",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4473964273929596,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3088",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5210980772972107,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3089",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4816683232784271,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3090",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47632500529289246,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3091",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44447118043899536,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3092",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47710052132606506,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3093",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44930246472358704,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3094",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4299010932445526,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3095",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44896334409713745,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3096",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4567464292049408,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3097",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4663381278514862,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3098",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4639660120010376,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3099",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4407438635826111,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3100",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42289528250694275,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3101",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4406368136405945,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3102",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46734699606895447,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3103",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4718834459781647,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3104",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4916280210018158,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3105",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45587629079818726,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3106",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5169788599014282,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3107",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.525345504283905,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3108",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5027473568916321,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3109",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44090577960014343,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3110",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45824503898620605,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3111",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5104067921638489,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3112",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4909864664077759,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3113",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4332236647605896,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3114",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4880157709121704,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3115",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49355918169021606,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3116",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.507114589214325,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3117",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4609653949737549,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3118",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4971824586391449,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3119",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49480682611465454,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3120",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4577473998069763,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3121",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5429826378822327,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3122",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5326486825942993,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3123",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5339404344558716,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3124",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5466793179512024,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3125",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4791070222854614,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3126",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49669867753982544,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3127",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49941322207450867,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3128",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5020167827606201,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3129",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5635136961936951,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3130",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5693840384483337,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3131",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5584459900856018,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3132",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4727735221385956,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3133",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4329831004142761,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3134",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46786898374557495,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3135",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5310468077659607,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3136",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3904035985469818,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3137",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45794111490249634,
+      "signature": "S|crypto"
+    },
+    {
+      "task_id": "uncommonroute/all/3138",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45868822932243347,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3139",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4413366913795471,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3140",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4244384169578552,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3141",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4528486430644989,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3142",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4197463393211365,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3143",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4623970091342926,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3144",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5133020877838135,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3145",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5161963701248169,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3146",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48465973138809204,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3147",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4823623299598694,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3148",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48766595125198364,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3149",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.3927514851093292,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3150",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.497939795255661,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3151",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4257948696613312,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3152",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4572301208972931,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3153",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49335139989852905,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3154",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49263888597488403,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3155",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45073574781417847,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3156",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44338929653167725,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3157",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46171092987060547,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3158",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5120293498039246,
+      "signature": "S|list"
+    },
+    {
+      "task_id": "uncommonroute/all/3159",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5254806280136108,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3160",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47320228815078735,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3161",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4328932464122772,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3162",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49163419008255005,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3163",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.494238018989563,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3164",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46480485796928406,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3165",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4385126531124115,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3166",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43170103430747986,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3167",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46762266755104065,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3168",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49977409839630127,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3169",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4993142783641815,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3170",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.469897598028183,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3171",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4983071982860565,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3172",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46523749828338623,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3173",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44789472222328186,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3174",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4660198986530304,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3175",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4803018867969513,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3176",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4612024426460266,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3177",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.469338595867157,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3178",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.49538010358810425,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3179",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.48863619565963745,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3180",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5243023633956909,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3181",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5392787456512451,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3182",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5411648750305176,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3183",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4518400728702545,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3184",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4920386075973511,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3185",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5572364330291748,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3186",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5492475032806396,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3187",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45693734288215637,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3188",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.47347161173820496,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3189",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.519084632396698,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3190",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4787233769893646,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3191",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4877270460128784,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3192",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45291343331336975,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3193",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.44671985507011414,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3194",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4738766551017761,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3195",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5093532204627991,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3196",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.4676816463470459,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3197",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.43908002972602844,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3198",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45807936787605286,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3199",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46511542797088623,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3200",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.46302205324172974,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3201",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.42266517877578735,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3202",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5037897825241089,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3203",
+      "label": "small",
+      "prediction": "large",
+      "p_large": 0.5326933264732361,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3204",
+      "label": "small",
+      "prediction": "small",
+      "p_large": 0.45030033588409424,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3205",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5551114082336426,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3206",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5611181855201721,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3207",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5676984190940857,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3208",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5596951842308044,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3209",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5470642447471619,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3210",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5701195597648621,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3211",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5684966444969177,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3212",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5455961227416992,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3213",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5715055465698242,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3214",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5599370002746582,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3215",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5654672980308533,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3216",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5733190178871155,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3217",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5617972612380981,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/3218",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5900477766990662,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3219",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5635972023010254,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3220",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5814489126205444,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3221",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5863727927207947,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3222",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5543350577354431,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3223",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5696040391921997,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3224",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5807855725288391,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3225",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5450959205627441,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3226",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5060720443725586,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3227",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5577622652053833,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3228",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.565918505191803,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3229",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5787901878356934,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3230",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5629389882087708,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3231",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5545192360877991,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3232",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5771251916885376,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3233",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5689137578010559,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3234",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.558715283870697,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3235",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5543497204780579,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3236",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5593293905258179,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3237",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5641746520996094,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/3238",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5571319460868835,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3239",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5568917393684387,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3240",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5409724712371826,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/3241",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.542708694934845,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3242",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5436412692070007,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3243",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5410823225975037,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3244",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5428516268730164,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3245",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5450047850608826,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3246",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5422421097755432,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3247",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5436164736747742,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3248",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.545115053653717,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3249",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5470022559165955,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3250",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6013469099998474,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3251",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.602499783039093,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3252",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5990114808082581,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3253",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5668178796768188,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3254",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5691652297973633,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3255",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6125220060348511,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3256",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6100280284881592,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3257",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5848119258880615,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3258",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5915021896362305,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3259",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5739373564720154,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3260",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5902254581451416,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3261",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5819441080093384,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3262",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6107720136642456,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3263",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5646436214447021,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3264",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5915733575820923,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3265",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5445569753646851,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3266",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.550011396408081,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3267",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5488913059234619,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3268",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5881086587905884,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3269",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5750730037689209,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/3270",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5803183317184448,
+      "signature": "S|bool/str"
+    },
+    {
+      "task_id": "uncommonroute/all/3271",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5625932216644287,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3272",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5394217371940613,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3273",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.560154378414154,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3274",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5439854264259338,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3275",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5512146949768066,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3276",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5422906279563904,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3277",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5864661335945129,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3278",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5388507843017578,
+      "signature": "S|bool"
+    },
+    {
+      "task_id": "uncommonroute/all/3279",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5543534755706787,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3280",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5452702045440674,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3281",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5415972471237183,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3282",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5511115193367004,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3283",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5452452301979065,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3284",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5992655158042908,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3285",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.599579930305481,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3286",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5653789639472961,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3287",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6079074144363403,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3288",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5792192816734314,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3289",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5751411318778992,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3290",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5925377607345581,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3291",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5624880194664001,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3292",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5405436754226685,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3293",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5579750537872314,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3294",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5440637469291687,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3295",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6003864407539368,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3296",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5957258939743042,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3297",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5487439632415771,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3298",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5412203073501587,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3299",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5366517901420593,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3300",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5672350525856018,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3301",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5155266523361206,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3302",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5781335234642029,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3304",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5169462561607361,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3305",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5725657939910889,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3306",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5429940223693848,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3307",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5911813378334045,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3309",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5727725028991699,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3310",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5437505841255188,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3311",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5826336741447449,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "uncommonroute/all/3312",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5614539980888367,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3313",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5713362693786621,
+      "signature": "S|sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3314",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5658489465713501,
+      "signature": "S|advanced/sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3315",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5360574722290039,
+      "signature": "S|list/sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3316",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5392448902130127,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3317",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5804491639137268,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3318",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5930875539779663,
+      "signature": "S|num/sort"
+    },
+    {
+      "task_id": "uncommonroute/all/3319",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5785847306251526,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3320",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5633450746536255,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3321",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5764198303222656,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3322",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5845034718513489,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3323",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5549962520599365,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3324",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5731363296508789,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "uncommonroute/all/3325",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5659583210945129,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3326",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5829097628593445,
+      "signature": "S|bool/num"
+    },
+    {
+      "task_id": "uncommonroute/all/3327",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5651577115058899,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "uncommonroute/all/3328",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5220013856887817,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3329",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5076907873153687,
+      "signature": "S|theory"
+    },
+    {
+      "task_id": "uncommonroute/all/3330",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5125198364257812,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3331",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5500809550285339,
+      "signature": "S|num/theory"
+    },
+    {
+      "task_id": "uncommonroute/all/3332",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5808883309364319,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3333",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5377954840660095,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3334",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.49850162863731384,
+      "signature": "S|num/theory"
+    },
+    {
+      "task_id": "uncommonroute/all/3335",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5587165951728821,
+      "signature": "S|num"
+    },
+    {
+      "task_id": "uncommonroute/all/3336",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.529983401298523,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3337",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5825626850128174,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3338",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5958716869354248,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3339",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.558575451374054,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3340",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5669270157814026,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3341",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5784573554992676,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3342",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5385491251945496,
+      "signature": "S|theory"
+    },
+    {
+      "task_id": "uncommonroute/all/3343",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5706341862678528,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3344",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5583317875862122,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3345",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5878384113311768,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3346",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5208323001861572,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3347",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5405120253562927,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3348",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5227243304252625,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3349",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5053051114082336,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3350",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.46974748373031616,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3351",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5102530717849731,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3352",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5289381742477417,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3353",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5539715886116028,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3354",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5239912271499634,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3355",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5967206358909607,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3356",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5928335785865784,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3357",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6068050861358643,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3358",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5984832644462585,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3359",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5643022656440735,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3360",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5602688789367676,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3361",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.6024476885795593,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3362",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.608070433139801,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3363",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5542653203010559,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3364",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5874225497245789,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3365",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5797498226165771,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3366",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.598567008972168,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3367",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5581852197647095,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3368",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.605332612991333,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3369",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5421916842460632,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3370",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5910820364952087,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3371",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5202203392982483,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3372",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.546424150466919,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3373",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5177856683731079,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3374",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5840601921081543,
+      "signature": "S|str"
+    },
+    {
+      "task_id": "uncommonroute/all/3375",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5598406195640564,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3376",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5715168118476868,
+      "signature": "S|advanced/str"
+    },
+    {
+      "task_id": "uncommonroute/all/3377",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5351477265357971,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3378",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.45205649733543396,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3379",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4468472898006439,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3380",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.44440850615501404,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3381",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4391496479511261,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3382",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.449378103017807,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3383",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4466690719127655,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3384",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.44422605633735657,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3385",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4397973120212555,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3386",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.44243124127388,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3387",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4448021650314331,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3388",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4373775124549866,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3389",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.43778470158576965,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3390",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.44496116042137146,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3391",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.44396135210990906,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3392",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.4517839252948761,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3393",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5107055306434631,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3394",
+      "label": "large",
+      "prediction": "large",
+      "p_large": 0.5034869909286499,
+      "signature": "S|general"
+    },
+    {
+      "task_id": "uncommonroute/all/3395",
+      "label": "large",
+      "prediction": "small",
+      "p_large": 0.49885812401771545,
+      "signature": "S|general"
+    }
+  ]
+}
