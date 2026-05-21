@@ -1,0 +1,20 @@
+[2026-05-21T10:08:53Z] SHEPHERD RUN — 2026-05-21 (2h check)
+  Status: A800 UNREACHABLE — TCP timeout on 117.74.66.181:50507
+  Outage duration: ≥168 hours (7th consecutive day, down since 2026-05-14T20:03Z)
+  SSH method: paramiko (no sshpass binary ssh); TCP handshake timed out — no connection established.
+  State read: LOCAL GIT ONLY (state.json not accessible)
+  Local queue: 23 experiments pending (from 2026-05-15 through 2026-05-20 batches)
+  Actions taken:
+    A. Queue starvation: SKIPPED — cannot SSH to run idea_gen_local.py; A800 unreachable.
+       Local queue at 23 (> cap), no new ideas generated (daily budget preserved).
+    B. Stuck experiment check: SKIPPED — cannot verify PIDs without SSH.
+    C. Surprising results: SKIPPED — no result JSONs accessible.
+    D. Disk pressure: SKIPPED — cannot run df without SSH.
+    E. Routine health:
+       - hotspots/2026-05-21.json: MISSING (expected 06:00 UTC arxiv scrape — A800 cron dead)
+       - reports/ideas-2026-05-21.md: MISSING (expected 07:00 UTC idea-gen — A800 cron dead)
+       Both artifacts absent due to A800 outage, not a cron misconfiguration.
+  Recommendation: When A800 is restored, immediately run:
+       python3 auto_research/pending_queue_update.py
+    then execute queue in Phase 1 (diagnostics first: EXP-023 pass@k eval, then EXP-015 forgetting).
+  Next shepherd run: +2h (no escalation triggered; outage alert was filed 2026-05-17).
