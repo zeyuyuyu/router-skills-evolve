@@ -1,0 +1,1 @@
+[2026-05-21T12:06:19Z] SHEPHERD RUN FAILED — A800 unreachable (117.74.66.181:50507, SSH timeout after 10s). No state read, no actions taken. Remote execution environment (cloud sandbox) cannot reach A800 — likely blocked by outbound network policy or A800 firewall. Manual check required.
