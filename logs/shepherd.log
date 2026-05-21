@@ -1,0 +1,5 @@
+[2026-05-21 18:06:31 UTC] SHEPHERD RUN — FAILED: A800 unreachable.
+  Host: 117.74.66.181:50507 — TCP connect errno=11 (EAGAIN/filtered).
+  Network probe: HTTPS/443 reachable to external internet, but direct SSH to A800 is blocked by cloud execution environment network policy.
+  Actions taken: none (cannot reach host).
+  Recommendation: Verify A800 SSH port 50507 is open to outbound connections from this cloud environment, or configure a relay/VPN. Next shepherd should retry; if persistent, escalate to manual check.
