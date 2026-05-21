@@ -1,0 +1,5 @@
+[2026-05-21T16:08:18Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable (TCP timeout on port 50507 and port 22).
+  Also: openssh-client not installable in this container (apt 404 on package).
+  No state read, no actions taken.
+  Next shepherd run should retry connectivity.
