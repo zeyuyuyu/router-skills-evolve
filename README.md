@@ -1,195 +1,189 @@
-# Router + Skills Evolve
+# router-skills-evolve
 
-> **一句话**: Router 把请求路由到合适的 LLM，Skills 通过历史 traces 学习"哪类题该用哪个模型"，自主 evolve 变聪明。
+A self-improving LLM serving system that jointly evolves three orthogonal
+components from production traces:
 
-已验证：**99% 准确率 + 省 83% 成本**（HumanEval 164 题真实实验）
+1. **Router** — a learnable BERT-style classifier that routes each prompt to
+   a cheap or expensive LLM.
+2. **SkillBook** — an online frequency table over prompt signatures that
+   tracks each model's success rate on each prompt cluster.
+3. **LLM adapter** — a continually-trained LoRA on the cheap LLM, hardening
+   it on the tasks the router currently sends to the expensive one.
 
----
+All three update in a cycle:
 
-## 🚀 5 分钟上手
-
-### 1. 环境准备
-
-```bash
-# Python 3.10+
-pip install openai requests
-
-# 拿 CommonStack API key (团队群问)
-export COMMONSTACK_API_KEY="ak-f53d..."
-
-# 中国大陆: HuggingFace 镜像 (下模型权重要用)
-export HF_ENDPOINT=https://hf-mirror.com
+```
+    SkillBook (online stats)
+           │
+           ▼
+    LLM continual GRPO  ──── traces ──── Learnable router (BERT-tiny)
+           │                                   │
+           ▼                                   ▼
+       per-task pass/fail              routing accuracy / fallback
+                  │       │       │
+                  ▼       ▼       ▼
+                Joint evaluation
 ```
 
-### 2. 启动 UncommonRoute proxy (本地)
+The full pipeline is driven by `experiments/run_joint_evolver.py` for one-shot
+runs and by `auto_research/` for 24/7 autonomous operation.
+
+## Quick start
 
 ```bash
-# 克隆 UncommonRoute (如果没装)
-git clone https://github.com/CommonstackAI/UncommonRoute.git
-cd UncommonRoute
+# environment
+pip install -r requirements.txt
+export COMMONSTACK_API_KEY="..."        # for the router-skills-evolve LLM calls
+export HF_ENDPOINT=https://hf-mirror.com  # optional, for hf-cache mirror
 
-# 启动 proxy
-UNCOMMON_ROUTE_API_KEY=$COMMONSTACK_API_KEY \
-UNCOMMON_ROUTE_UPSTREAM="https://api.commonstack.ai/v1" \
-python3 -m uncommon_route.cli serve --port 8403 &
-```
-
-### 3. 跑基线实验（最简单）
-
-```bash
-cd router_skills_evolve
-
-# 在 HumanEval 30 题上跑 Router+Skills (约 5 分钟)
+# clone and a smoke run
+git clone https://github.com/zeyuyuyu/router-skills-evolve
+cd router-skills-evolve
 python3 experiments/run_evolve.py --n 30 --rounds 3
 ```
 
-### 4. 收集训练数据（给白）
-
-```bash
-# 从 traces 提取训练集 (小模型失败、大模型成功的题)
-python3 experiments/extract_training_data.py \
-    --traces data/traces/traces.jsonl \
-    --output data/training_data.jsonl
-```
-
-### 5. 训练小模型（3 种方法可选）
-
-**查看对比**: [docs/TRAINING_METHODS.md](docs/TRAINING_METHODS.md)
-
-```bash
-# 方案 A: SFT (快, 简单, 推荐 PoC)
-python3 experiments/train_small_model.py \
-    --data data/training_data.jsonl \
-    --base-model "MiniMaxAI/MiniMax-M2" \
-    --use-4bit
-
-# 方案 B: DPO (偏好学习, 利用 chosen/rejected 对)
-python3 experiments/extract_dpo_data.py  # 先生成 DPO 数据
-python3 experiments/train_small_model_dpo.py \
-    --data data/dpo_data.jsonl \
-    --base-model "MiniMaxAI/MiniMax-M2" \
-    --use-4bit
-
-# 方案 C: GRPO (真正的 RL, DeepSeek-R1 方法)
-python3 experiments/train_small_model_grpo.py \
-    --tasks data/HumanEval.jsonl \
-    --base-model "MiniMaxAI/MiniMax-M2" \
-    --n-generations 4 --use-4bit
-```
-
----
-
-## 📂 项目结构
+## Layout
 
 ```
-router_skills_evolve/
-├── README.md                 ← 本文件
-├── src/                      ← 核心代码
-│   ├── config.py             ← 配置 (API, 模型, 价格)
-│   ├── models.py             ← LLM 调用封装
-│   ├── skills.py             ← Skills 数据结构 + 学习
-│   ├── router.py             ← Router + Skills 路由决策
-│   └── evaluator.py          ← 代码评估 (跑 pytest)
-├── experiments/              ← 运行脚本
-│   ├── run_evolve.py         ← Evolve 主实验 (路由 + 收 trace)
-│   ├── extract_training_data.py  ← 从 traces 提 SFT 数据
-│   ├── extract_dpo_data.py   ← 从 traces 提 DPO 数据 (chosen/rejected)
-│   ├── train_small_model.py      ← SFT + LoRA (推荐 PoC)
-│   ├── train_small_model_dpo.py  ← DPO + LoRA (偏好学习)
-│   └── train_small_model_grpo.py ← GRPO (真 RL, DeepSeek-R1 方法)
+router-skills-evolve/
+├── src/                    # core: SkillBook, RouterWithSkills, models.py
+├── experiments/            # one-shot training and evaluation scripts
+│   ├── run_evolve.py                       # SkillBook + traces loop
+│   ├── run_joint_evolver.py                # 1-cycle joint of all 3 tracks
+│   ├── run_e2e_ablation.py                 # offline ablation reporting
+│   ├── train_learnable_router.py           # BERT-tiny router
+│   ├── train_small_model_grpo_local.py     # LoRA + GRPO + K3 KL
+│   ├── train_small_model_dpo.py            # LoRA + DPO
+│   └── evaluate_finetuned_model.py
+├── scripts/                # multi-cycle ordering / iterated drivers
+│   ├── run_iterated_skill_llm_router.sh    # N-cycle joint loop
+│   ├── run_ordering_seq.sh                 # skill_first / llm_first
+│   ├── run_ordering_exp.sh                 # serial / xiaojie / user / parallel
+│   └── run_ordering_parallel.sh            # router ‖ LLM dual-GPU
+├── auto_research/          # 24/7 autonomous orchestrator
+│   ├── orchestrator.py                     # cron tick: collect + launch
+│   ├── runner.py                           # per-kind experiment dispatcher
+│   ├── idea_gen_local.py                   # rule-based fallback ideator
+│   ├── arxiv_scrape.py                     # daily LLM-keyword arxiv pull
+│   ├── cron_entry.sh                       # crontab target (every 30 min)
+│   └── README.md                           # orchestrator docs
 ├── data/
-│   ├── traces/               ← 收集的 traces (prompt+model+success)
-│   └── skills/               ← 学到的 skills (JSON)
-├── results/                  ← 实验结果
-└── docs/
-    ├── ARCHITECTURE.md       ← 架构详解
-    ├── TRAINING.md           ← 训练指南 (白看这个)
-    └── EXPERIMENTS.md        ← 过往实验结果
+│   ├── HumanEval.jsonl                     # 164 code tasks
+│   ├── training_data.jsonl                 # extracted SFT pairs
+│   ├── traces/                             # accumulated routing traces
+│   └── skills/                             # persisted SkillBook snapshots
+├── results/                # per-run JSON summaries
+│   ├── iterated_skill_llm_router_8cycles/  # 8-cycle joint run, raw evals
+│   └── *.json                              # historical headline numbers
+├── docs/
+│   ├── HIGHLIGHTS.md                       # ⭐ current best results
+│   ├── E2E_ABLATION_RESULTS.md             # full ablation tables
+│   ├── ARCHITECTURE.md, JOINT_EVOLVER.md, ...
+└── requirements.txt
 ```
 
----
+## Three ways to run
 
-## 🎯 核心概念
+### 1. One-shot joint evolver
 
-### Pipeline
-
-```
-用户 Prompt
-    ↓
-  ┌─────────────┐
-  │   Router    │  ← UncommonRoute 分类器 (本地, 无 LLM 调用)
-  └─────────────┘
-    ↓ tier: SIMPLE/MEDIUM/COMPLEX
-  ┌─────────────┐
-  │   Skills    │  ← 查 "这类题用啥模型最便宜"
-  └─────────────┘
-    ↓ 推荐具体 model
-  ┌─────────────┐
-  │    LLM      │  ← 真实调用 (这里才产生成本)
-  └─────────────┘
-    ↓
-  ┌─────────────┐
-  │  Test code  │  ← pytest 验证代码是否通过
-  └─────────────┘
-    ↓ 收集 trace: (prompt, model, success, cost)
-  ┌─────────────┐
-  │ Skills 学习  │  ← 下次同类题决策更优
-  └─────────────┘
+```bash
+python3 experiments/run_joint_evolver.py \
+  --cycles 1 \
+  --traces "data/traces/*.jsonl" \
+  --router-base-model google/bert_uncased_L-2_H-128_A-2 \
+  --llm-train-data data/training_data.jsonl \
+  --llm-base-model Qwen/Qwen2.5-Coder-1.5B-Instruct
 ```
 
-### Evolve 的 3 个阶段
+Produces `joint_evolver_manifest.json` with all stage commands, metrics, and
+artifact paths.
 
-1. **Skills Evolve** (已验证): 收集 traces → 学出 skills → 降级决策更准
-2. **Model Evolve** (下一步): traces → 训练 SMALL model → 模型变强 → 更多降级
-3. **持续循环**: 越用越省钱，准确率不降
+### 2. Multi-cycle iterated pipeline (Skill → LLM → Router, repeated)
 
----
+```bash
+NUM_CYCLES=8 CUDA_VISIBLE_DEVICES=0 \
+  bash scripts/run_iterated_skill_llm_router.sh
+```
 
-## 📊 已验证结果（HumanEval 164 题真实实验）
+Each cycle does: SkillBook online update → continual-train LoRA on a fresh
+MBPP chunk → retrain BERT router on the cumulative bench slice.
 
-| 策略 | 成功率 | 成本 | vs GPT-5.4 |
-|------|--------|------|-----------|
-| Pure GPT-5.4 | 95% | $0.37 | 100% |
-| Router Only | 74% | $0.15 | 42% |
-| Router + Fallback | 98% | $0.27 | 73% |
-| **Router + Skills Evolve** | **99%** | **$0.06** | **17%** |
+### 3. 24/7 autonomous mode (cron-driven)
 
-**Evolve 赢在**: 同时最高准确率 + 最低成本。
+```bash
+# one-time setup on a GPU host with at least one A800-class card:
+bash auto_research/cron_entry.sh   # smoke
+crontab -e  # add: */30 * * * * /path/to/auto_research/cron_entry.sh
+```
 
----
+The orchestrator runs every 30 minutes: it `git pull`s, applies any pending
+queue updates from cloud agents, launches the highest-priority queued
+experiment on a free GPU, and collects finished experiments. Pair with cloud
+Claude routines (idea-gen daily, shepherd every 2h) for fully autonomous
+research.
 
-## 🔧 谁负责什么
+See [`auto_research/README.md`](auto_research/README.md) for details.
 
-| 模块 | 负责人 | 代码位置 |
-|------|--------|---------|
-| Router (UncommonRoute) | 已有 | `UncommonRoute` repo |
-| Skills 数据结构 + 学习 | Franklin | `src/skills.py` |
-| 路由决策 | Franklin | `src/router.py` |
-| 代码评估 | Franklin | `src/evaluator.py` |
-| **模型训练** | 白 | `experiments/train_small_model.py` |
-| Inference 部署 | 平台团队 | TBD |
+## Current best results
 
----
+See [`docs/HIGHLIGHTS.md`](docs/HIGHLIGHTS.md) for the complete summary. As of
+2026-05-21:
 
-## 📚 进一步阅读
+- **Router**: cold-start 57.6% → cycle 3 peak 87.8% → settled 82–88%
+  (8-cycle iterated, BERT-tiny, 832-task held-out)
+- **Skills**: monotonic accumulation, 34 signatures from 8-cycle run
+- **LLM 1.5B GRPO**: ~47% on MBPP eval200 (recipe-invariant across orderings
+  and cycle counts; 4 candidate configurations show 50–51% on eval100, under
+  verification)
+- **LLM 3B GRPO**: 61.0% on MBPP eval200
+- **Pipeline**: only `parallel` ordering saves wall time (~4 min/cycle from
+  router ‖ LLM dual-GPU)
 
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - 架构详解
-- [TRAINING.md](docs/TRAINING.md) - **训练指南（白看这个）**
-- [EXPERIMENTS.md](docs/EXPERIMENTS.md) - 实验结果汇总
-- [原始 HumanEval 164 报告](../uncommonroute_skill_experiment/FULL_HUMANEVAL_FINAL_REPORT.md)
+See [`docs/E2E_ABLATION_RESULTS.md`](docs/E2E_ABLATION_RESULTS.md) for the
+full table.
 
----
+## Concepts
 
-## ❓ FAQ
+### Router
 
-**Q: 为什么实验只用 2 个模型（SMALL + LARGE）？**  
-A: 控制变量简化对比。架构支持 N 个，生产 UncommonRoute 已支持 48 个。
+A BERT-tiny binary classifier (`google/bert_uncased_L-2_H-128_A-2` by default)
+that predicts whether to route a prompt to the cheap or expensive LLM. Trained
+on a mix of UncommonRoute weak labels and accumulated traces. Threshold tuned
+per cost/quality target.
 
-**Q: 训练数据怎么来？**  
-A: 自动从 traces 提取 "小模型失败+大模型成功" 的题，大模型代码做 ground truth。
+### SkillBook
 
-**Q: 为什么不用闭源模型训练？**  
-A: 闭源（GPT-5.4, Claude, Gemini）不开权重。开源可训：deepseek, qwen, glm, minimax 等（24 个）。
+A signature → frequency table. The signature is a hand-coded folding of the
+prompt:
 
-**Q: 需要什么 GPU？**  
-A: 看模型大小。小（minimax-m2 ~20B）用 2×A100；大（deepseek-v3.2 37B activate MoE）用 8×A100。
+```
+length_bucket × {list, str, num, sort, theory, crypto, advanced, bool, ...}
+```
+
+Per signature, the SkillBook stores `(model_id) → (successes, total)`.
+Routing decisions consult the book with Laplace-smoothed success rates.
+
+### Joint cycle
+
+Each cycle k:
+
+1. SkillBook ← merge new traces (online, sub-second).
+2. LLM adapter ← continual GRPO step on a fresh task chunk; LoRA is *resumed*
+   from cycle k-1.
+3. Router ← retrain BERT on cumulative router-supervision data.
+
+Evaluation: MBPP eval200 for the LLM, 832-task held-out for the router.
+
+## Languages / 语言
+
+- **English (this file)**: README.md
+- **中文**: [README.zh.md](README.zh.md)
+
+## Citation
+
+If you use this code or data, please cite via the GitHub release page:
+https://github.com/zeyuyuyu/router-skills-evolve
+
+## License
+
+MIT.

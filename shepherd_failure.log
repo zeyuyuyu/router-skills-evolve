@@ -1,5 +1,0 @@
-[2026-05-20T06:02:42Z] SHEPHERD RUN FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out after 30s.
-  SSH client missing from container; paramiko used as fallback — same result.
-  Actions taken: none (no changes to state, no triggers fired).
-  Next shepherd: will retry connection on next 2-hour tick.
