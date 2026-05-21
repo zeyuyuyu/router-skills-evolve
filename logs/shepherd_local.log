@@ -1,0 +1,5 @@
+[2026-05-21T14:05:30Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out (ConnectTimeout=10s, tried twice + nc probe).
+  This managed remote-execution environment appears to lack outbound network access to the A800 host on that port.
+  No state read, no actions taken.
+  Actions: none
