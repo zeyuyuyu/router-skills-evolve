@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-20 by autonomous research agent.
+Pending queue update — last updated 2026-05-21 by autonomous research agent.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
-2026-05-19 (4), 2026-05-20 (2).
-Total pending: 23 experiments.
+2026-05-19 (4), 2026-05-20 (2), 2026-05-21 (2).
+Total pending: 25 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -785,7 +785,7 @@ NEW_EXPERIMENTS = [
         },
         "gpu": "auto",
     },
-    # ── 2026-05-20 batch (2 experiments — queue > 20 cap) ──────────────────────
+    # ── 2026-05-20 batch (2 experiments — queue > 20 cap) ─────────────────────
     {
         "id": "exp_2026_05_20_001_rloo_binary_reward_15b",
         "priority": 8,
@@ -877,6 +877,121 @@ NEW_EXPERIMENTS = [
                     "pass_k_values": [1, 4, 8],
                     "temperature": 0.8,
                     "num_samples": 8,
+                },
+            ],
+            "max_new_tokens": 256,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-21 batch (2 experiments — queue > 20 cap) ─────────────────────
+    {
+        "id": "exp_2026_05_21_001_rlad_trrd_distill_3b_teacher_15b",
+        "priority": 9,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Reinforcement-aware Knowledge Distillation for LLM Reasoning "
+            "(arxiv:2602.22495, Feb 2026) proposes RLAD with Trust Region Ratio "
+            "Distillation (TRRD), which addresses the core limitation exposed by "
+            "arxiv:2605.06241 (Sparse Policy Selection): pure RL cannot teach the "
+            "1.5B model capabilities it has never exhibited, because RL only "
+            "redistributes probability mass at existing decision forks. RLAD breaks "
+            "this ceiling by incorporating a Qwen2.5-Coder-3B-Instruct teacher during "
+            "RL training. TRRD replaces the teacher-student KL regularizer (which "
+            "causes distribution mismatch and objective interference with the RL loss) "
+            "with a PPO/GRPO-style likelihood-ratio objective anchored to a "
+            "teacher-old-policy mixture. Concretely, for each student rollout the TRRD "
+            "advantage is: A_TRRD = A_GRPO + lambda * log(pi_teacher / pi_old), where "
+            "pi_teacher is the 3B teacher's log-probability on the same token sequence "
+            "and pi_old is the student's reference log-probability. This advantage is "
+            "clipped to a trust region bounded by the student's own policy ratio, "
+            "preventing the teacher from overriding the student's learned behaviour "
+            "while providing capability uplift at positions where the teacher assigns "
+            "high probability to solutions the student never generates. In math and "
+            "logic benchmarks, RLAD consistently outperforms standard GRPO, KL-based "
+            "KD, and offline distillation. For our project, the 3B teacher already "
+            "solves ~74/100 MBPP eval tasks (vs 1.5B base's 47/100), so the teacher "
+            "distribution covers 27 tasks that are currently zero-capability for the "
+            "1.5B — exactly the frontier GRPO cannot reach. Using the 3B as teacher "
+            "targets TRRD guidance specifically at those tasks, without requiring the "
+            "3B's VRAM footprint at deployment (the deployed model is still 1.5B LoRA). "
+            "All base params match the best case (200 tasks, 4 rollouts, 1 epoch, "
+            "lr=5e-6, LoRA r=16, qwen-chat, binary reward, eval@100). Runner changes: "
+            "add distill_teacher, distill_mode='trrd', distill_lambda to grpo_continual "
+            "kind; load 3B teacher in inference-only mode alongside student during "
+            "rollout scoring. Estimated wall-clock: ~110 minutes (teacher inference "
+            "adds ~20% overhead vs pure GRPO)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "distill_teacher": "Qwen/Qwen2.5-Coder-3B-Instruct",
+            "distill_mode": "trrd",
+            "distill_lambda": 0.1,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_21_002_sstar_execguided_selection_15b",
+        "priority": 7,
+        "kind": "forgetting_eval",
+        "rationale": (
+            "S*: Test Time Scaling for Code Generation (arxiv:2502.14382, Feb 2026) "
+            "demonstrates that execution-guided selection among candidate solutions "
+            "enables a 3B model to outperform GPT-4o-mini on code generation "
+            "benchmarks. S* combines two mechanisms: (a) iterative debugging — each "
+            "of k samples is revised using execution feedback (test output or error "
+            "message) for up to D debug rounds; (b) pairwise discriminative selection "
+            "— for each pair of remaining candidates, an LLM generates a "
+            "distinguishing input, both solutions are executed on that input, and the "
+            "one matching expected behaviour is preferred. This experiment evaluates "
+            "the existing 1.5B GRPO adapter using simplified S*: generate 8 samples "
+            "at temperature=0.8, apply 1 round of execution-guided debugging (revise "
+            "failed solutions using the test error message as feedback), then select "
+            "the solution with the highest test-pass count among all 8. The result is "
+            "compared to: (a) greedy decode (pass@1), (b) random selection from 8 "
+            "(best-of-8-random), and (c) oracle best-of-8. This experiment is the "
+            "natural complement to exp_2026_05_20_002 (pass@k random sampling): "
+            "EXP-023 establishes the random ceiling; EXP-025 tests how close "
+            "execution-guided selection gets to that ceiling in practice. "
+            "Critically, the S* framework is inference-only — it requires no additional "
+            "training — but the iterative debugging step is expected to amplify the "
+            "GRPO adapter's advantage, because the adapter (per arxiv:2605.06241) "
+            "has already shifted probability mass toward structurally-correct code "
+            "patterns, meaning debug iterations start from stronger initial solutions "
+            "than the base model would. If execution-guided selection achieves > "
+            "58/100 pass rate (vs 49/100 greedy), it is production-ready as a "
+            "deployment strategy: call the 1.5B adapter 8 times + 1 debug round, "
+            "apply S* selection, and skip the large model entirely for MBPP-like "
+            "tasks. Pure evaluation, no training. Uses adapter at "
+            "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/"
+            "qwen25_coder_15b_grpo_200x4. Estimated wall-clock: ~50 minutes "
+            "(8 samples × 100 tasks + debugging passes + selection)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4",
+            "eval_sets": [
+                {
+                    "name": "MBPP_sstar_selection",
+                    "data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+                    "limit": 100,
+                    "offset": 0,
+                    "prompt_style": "qwen-chat",
+                    "selection_mode": "execution_guided",
+                    "num_samples": 8,
+                    "temperature": 0.8,
+                    "debug_rounds": 1,
+                    "compare_baselines": ["greedy", "random_best_of_8", "oracle_best_of_8"],
                 },
             ],
             "max_new_tokens": 256,
