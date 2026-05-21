@@ -49,3 +49,6 @@ data/mbpp/
 # 下载的模型权重
 models/
 hf_cache/
+
+# Shepherd / orchestrator local fallback logs
+shepherd_local_fallback.log
