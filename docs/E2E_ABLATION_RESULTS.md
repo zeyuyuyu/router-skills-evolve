@@ -29,20 +29,38 @@ Full artifacts on A800:
 
 ## Routing ablation
 
+### Single-shot training on full bench (2026-05-09)
+
 | Variant | Accuracy | Large F1 | Fallback Rate | Cost vs Always-Large | Predicted Large |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Base: always-small + fallback | 68.28% | 0.00% | 31.72% | 33.54% | 0 |
 | + SkillBook signature routing | 69.46% | 24.93% | 26.65% | 37.27% | 76 |
-| + Learned router | **93.04%** | **89.48%** | **2.12%** | 37.75% | 292 |
+| + Learned router (single-shot, full 3328-row bench, threshold tuned) | **93.04%** | **89.48%** | **2.12%** | 37.75% | 292 |
+
+Trained once on the full UncommonRoute bench with the threshold tuner; evaluated on the 848-task split. These are the headline numbers.
+
+### Cumulative-slice training in joint cycles (2026-05-20 / 2026-05-21)
+
+| Variant | Accuracy | Fallback Rate | Cost vs Always-Large | Routing cost (USD) |
+| --- | ---: | ---: | ---: | ---: |
+| 4-cycle ordering `skill_first` cycle 4 (default seed) | **87.3%** | 4.4% | 51.8% | -- |
+| 4-cycle ordering `xiaojie` cycle 4 | 82.7% | 4.1% | 56.4% | -- |
+| 4-cycle ordering `llm_first` cycle 4 | 84.6% | 4.1% | 54.5% | -- |
+| 8-cycle iterated cycle 3 peak (seed 45) | **87.8%** | 3.4% | 52.8% | $2.47 vs $4.61 always-large |
+| 8-cycle iterated cycle 4-8 mean | 84.3% | 5.3% | 55.7% | -- |
+
+Trained per-cycle on a cumulative slice (`624 * k` rows at cycle k), default threshold 0.5, evaluated on the fixed 832-task held-out test. These are the joint-cycle numbers and explain the +1 percentage-point variance vs the 5/9 single-shot baseline (different splits + no threshold tune).
 
 Interpretation:
 
 - Base is cheap but falls back on all hard examples.
 - SkillBook alone helps slightly, but hard-route recall is still weak.
-- Learned router is the strongest positive ablation: it sharply reduces
-  fallback while preserving low cost.
+- Learned router is the strongest positive ablation: it sharply reduces fallback while preserving low cost. Both single-shot and joint-cycle training reach the 87–93% accuracy band with 2–5% fallback.
+- Joint-cycle accuracy stabilises in the 82–88% range from cycle 3 onward; a single cycle 5 dip (76.7%, fallback 14.4%) is a per-cycle BERT-init seed outlier.
 
 ## LLM training ablation
+
+### 0.5B + MBPP eval20 (2026-05-09 historical)
 
 | Variant | Eval | Pass Rate |
 | --- | --- | ---: |
@@ -54,9 +72,25 @@ Interpretation:
 
 - The qwen-chat prompt substantially improves generation format.
 - Naive SFT is still below the base model.
-- Local GRPO has shown a small positive signal in a separate 8x4090 smoke run
-  when compared against that run's measured base (9/20 vs 8/20), but it is not
-  yet a strong model-evolution result.
+- Local GRPO has shown a small positive signal in a separate 8x4090 smoke run when compared against that run's measured base (9/20 vs 8/20), but it is not yet a strong model-evolution result.
+
+### 1.5B / 3B + MBPP eval200 (2026-05-12 onward)
+
+| Variant | Eval | Pass Rate |
+| --- | --- | ---: |
+| Qwen2.5-Coder-1.5B-Instruct base | MBPP eval200 | ~47% (estimated from continual cycle 1) |
+| 1.5B + GRPO 200x4 (binary reward, no K3 KL) | MBPP eval100 | 49% (historical) |
+| 1.5B + GRPO 400x4 (binary reward, no K3 KL) | MBPP eval100 | 46% (degraded vs base) |
+| 1.5B + GRPO continual 4-step 100 each (K3 KL 0.05, partial reward) | MBPP eval200 | 46.5–47.5% per cycle |
+| 1.5B + GRPO iterated 8-cycle (K3 KL 0.05, partial reward, chunks loop mod 4) | MBPP eval200 | 46.5–47.5% across all cycles, cycle 8 = **47.5%** |
+| Qwen2.5-Coder-3B-Instruct + GRPO continual 4-step (K3 KL 0.05) | MBPP eval200 | **61.0%** |
+
+Interpretation:
+
+- The 1.5B GRPO recipe is *insensitive to cycle count and pipeline order*: across 4-cycle ordering ablations, 8-cycle iterated runs, and per-cycle granularity, MBPP eval200 stays in the 46.5–47.5% band. The current recipe is not extracting capacity-level improvements at this scale.
+- 3B base on the same recipe lands at 61.0%, a +14 pp gap that is roughly the 1.5B→3B base-capability difference (not GRPO-induced).
+- The K3 KL fix (relative to the buggy one-sample log-ratio v1) prevents the 1.5B 400-row recipe from degrading to 46% (as in 2026-05-09 historical), but doesn't move the band upward.
+- Next leverage points: stronger reward shaping (curriculum, multi-task reward), JEPA-style auxiliary loss on paired NL↔code views (LLM-JEPA, arxiv 2509.14252), and 3B-scale + multi-seed runs.
 
 ## Joint cycle ordering (added 2026-05-20)
 
