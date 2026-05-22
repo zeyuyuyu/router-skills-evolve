@@ -53,3 +53,7 @@
     3. Expose A800 state via HTTPS endpoint reachable by this runner.
   DONE: actions=FAILED
 [2026-05-22 08:04:57 UTC] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable. TCP connect to port 50507 timed out after 30s; port also reported CLOSED/FILTERED on direct /dev/tcp probe. No state could be read, no actions taken. Cannot assess queue depth, running experiments, GPU utilization, disk pressure, or daily artifact health. Actions taken: none. Manual intervention required to diagnose A800 connectivity (network policy change? SSH daemon down? Host rebooted?).
+[2026-05-22T12:11:21Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s.
+  Actions taken: none (cannot read state, cannot write remote log).
+  Next step: retry at next 2-hour cron tick; investigate if outage persists >4h.
