@@ -3,3 +3,11 @@
   SSH client missing from container; paramiko used as fallback — same result.
   Actions taken: none (no changes to state, no triggers fired).
   Next shepherd: will retry connection on next 2-hour tick.
+
+---
+[2026-05-22T04:04:30Z] SHEPHERD FAILED — A800 unreachable (117.74.66.181:50507)
+  TCP probe to :50507 and :22 both blocked by cloud sandbox outbound network policy.
+  This is a persistent failure spanning multiple days (day 7+).
+  No state read, no actions taken.
+  Recommendation: move shepherd cron to a runner with direct A800 network access,
+  or whitelist cloud egress IP on A800 firewall.
