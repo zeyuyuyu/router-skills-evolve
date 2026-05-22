@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Pending queue update — generated 2026-05-15 by autonomous research agent.
+Pending queue update — last updated 2026-05-22 by autonomous research agent.
+Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
+2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2).
+Total pending: 25 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -13,6 +16,7 @@ from pathlib import Path
 STATE_PATH = Path("/data0/home/zeyuwang/auto_research/state.json")
 
 NEW_EXPERIMENTS = [
+    # ── 2026-05-15 batch (5 experiments) ───────────────────────────────────
     {
         "id": "exp_2026_05_15_001_curriculum_grpo_15b",
         "priority": 8,
@@ -165,6 +169,816 @@ NEW_EXPERIMENTS = [
         },
         "gpu": "auto",
     },
+    # ── 2026-05-16 batch (4 experiments) ────────────────────────────────────
+    {
+        "id": "exp_2026_05_16_001_pgrpo_partial_reward_15b",
+        "priority": 9,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Posterior-GRPO (arxiv:2508.05170, Aug 2025) shows that conditioning a "
+            "partial reward on execution success — reward = (passing_asserts / "
+            "total_asserts) if code runs without exception, else 0 — prevents reward "
+            "hacking while providing denser gradient signal than binary pass/fail. "
+            "Our current best case (1.5B, 200x4, binary reward) gives only +2pts. The "
+            "binary signal gives zero gradient on 53/100 eval tasks that consistently "
+            "fail all tests (model never finds a passing rollout). P-GRPO's partial "
+            "signal provides learning signal on these hard tasks. Same architecture: "
+            "1.5B, 200 tasks, 4 rollouts, lr=5e-6, LoRA r=16, qwen-chat prompt."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "partial_test_count",
+            "reward_condition": "execution_success",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_16_002_curriculum_grpo_3b",
+        "priority": 8,
+        "kind": "grpo_curriculum_continual",
+        "rationale": (
+            "E2H Reasoner (arxiv:2506.06632, 2026) specifically demonstrates that 1.5B–3B "
+            "models which fail or degrade under vanilla RL recover and surpass baseline "
+            "when tasks are sorted easy-to-hard. Our 3B model (Qwen2.5-Coder-3B-Instruct) "
+            "degraded from 62->60/100 (-2pts) with flat GRPO on 200 MBPP tasks. The paper "
+            "attributes this to gradient collapse on hard tasks seen before the model can "
+            "handle them. An easy-to-hard curriculum (sort 200 MBPP tasks by base-3B solve "
+            "rate ascending) directly targets this failure mode. This is complementary to "
+            "exp_2026_05_15_001 which tests curriculum on 1.5B; here we test on 3B where "
+            "the degradation was larger and the benefit should be more pronounced."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "curriculum": "easy_to_hard",
+            "difficulty_metric": "base_model_solve_rate",
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_16_003_grpo_15b_8rollouts_200tasks",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "GRPO theory (arxiv:2503.06639, Guo et al.) shows that advantage normalization "
+            "quality improves with group size G: with G=4 rollouts the per-task advantage "
+            "estimate has high variance, especially for tasks with mixed outcomes "
+            "(2 pass / 2 fail). Doubling to G=8 tightens the estimate at the cost of ~2x "
+            "peak VRAM (still safe: 1.5B model with LoRA r=16 + 8 rollouts fits in 80GB). "
+            "All other params identical to the best case (200 tasks, 1 epoch, lr=5e-6, "
+            "LoRA r=16, qwen-chat, binary reward). If 8 rollouts gives >+4pts, this "
+            "becomes the new standard rollout count; if it matches +2pts, 4 rollouts is "
+            "sufficient and cheaper."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 8,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_16_004_staircase_grpo_15b_100_100",
+        "priority": 6,
+        "kind": "grpo_multi_seed_staircase",
+        "rationale": (
+            "Self-Distillation Enables Continual Learning (arxiv:2601.19897, Jan 2026) "
+            "demonstrates that incremental task introduction — training on a small chunk, "
+            "checkpointing, then continuing on the next chunk — prevents catastrophic "
+            "forgetting better than training on all tasks at once. Our history shows: "
+            "200-task GRPO gives +2pts but 400-task degrades (-1pt). A staircase schedule "
+            "— train on tasks 1-100, save checkpoint; load checkpoint and train on tasks "
+            "101-200 — tests whether the degradation between 200 and 400 tasks is a "
+            "batch-size effect or a fundamental instability. If the 2-stage staircase "
+            "matches or beats flat-200 (+2pts), we can extend to 4 stages x 100 tasks "
+            "to safely utilize 400 tasks. Each stage runs < 45 min; total < 2h."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "staircase_stages": [
+                {"task_offset": 0, "task_limit": 100},
+                {"task_offset": 100, "task_limit": 100},
+            ],
+            "epochs_per_stage": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+            "seeds": [42],
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-17 batch (4 experiments) ────────────────────────────────────
+    {
+        "id": "exp_2026_05_17_001_kl_curriculum_15b_300tasks",
+        "priority": 9,
+        "kind": "grpo_curriculum_continual",
+        "rationale": (
+            "The two strongest pending interventions — KL regularization (arxiv:2503.06639) "
+            "and easy-to-hard curriculum (arxiv:2605.00433) — are being tested in isolation "
+            "in exp_2026_05_15_002 and exp_2026_05_15_001 respectively. They address "
+            "orthogonal failure modes: KL prevents distribution collapse / reward hacking "
+            "during longer training runs, while curriculum prevents zero-gradient rollouts "
+            "on hard tasks seen before the model is ready. Combining both on 300 tasks tests "
+            "whether the gains are additive: KL stabilises the extra 100 tasks beyond the "
+            "safe 200-task ceiling, while curriculum ensures those 100 additional tasks are "
+            "introduced in the order the model can learn from. If each independently gives "
+            "+2–3pts, the combination on 300 tasks could reach +4–6pts — the target for a "
+            "paper-quality LLM training result. All other hyperparams match the best case "
+            "(lr=5e-6, LoRA r=16, 4 rollouts, qwen-chat, binary reward). Estimated: ~130 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 300,
+            "curriculum": "easy_to_hard",
+            "difficulty_metric": "base_model_solve_rate",
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "kl_coeff": 0.02,
+            "use_reference_model": True,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_17_002_grpo_15b_lr1e6_200x4",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Our best case uses lr=5e-6; the degradation at 400 tasks (same lr) implies "
+            "the policy update step is near the stability boundary. GRPO dynamics analysis "
+            "(arxiv:2503.06639) shows that the effective gradient magnitude scales as "
+            "lr × |advantage| and that for small models (<2B) the advantage signal is "
+            "noisier per rollout, amplifying instability at higher LRs. A 5× more "
+            "conservative lr=1e-6 keeps the update in a more stable regime without "
+            "requiring KL regularization or curriculum scheduling. If lr=1e-6 matches "
+            "+2pts with lower variance across seeds, it is a safer default than lr=5e-6 "
+            "and enables longer training runs. If it underperforms, lr=5e-6 is confirmed "
+            "as necessary for the model to escape local minima. This isolates the LR "
+            "effect cleanly: all other params identical to the best case (200 tasks, "
+            "4 rollouts, 1 epoch, LoRA r=16, qwen-chat, binary reward). Estimated: ~90 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 1e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_17_003_grpo_15b_lora_r32_200x4",
+        "priority": 6,
+        "kind": "grpo_continual",
+        "rationale": (
+            "History shows a clear monotonic trend in LoRA rank: r=8 gives +1pt on 0.5B "
+            "and r=16 gives +2pts on 1.5B. The LoRA paper (arxiv:2106.09685, Hu et al.) "
+            "demonstrates that for complex adaptation tasks the gain from rank increase is "
+            "significant up to r=32 and diminishes above r=64. For GRPO specifically, a "
+            "higher LoRA rank means the policy gradient can express richer weight-space "
+            "updates, which is important when the target behaviour (generating correct code "
+            "that passes test assertions) requires structural changes to the model's "
+            "generation distribution rather than surface-level token biases. With LoRA r=32 "
+            "on a 1.5B model the adapter adds ~52M trainable parameters (vs ~26M for r=16), "
+            "which at 80GB VRAM with 4 rollouts is safely within budget. All other params "
+            "identical to the best case (200 tasks, lr=5e-6, 4 rollouts, binary reward, "
+            "qwen-chat). Estimated: ~95 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 32,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_17_004_forgetting_eval_3b_grpo_adapter",
+        "priority": 5,
+        "kind": "forgetting_eval",
+        "rationale": (
+            "The 3B GRPO adapter (from the run that degraded: 62->60 MBPP eval100) has "
+            "never been evaluated on benchmarks other than MBPP. Before proposing further "
+            "3B training (exp_2026_05_16_002 is the 3B curriculum experiment), it is "
+            "essential to understand whether the 62->60 degradation is MBPP-specific or "
+            "whether the adapter also damaged HumanEval performance. Two contrasting "
+            "outcomes are informative: (a) if HumanEval also degrades by ~2pts, the 3B "
+            "GRPO recipe is uniformly harmful and the curriculum fix (exp_2026_05_16_002) "
+            "is the only path; (b) if HumanEval is preserved or improves, the degradation "
+            "is a dataset-distribution artefact, not a general forgetting problem, which "
+            "changes the interpretation of the 3B results significantly. HANDOFF section 6 "
+            "(open question 1) calls for quantifying forgetting before paper claims. "
+            "Eval-only; no training. Adapter path: "
+            "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_3b_grpo_200x4 "
+            "(created by the earlier degraded 3B run). Estimated: ~35 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+            "adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_3b_grpo_200x4",
+            "eval_sets": [
+                {
+                    "name": "HumanEval",
+                    "data": "data/HumanEval.jsonl",
+                    "limit": 164,
+                    "prompt_style": "qwen-chat",
+                },
+                {
+                    "name": "MBPP_ood",
+                    "data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+                    "limit": 50,
+                    "offset": 100,
+                    "prompt_style": "qwen-chat",
+                },
+            ],
+            "max_new_tokens": 384,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-18 batch (4 experiments) ─────────────────────────────────────
+    {
+        "id": "exp_2026_05_18_001_fgrpo_focal_advantage_15b",
+        "priority": 9,
+        "kind": "grpo_continual",
+        "rationale": (
+            "F-GRPO (arxiv:2602.06717, Feb 2026) identifies a frequency bias in GRPO: "
+            "with small group sizes (G=4), updates concentrate probability mass on "
+            "already-common correct solutions, ignoring rare-correct trajectories on hard "
+            "tasks. The paper derives that the probability of a gradient update missing "
+            "rare-correct modes grows super-linearly as success rate increases. Our history "
+            "shows ~53/100 eval tasks are never solved across all 4 rollouts (zero-gradient "
+            "groups), while ~20/100 are consistently solved (near-zero advantage, noise "
+            "updates). F-GRPO introduces a Focal-loss-inspired difficulty-aware advantage "
+            "scaling coefficient: advantage_scaled = advantage × (1 - success_rate)^gamma, "
+            "which down-weights groups where the model already succeeds frequently (gamma "
+            "controls the down-weighting strength; gamma=2 from the paper). This gives the "
+            "47 hard tasks (1-4 successes in 4 rollouts) ~2-4× more gradient weight than "
+            "the 20 easy tasks, directly addressing the key failure mode identified in our "
+            "history without increasing compute cost. All other params match the best case "
+            "(1.5B, 200 tasks, 1 epoch, lr=5e-6, LoRA r=16, qwen-chat, binary reward, "
+            "eval@100). Requires adding focal_gamma field to runner.py grpo_continual kind. "
+            "Estimated wall-clock: ~90 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "advantage_scale": "focal",
+            "focal_gamma": 2.0,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_18_002_dapo_dynamic_sampling_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "DAPO (arxiv:2503.14476, ByteDance, March 2025) introduces dynamic sampling: "
+            "when all rollouts in a group either all pass or all fail, the advantage is "
+            "identically zero and the group contributes only gradient noise. DAPO discards "
+            "these uninformative groups and re-samples new prompts until every group "
+            "contains at least one passing and one failing rollout, guaranteeing non-zero "
+            "advantage and clean gradient signal throughout training. Our 200-task GRPO "
+            "baseline uses standard GRPO which includes all-fail groups (the ~53% "
+            "consistently-failing hard tasks) and all-pass groups (the ~20% trivially-easy "
+            "tasks), so roughly 73% of gradient updates are likely noise-dominated. DAPO "
+            "also replaces sample-level policy gradient loss with token-level loss "
+            "(normalised per-token rather than per-sample), shown in the paper to stabilise "
+            "training for variable-length code outputs. Combined, these two changes "
+            "require no extra parameters and add ~10% overhead for re-sampling but produce "
+            "much cleaner gradients — DAPO achieves 50pts on AIME2024 with Qwen2.5-32B, "
+            "and the same mechanism should help at 1.5B for MBPP. All other params match "
+            "the best case (200 tasks, 1 epoch, lr=5e-6, LoRA r=16, qwen-chat, binary "
+            "reward, eval@100). Requires runner.py support for dynamic_sampling and "
+            "loss_level fields. Estimated wall-clock: ~95 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "dynamic_sampling": True,
+            "loss_level": "token",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_18_003_scafgrpo_hint_injection_15b",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Scaf-GRPO (arxiv:2510.19807, Oct 2025 / Feb 2026) addresses the 'learning "
+            "cliff': tasks where the model consistently fails all rollouts, collapsing the "
+            "advantage to zero and making the task invisible to the policy gradient. Scaf-GRPO "
+            "monitors training progress per task and, when a task's rolling success rate "
+            "remains at 0 after a stagnation window (e.g., 3 consecutive gradient steps with "
+            "zero reward), injects a tiered in-prompt hint — first an abstract hint "
+            "('identify the core algorithmic pattern'), then if still failing a concrete hint "
+            "('use a sliding-window over the list') — that guides the rollout toward a valid "
+            "structure without prescribing the exact solution. On AIME24, Scaf-GRPO boosted "
+            "Qwen2.5-Math-7B by a relative 44.3% over vanilla GRPO. For our 1.5B MBPP case, "
+            "approximately 53/100 eval tasks are never solved in any rollout; scaffold hints "
+            "on those tasks would convert some from zero-reward to mixed-reward, providing "
+            "gradient signal on the hardest segment of the training distribution. All other "
+            "params match the best case (200 tasks, 1 epoch, lr=5e-6, LoRA r=16, qwen-chat, "
+            "binary reward, eval@100). Requires runner.py support for scaffold_stagnation_window "
+            "and scaffold_hint_levels fields. Estimated wall-clock: ~110 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "scaffold_stagnation_window": 3,
+            "scaffold_hint_levels": ["abstract", "concrete"],
+            "eval_limit": 100,
+            "max_new_tokens": 256,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_18_004_frpo_2epoch_15b_200x4",
+        "priority": 6,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Our entire history uses epochs=1. Multi-epoch RL training is the natural next "
+            "step to squeeze more learning from the same 200 tasks, but 'Mechanistic Analysis "
+            "of Catastrophic Forgetting in LLMs During Continual Fine-tuning' "
+            "(arxiv:2601.18699, Jan 2026) shows that forgetting accelerates dramatically in "
+            "later epochs (3-5): attention heads in lower layers show 15–23% severe disruption "
+            "correlated with forgetting onset. However, FRPO (arxiv:2602.08813, Feb 2026) "
+            "modifies GRPO with a max-min formulation that maximises the minimum reward over "
+            "a KL-bounded neighbourhood of policies — equivalently, an entropic-risk objective "
+            "that up-weights low-reward rollouts and penalises high-variance policies. FRPO "
+            "is proven to preserve performance under subsequent fine-tuning while adding no "
+            "extra computation. By running 2 epochs under the FRPO objective, we test whether "
+            "the frpo_mode can prevent the 2nd-epoch forgetting/collapse that standard GRPO "
+            "would likely exhibit. If 2-epoch FRPO beats 1-epoch standard GRPO (+2pts), it "
+            "opens the door to multi-epoch training at 0 additional data cost. All other "
+            "params match the best case (200 tasks, lr=5e-6, LoRA r=16, qwen-chat, binary "
+            "reward, eval@100). Requires runner.py support for frpo_mode field. "
+            "Estimated wall-clock: ~165 minutes (2× training; within 4h budget)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 2,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "frpo_mode": True,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-19 batch (4 experiments) ─────────────────────────────────────
+    {
+        "id": "exp_2026_05_19_001_unlikeliness_reward_15b",
+        "priority": 9,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Rewarding the Unlikely (arxiv:2506.02355, He et al., June 2025) identifies a "
+            "degenerate rank bias in GRPO: the policy gradient systematically amplifies "
+            "high-probability trajectories and neglects rare-but-correct ones because "
+            "advantage normalisation uses group mean/std of rewards — rare correct rollouts "
+            "are treated identically in magnitude to common correct rollouts but are fewer "
+            "in number so they contribute less total gradient signal. For our 1.5B MBPP "
+            "case: the ~27/100 mixed-outcome tasks each have 1 correct rollout among 4; "
+            "that 1 correct trajectory is the rare one, and standard GRPO under-weights it "
+            "relative to the 3 failing trajectories' zero-reward signal. The unlikeliness "
+            "reward adds an auxiliary term inversely proportional to the trajectory's "
+            "marginal rank within its group: correct trajectories ranked lowest by log-prob "
+            "receive additional reward alpha=0.3 (paper: alpha=0.3 achieves best pass@N). "
+            "This converts trajectory rarity from a disadvantage to a signal amplifier. "
+            "Unlike F-GRPO (EXP-014: group-level advantage scaling by task success rate), "
+            "the unlikeliness reward operates at the trajectory level within a group — "
+            "the two mechanisms are orthogonal and potentially composable. All other params "
+            "match the best case (1.5B, 200 tasks, 4 rollouts, 1 epoch, lr=5e-6, LoRA r=16, "
+            "qwen-chat, binary reward, eval@100). Runner changes: add unlikeliness_reward, "
+            "unlikeliness_alpha, unlikeliness_beta fields to grpo_continual kind. "
+            "Estimated wall-clock: ~90 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "unlikeliness_reward": True,
+            "unlikeliness_alpha": 0.3,
+            "unlikeliness_beta": 1.0,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_19_002_mt_grpo_minmax_task_weight_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Multi-Task GRPO (arxiv:2602.05547, Feb 2026) identifies that standard GRPO on "
+            "heterogeneous tasks produces imbalanced optimization: tasks with non-zero reward "
+            "variance dominate gradient updates while zero-variance tasks are silently "
+            "ignored — the same failure mode we observe with our 53/100 consistently-failed "
+            "MBPP tasks. MT-GRPO introduces a min-max task weight formulation: it maintains "
+            "a per-task importance weight initialised uniformly, and after every "
+            "minmax_update_freq gradient steps increases the weight for tasks whose rolling "
+            "success rate falls below the global average, while decreasing it for tasks that "
+            "consistently succeed (near all-pass). A ratio-preserving sampler then "
+            "over-samples the upweighted tasks in subsequent mini-batches, ensuring the "
+            "adapted weights translate directly into gradient contributions. In 3-task and "
+            "9-task experiments, MT-GRPO achieves 16-28% absolute improvement on worst-task "
+            "accuracy over standard GRPO and 6% over DAPO, while matching average accuracy. "
+            "Mechanistically distinct from both F-GRPO (scales advantage within existing "
+            "groups) and DAPO dynamic sampling (discards uninformative groups): MT-GRPO "
+            "keeps all tasks but changes their sampling frequency so the hardest tasks get "
+            "more mini-batch exposure. For our 200-task MBPP training set, the 53 hard "
+            "tasks would receive more gradient steps per epoch without changing batch size. "
+            "Runner changes: add task_weighting and minmax_update_freq fields to "
+            "grpo_continual kind; implement per-task success rate tracker and weighted "
+            "sampler. Estimated wall-clock: ~95 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "task_weighting": "minmax",
+            "minmax_update_freq": 10,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_19_003_staircase_3stage_15b_100x3",
+        "priority": 6,
+        "kind": "grpo_multi_seed_staircase",
+        "rationale": (
+            "The 2-stage staircase [100+100] (exp_2026_05_16_004) tests whether incremental "
+            "chunk training (arxiv:2601.19897: Self-Distillation Enables Continual Learning) "
+            "prevents the degradation seen at flat 400 tasks. The 3-stage extension "
+            "[100+100+100]=300 total tasks is the natural next test point: if 2-stage "
+            "preserves accuracy and the staircase mechanism is the protection (not a "
+            "capacity limit), then 3 stages should safely reach 300 tasks. Our history "
+            "shows: flat-200 = +2pts, flat-400 = -1pt. The 300-task range has only been "
+            "attempted via flat GRPO with KL (exp_2026_05_15_002) and KL+curriculum "
+            "(exp_2026_05_17_001) but never via staircase chunking. The staircase mechanism "
+            "differs fundamentally from KL regularisation: it imposes structural continuity "
+            "(each stage starts from the previous stage's checkpoint) rather than a "
+            "probabilistic constraint (KL penalty). This experiment disambiguates whether "
+            "the 200->400 degradation is: (a) a cumulative gradient problem (staircase "
+            "fixes it by resetting context every 100 tasks), or (b) a fundamental capacity "
+            "limit at ~200 tasks regardless of training order. Each 100-task stage runs "
+            "~45 minutes; 3 stages total ~135 minutes, well within the 4h A800 budget. "
+            "seeds=[42] to match the 2-stage experiment for direct comparison on held-out "
+            "eval."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "staircase_stages": [
+                {"task_offset": 0, "task_limit": 100},
+                {"task_offset": 100, "task_limit": 100},
+                {"task_offset": 200, "task_limit": 100},
+            ],
+            "epochs_per_stage": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+            "seeds": [42],
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_19_004_joint_cycle_router_threshold_45",
+        "priority": 5,
+        "kind": "joint_cycle_multiseed",
+        "rationale": (
+            "Switchcraft (arxiv:2605.07112, May 2026) shows that the routing threshold is "
+            "the primary lever controlling the cost-accuracy Pareto frontier in LLM routing "
+            "systems: the DistilBERT-based Switchcraft router achieved 82.9% accuracy with "
+            "84% cost reduction, but the threshold sweep revealed 3-6% accuracy variation "
+            "per 0.1-unit threshold change. Our learned BERT-base router achieves 93.04% "
+            "accuracy at threshold=0.57 (tuned on the mixed-pretrained validation set). "
+            "exp_2026_05_15_005 evaluates the joint cycle at the default 0.57 threshold. "
+            "The 0.45 threshold is 0.12 units below the current operating point — "
+            "aggressively routing more queries to the 1.5B small model, reducing oracle "
+            "calls to the large model. If accuracy at 0.45 is within 2-3pts of the 0.57 "
+            "baseline, substantial cost savings are achievable in deployment without "
+            "retraining the router. If accuracy degrades sharply below 0.45, the current "
+            "0.57 threshold is near-optimal and further threshold reduction is infeasible. "
+            "This is the first sub-0.57 operating point in our evaluation history. "
+            "Seeds=[42, 123] match the baseline experiment for direct paired comparison. "
+            "Eval-only joint inference; no training. Estimated wall-clock: ~20 minutes."
+        ),
+        "spec": {
+            "small_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "small_adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4",
+            "router_model": "/data0/home/zeyuwang/router-skills-evolve-runs/learned-router-mixed-pretrained",
+            "router_threshold": 0.45,
+            "eval_data": "data/HumanEval.jsonl",
+            "seeds": [42, 123],
+            "prompt_style": "qwen-chat",
+            "eval_limit": 100,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-20 batch (2 experiments — queue > 20 cap) ─────────────────────
+    {
+        "id": "exp_2026_05_20_001_rloo_binary_reward_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Exploring Pass-Rate Reward in RL for Code Generation (arxiv:2605.02944, "
+            "May 2026) evaluates GRPO and RLOO in a strict on-policy regime on code "
+            "generation benchmarks and finds a key algorithmic difference: RLOO "
+            "(REINFORCE Leave-One-Out) uses a per-rollout leave-one-out baseline "
+            "A_i = r_i - mean(r_{j≠i}) rather than the group-level mean/std "
+            "normalisation in standard GRPO. Critically, the Sparse Policy Selection "
+            "paper (arxiv:2605.06241, May 2026) establishes that RL performs sparse "
+            "targeted edits at high-entropy token positions — not broad capability "
+            "acquisition. RLOO's per-rollout baseline is a lower-variance advantage "
+            "estimate than GRPO's group mean: with G=4, GRPO uses all 4 rewards for "
+            "normalisation and then for gradient, mixing these roles; RLOO uses 3 "
+            "as baseline for 1, isolating the gradient signal per rollout. In our "
+            "27/100 mixed-outcome tasks (1 pass, 3 fail), RLOO assigns the correct "
+            "rollout advantage = 1.0 - mean(0,0,0) = 1.0, while standard GRPO "
+            "normalises the whole group and may assign smaller magnitude advantages "
+            "due to std-scaling. Additionally, RLOO is unbiased (the leave-one-out "
+            "baseline is exact for on-policy objectives) whereas GRPO's group-relative "
+            "normalisation is biased when group size is small (G=4). arxiv:2605.02944 "
+            "shows that with binary reward, RLOO matches or slightly exceeds GRPO on "
+            "HumanEval and MBPP in strict on-policy settings. All params match best "
+            "case (1.5B, 200 tasks, 4 rollouts, 1 epoch, lr=5e-6, LoRA r=16, "
+            "qwen-chat, binary reward, eval@100). Runner changes: add "
+            "algorithm='rloo' field to grpo_continual kind; implement leave-one-out "
+            "advantage estimation (trivial change from group mean to leave-one-out). "
+            "Estimated wall-clock: ~90 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "algorithm": "rloo",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_20_002_passk_eval_grpo_adapter_15b",
+        "priority": 7,
+        "kind": "forgetting_eval",
+        "rationale": (
+            "Rethinking RL for LLM Reasoning: It's Sparse Policy Selection, Not "
+            "Capability Learning (arxiv:2605.06241, May 2026) provides a mechanistic "
+            "account of why our GRPO training produces only +2pts at pass@1: RL "
+            "redistributes probability mass at a sparse set of high-entropy token "
+            "positions rather than teaching new capabilities. Critically, this sparse "
+            "redistribution is predicted to compound with test-time compute: if the "
+            "adapter shifts even a small amount of probability mass toward correct "
+            "solutions at key decision points, sampling more solutions at inference "
+            "time (larger k) should show super-linear gain relative to the base model. "
+            "Concretely: if base pass@1=0.47 and adapter pass@1=0.49, but the adapter's "
+            "per-task probability of generating a correct solution increased from "
+            "base_p → adapter_p by +5-10% on average (not just +2% at k=1), then at "
+            "k=4 the gain would be visible as 1-(1-adapter_p)^4 vs 1-(1-base_p)^4. "
+            "This experiment evaluates the existing 1.5B GRPO adapter at pass@1, "
+            "pass@4, and pass@8 on the 100-task MBPP eval set (temperature=0.8, "
+            "multiple sample draws), comparing to the base model at the same k values. "
+            "Two outcomes are informative: (a) if adapter pass@k >> base pass@k for "
+            "k=4,8 despite small pass@1 gap, the RL training is succeeding silently "
+            "and the path forward is test-time compute rather than more training; "
+            "(b) if pass@k gain tracks pass@1 gain (stays near +2pts), the adapter "
+            "has made no deep structural improvement and the sparse-editing framing "
+            "predicts future GRPO variants will also plateau near +2pts, motivating "
+            "a fundamentally different approach (distillation, test-time tree search). "
+            "Pure eval — no training. Estimated wall-clock: ~35 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4",
+            "eval_sets": [
+                {
+                    "name": "MBPP_passk",
+                    "data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+                    "limit": 100,
+                    "offset": 0,
+                    "prompt_style": "qwen-chat",
+                    "pass_k_values": [1, 4, 8],
+                    "temperature": 0.8,
+                    "num_samples": 8,
+                },
+            ],
+            "max_new_tokens": 256,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-22 batch (2 experiments — queue > 20 cap, A800 day 8 offline) ─
+    {
+        "id": "exp_2026_05_22_001_warmstart_continual_15b_chunks34",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Learning, Fast and Slow: Towards LLMs That Adapt Continually "
+            "(arxiv:2605.12484, May 2026) identifies 'plasticity loss' as the mechanism "
+            "behind our 400-task degradation: prolonged parametric adaptation causes output "
+            "entropy to shrink and KL to the base policy to rise, eroding the model's "
+            "ability to absorb new tasks. After training on 200 tasks (chunks 1+2), the "
+            "adapter's weight distribution has shifted; restarting a new GRPO phase from "
+            "that adapter on 100 new tasks (chunks 3+4 each limited to 100) tests whether "
+            "warm-starting from already-adapted weights allows safe extension beyond 200 "
+            "tasks. Critically, this differs from flat-400 (which trains on tasks 1-400 "
+            "from the base model in one long session) AND from the staircase experiments "
+            "(exp_2026_05_16_004 and exp_2026_05_19_003, which start each 100-task chunk "
+            "from the immediately preceding chunk's checkpoint). This experiment starts "
+            "from the BEST KNOWN ADAPTER (200×4, fully converged) rather than a "
+            "transient mid-training checkpoint, isolating whether the degradation is a "
+            "within-session cumulative gradient effect vs. a beyond-capacity effect. "
+            "If warm-starting from the best adapter + 100 new tasks matches or exceeds "
+            "the +2pt best case, it demonstrates that the training protocol (start-from-"
+            "best) prevents plasticity loss where start-from-base + long training does not. "
+            "2605.12484's fast-slow framework predicts this: the best adapter's weights "
+            "represent a more stable slow-weight configuration than the base model for "
+            "continual task absorption. Runner change needed: add 'warm_start_adapter' "
+            "field to run_grpo_continual — set prev = spec.get('warm_start_adapter') "
+            "before the chunks loop, so chunk 3 starts from the 200x4 adapter path. "
+            "Estimated wall-clock: ~90 minutes (2 × 45-min chunks on A800)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "warm_start_adapter": (
+                "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/"
+                "qwen25_coder_15b_grpo_200x4"
+            ),
+            "chunks": [3, 4],
+            "epochs_per_chunk": 1,
+            "n_generations": 4,
+            "kl_coef": 0.05,
+            "reward_mode": "binary",
+            "eval_limit": 100,
+            "lora_r": 16,
+            "lr": 5e-6,
+            "tag": "warmstart_chunks34",
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_22_002_router_threshold_065_joint_cycle",
+        "priority": 5,
+        "kind": "joint_cycle_multiseed",
+        "rationale": (
+            "BEST-Route: Adaptive LLM Routing with Test-Time Optimal Compute "
+            "(arxiv:2506.22716, ICML 2025) demonstrates that the routing threshold "
+            "defines a continuous Pareto curve between inference cost and answer quality: "
+            "lower thresholds route more queries to the small model (cheaper, lower "
+            "accuracy) and higher thresholds route more to the large model (expensive, "
+            "higher accuracy). Our BERT-base router has only been characterised at two "
+            "operating points: threshold=0.57 (baseline, 93.04% accuracy, "
+            "exp_2026_05_15_005) and threshold=0.45 (more aggressive routing to small "
+            "model, exp_2026_05_19_004). A third data point at threshold=0.65 — a "
+            "CONSERVATIVE operating point that routes more queries to the large model — "
+            "completes the 3-point Pareto characterisation (0.45 → 0.57 → 0.65). This "
+            "is diagnostically valuable because: (a) if accuracy at 0.65 improves by "
+            "<1pt over 0.57, the current threshold is already near the saturation "
+            "plateau and we cannot meaningfully improve quality by being more "
+            "conservative; (b) if accuracy at 0.65 improves by >3pts over 0.57, there "
+            "is a significant quality ceiling at 0.57 that a tuned threshold can capture "
+            "without any retraining. BEST-Route found ≥3% accuracy gains from threshold "
+            "tuning in their DistilBERT router on MMLU/BBH; our code-routing task may "
+            "show a steeper plateau due to the bimodal difficulty distribution (code "
+            "is either easy for the small model or fundamentally hard regardless of "
+            "model scale). Seeds=[42, 123] match both baseline experiments for direct "
+            "3-way paired comparison. Eval-only joint inference; no training. "
+            "Estimated wall-clock: ~20 minutes."
+        ),
+        "spec": {
+            "small_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "small_adapter": (
+                "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/"
+                "qwen25_coder_15b_grpo_200x4"
+            ),
+            "router_model": (
+                "/data0/home/zeyuwang/router-skills-evolve-runs/"
+                "learned-router-mixed-pretrained"
+            ),
+            "router_threshold": 0.65,
+            "eval_data": "data/HumanEval.jsonl",
+            "seeds": [42, 123],
+            "prompt_style": "qwen-chat",
+            "eval_limit": 100,
+        },
+        "gpu": "auto",
+    },
 ]
 
 
@@ -189,7 +1003,6 @@ def main():
         queue.append(exp)
         added.append(exp["id"])
 
-    # Atomic write
     tmp_fd, tmp_path = tempfile.mkstemp(
         dir=STATE_PATH.parent, suffix=".tmp", prefix="state_"
     )
