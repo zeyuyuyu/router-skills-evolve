@@ -58,3 +58,4 @@
   Actions taken: none (cannot read state, cannot write remote log).
   Next step: retry at next 2-hour cron tick; investigate if outage persists >4h.
 [2026-05-22T20:06:17Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s (sshpass+openssh-client present). This is run #13+1 since 2026-05-14. Outbound TCP to this host appears blocked by network policy. No state read; all checks (A/B/C/D/E) skipped; no actions taken. ESCALATION: persistent connectivity failure (~8 days); human intervention required to re-route shepherd or open firewall.
+[2026-05-23T06:07:18Z] SHEPHERD RUN — FAILED: A800 unreachable (ssh -p 50507 117.74.66.181 timed out after 15s). No state read, no actions taken. All steps (state check, stall detection, result analysis, disk check, artifact health) were skipped. Will retry on next scheduled run (2h). Recommend verifying A800 network/SSH service.
