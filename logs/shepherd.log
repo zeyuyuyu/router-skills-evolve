@@ -77,3 +77,4 @@ SSH/TCP connections to A800. No state was read, no actions were taken.
 Next scheduled shepherd run should retry; if outbound network is intentionally
 restricted, shepherd must be moved to a container with A800 network access.
 
+[2026-05-23T16:05:37Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable (SSH timeout). 9th+ consecutive failure from cloud env. Steps A/B/C/D/E skipped. No actions taken.

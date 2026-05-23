@@ -10,3 +10,14 @@ Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out on b
 Actions taken: none (cannot reach host; per protocol, write failure and exit).
 Concerns: two consecutive shepherd failures means ~4 hours of unmonitored research pipeline. If A800 is up but this container has no outbound route to the host, manual intervention is needed to verify firewall/VPN/network policy for this cloud execution environment.
 Next step: manual check of A800 network reachability from cloud environment; verify host is online; retry at next shepherd invocation.
+
+[2026-05-23T16:05:37Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out.
+  This is a persistent failure; outbound TCP to port 50507 from this cloud execution
+  environment is blocked or the A800 host is down. Multiple shepherd runs have failed
+  since at least 2026-05-14 (9+ days). Steps A/B/C/D/E all skipped (no state readable).
+Actions taken: none.
+Escalation: 9+ consecutive days of failed shepherd runs. Auto-research pipeline is
+  unmonitored. Manual intervention required: verify A800 uptime and either (a) restore
+  outbound SSH from this environment, (b) move the shepherd cron to A800-local cron,
+  or (c) use an SSH jump host / reverse tunnel.
