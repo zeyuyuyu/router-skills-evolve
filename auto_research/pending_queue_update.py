@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-22 by autonomous research agent.
+Pending queue update — last updated 2026-05-23 by autonomous research agent.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
-2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2).
-Total pending: 25 experiments.
+2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-23 (2).
+Total pending: 27 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -883,7 +883,7 @@ NEW_EXPERIMENTS = [
         },
         "gpu": "auto",
     },
-    # ── 2026-05-22 batch (2 experiments — queue > 20 cap, A800 day 8 offline) ─
+    # ── 2026-05-22 batch (2 experiments — queue > 20 cap, A800 day 8 offline) ──
     {
         "id": "exp_2026_05_22_001_warmstart_continual_15b_chunks34",
         "priority": 7,
@@ -976,6 +976,140 @@ NEW_EXPERIMENTS = [
             "seeds": [42, 123],
             "prompt_style": "qwen-chat",
             "eval_limit": 100,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-23 batch (2 experiments — queue > 20 cap, A800 day 9 offline) ──
+    {
+        "id": "exp_2026_05_23_001_egca_execution_grounded_grpo_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Execution-Grounded Credit Assignment for GRPO in Code Generation "
+            "(arxiv:2603.16158, ICLR 2026 Workshop on Scaling Post-Training for LLMs) "
+            "identifies a fundamental failure mode in GRPO for code: advantage is "
+            "uniformly distributed across all output tokens even when the program "
+            "failure originates from a narrow, localised semantic error. EGCA addresses "
+            "this by executing both the generated candidate and a reference solution under "
+            "identical instrumentation, finding the *earliest semantic divergence point* "
+            "(the specific line/function call where outputs first differ), and then "
+            "assigning non-zero advantage ONLY to the token span preceding that "
+            "divergence while masking downstream tokens. Programs that fail all tests "
+            "but produce syntactically valid code receive advantage on the tokens up "
+            "to the first divergence from a correct execution trace. EGCA requires no "
+            "critic, auxiliary loss, or learned verifier — it is a drop-in modification "
+            "of the GRPO advantage assignment step with ~18% wall-clock overhead. "
+            "Paper results: +3.1 pts pass@1 on HumanEval (vs vanilla GRPO) and "
+            "+1.5 pts on MBPP. For our project, the key gap EGCA fills is the "
+            "~53/100 MBPP eval tasks that consistently fail ALL 4 rollouts — under "
+            "vanilla GRPO these tasks receive zero advantage and contribute only noise. "
+            "Under EGCA, even a failed rollout gets a localized signal on the first "
+            "wrong decision tokens, converting roughly N tasks from zero-gradient to "
+            "positive-gradient. This is mechanistically orthogonal to ALL 25 queued "
+            "experiments: F-GRPO (EXP-014) reweights groups by success rate, DAPO "
+            "(EXP-013) discards non-mixed groups, MT-GRPO (EXP-018) upsamples hard "
+            "tasks — none of them change WHAT signal a failed rollout contains, only "
+            "whether/how often it is used. EGCA changes the signal itself at the "
+            "token level. If +1.5 pts on MBPP transfers directly, we go 47→50.5, "
+            "breaking the +2pt ceiling for the first time. "
+            "Runner changes required: add 'credit_assignment' field to grpo_continual "
+            "kind; implement execution-trace diffing against the MBPP reference "
+            "solutions already available in the dataset. The reference solutions are "
+            "the 'canonical' solutions in the MBPP augmented dataset — no extra "
+            "data or labelling needed. "
+            "Estimated wall-clock: ~110 minutes (base 90 min × 1.18 overhead)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/"
+                "mbpp_aug/train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/"
+                "mbpp_aug/test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "credit_assignment": "execution_grounded",
+            "egca_reference_field": "canonical_solution",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_23_002_mssr_replay_grpo_15b_300tasks",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "MSSR: Memory-Aware Adaptive Replay for Continual LLM Fine-Tuning "
+            "(arxiv:2603.09892, March 2026) proposes an Ebbinghaus forgetting-curve-"
+            "inspired replay schedule for continual fine-tuning: it estimates a "
+            "per-sample 'memory strength' score (using the model's current loss on "
+            "each sample as a proxy for retention), then schedules replay at "
+            "progressively expanding intervals — early in training, high-loss (likely "
+            "forgotten) samples are replayed frequently; as the model stabilises "
+            "and loss on those samples decreases, replay intervals expand, reducing "
+            "overhead. The replay buffer stores the N_buffer highest-reward examples "
+            "seen so far; when triggered, a mini-batch of replay samples is interleaved "
+            "with the current training mini-batch. Results: MSSR consistently "
+            "outperforms SOTA replay baselines across 3 backbone models and 11 "
+            "sequential tasks, with particularly strong gains on reasoning-intensive "
+            "benchmarks — directly analogous to our MBPP code generation setting. "
+            "Connection to project history: our key open question is whether we can "
+            "extend the training task count beyond 200 tasks without the -1pt "
+            "degradation seen at 400 tasks (arxiv:2605.12484 attributes this to "
+            "plasticity loss). We have three queued approaches to this problem: "
+            "(a) KL penalty at 300 tasks (EXP-002, priority 9), "
+            "(b) KL + curriculum at 300 tasks (EXP-011, priority 9), "
+            "(c) warm-start from best adapter (EXP-024, priority 7). "
+            "MSSR replay is a fourth, mechanistically orthogonal approach: instead of "
+            "regularising the RL objective (KL), reordering training (curriculum), or "
+            "starting from a better checkpoint (warm-start), MSSR prevents forgetting "
+            "by *explicitly rehearsing* successful early-training examples during later "
+            "training. This is the only replay-based approach in the entire 27-item "
+            "queue. The key experimental question: does replay (MSSR) prevent the "
+            "200→400 degradation as effectively as KL regularisation? If yes, replay "
+            "is a complementary tool; if replay + KL together eliminate degradation "
+            "beyond 300 tasks, that is a strong combined result. Spec: train on 300 "
+            "tasks (50% more than the safe 200-task ceiling), with MSSR-style replay "
+            "buffer of size 30 and initial replay frequency of 1 replay step per 5 "
+            "gradient steps (expanding to 1 per 20 by task 200). All other params "
+            "match the best-case (lr=5e-6, LoRA r=16, 4 rollouts, qwen-chat, binary "
+            "reward). Runner changes: add replay_buffer_size, replay_freq_init, and "
+            "replay_freq_expand_rate fields to grpo_continual kind; implement a "
+            "simple circular replay buffer drawing from past high-reward examples. "
+            "Estimated wall-clock: ~125 minutes (300 tasks × 45 sec/task × 1.1 "
+            "replay overhead, within the 4h budget)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/"
+                "mbpp_aug/train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/"
+                "mbpp_aug/test_eval_all.jsonl"
+            ),
+            "train_task_limit": 300,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "replay_buffer_size": 30,
+            "replay_freq_init": 5,
+            "replay_freq_expand_rate": 1.5,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
         },
         "gpu": "auto",
     },
