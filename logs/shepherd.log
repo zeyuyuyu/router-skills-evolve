@@ -66,3 +66,14 @@
   Actions taken: none (cannot read state.json, cannot check processes, cannot write alerts).
   Recommendation: Run shepherd from a machine on the same network as A800, or configure an SSH tunnel/proxy
   accessible from code.claude.com egress IPs (or whitelist this environment's IP on A800's firewall/NAT).
+[2026-05-23T12:10:12Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181) unreachable from this container.
+  Port 50507 (configured SSH): timed out
+  Port 22 (standard SSH): timed out
+  SSH binary available: None
+  sshpass binary available: None
+Network policy of this remote execution environment does not permit outbound
+SSH/TCP connections to A800. No state was read, no actions were taken.
+Next scheduled shepherd run should retry; if outbound network is intentionally
+restricted, shepherd must be moved to a container with A800 network access.
+
