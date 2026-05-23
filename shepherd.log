@@ -1,0 +1,6 @@
+
+[2026-05-23T02:04:55Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out after 10s.
+Actions taken: none (cannot reach host).
+Checked: sshpass installed, ssh installed (1:9.6p1-3ubuntu13), nc confirms port closed/filtered.
+Next step: manual check of A800 network/firewall; retry at next shepherd invocation.
