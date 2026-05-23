@@ -1,0 +1,1 @@
+[2026-05-23 14:06:35 UTC] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable after 4 retries (2s/4s/8s/16s backoff). Connection timed out on all attempts. No actions taken. Will retry on next cron tick.
