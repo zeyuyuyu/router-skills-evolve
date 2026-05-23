@@ -4,3 +4,9 @@ Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out afte
 Actions taken: none (cannot reach host).
 Checked: sshpass installed, ssh installed (1:9.6p1-3ubuntu13), nc confirms port closed/filtered.
 Next step: manual check of A800 network/firewall; retry at next shepherd invocation.
+
+[2026-05-23T04:07:08Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out on both raw socket (Python/paramiko) and sshpass attempts. ssh binary not present in container PATH; paramiko installed and attempted directly; all network probes timed out. This is the 2nd consecutive failure (~2h apart).
+Actions taken: none (cannot reach host; per protocol, write failure and exit).
+Concerns: two consecutive shepherd failures means ~4 hours of unmonitored research pipeline. If A800 is up but this container has no outbound route to the host, manual intervention is needed to verify firewall/VPN/network policy for this cloud execution environment.
+Next step: manual check of A800 network reachability from cloud environment; verify host is online; retry at next shepherd invocation.
