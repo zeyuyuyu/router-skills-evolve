@@ -88,3 +88,7 @@ restricted, shepherd must be moved to a container with A800 network access.
   sshpass installed successfully but ssh binary was missing; openssh-client installed from apt cache (v9.6p1-3ubuntu13).
   No state could be read. No actions taken. All STEP 2 checks skipped.
   Next shepherd run should retry A800 connectivity; if persistent, check port forwarding / VPN tunnel on A800 side.
+[2026-05-24T10:07:40Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — connection timed out on both attempts (state.json fetch + system health check).
+  Actions taken: none (cannot read state, cannot assess conditions, cannot write remote shepherd.log).
+  Next: retry at next 2-hour shepherd tick. If persistent, check A800 power/network or contact admin.
