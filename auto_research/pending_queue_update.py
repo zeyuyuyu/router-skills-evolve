@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-22 by autonomous research agent.
+Pending queue update — last updated 2026-05-24 by autonomous research agent.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
-2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2).
-Total pending: 25 experiments.
+2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2).
+Total pending: 27 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -883,7 +883,7 @@ NEW_EXPERIMENTS = [
         },
         "gpu": "auto",
     },
-    # ── 2026-05-22 batch (2 experiments — queue > 20 cap, A800 day 8 offline) ─
+    # ── 2026-05-22 batch (2 experiments — queue > 20 cap, A800 day 8 offline) ──
     {
         "id": "exp_2026_05_22_001_warmstart_continual_15b_chunks34",
         "priority": 7,
@@ -976,6 +976,103 @@ NEW_EXPERIMENTS = [
             "seeds": [42, 123],
             "prompt_style": "qwen-chat",
             "eval_limit": 100,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-24 batch (2 experiments — queue > 20 cap, A800 day 10 offline) ─
+    {
+        "id": "exp_2026_05_24_001_egca_credit_assignment_15b",
+        "priority": 9,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Execution-Grounded Credit Assignment for GRPO in Code Generation "
+            "(arxiv:2603.16158, ICLR 2026 Workshop SPOT) identifies credit assignment "
+            "— not reward sparsity — as the primary bottleneck in code-domain GRPO: "
+            "standard GRPO diffuses the outcome signal uniformly across 100-192 tokens "
+            "even when failure originates from a 1-8 token causal patch (a wrong index, "
+            "comparison operator, or missing edge case). EGCA executes the failing "
+            "candidate alongside a canonical reference solution under identical "
+            "instrumentation, identifies the earliest execution-state divergence, maps "
+            "it back to the responsible token span, and concentrates the GRPO advantage "
+            "exclusively on that span while masking downstream tokens. Results: "
+            "+3.1 pts on HumanEval (82.1% pass@1 vs ~79% GRPO baseline) and "
+            "+1.5 pts on MBPP (68.9% vs ~67.4%), with only 18% wall-clock overhead. "
+            "No critic, auxiliary loss, or learned verifier required — drop-in change. "
+            "For our project: ~27/100 eval tasks produce programs that run but fail "
+            "tests (the EGCA target class). The 200-task MBPP training set has canonical "
+            "reference solutions (MBPP specifies expected outputs). EGCA should "
+            "concentrate the gradient at the precise failure sites in these 27 tasks, "
+            "potentially converting some of the 53 currently-all-fail tasks (which fall "
+            "back to standard GRPO) to mixed-outcome as the model learns better local "
+            "patterns. Runner change: add credit_assignment='egca' field; on reward=0 "
+            "and execution_status='ok', run both traces, find first state divergence, "
+            "set advantage_mask = 0 for all tokens except the divergence span. "
+            "Estimated wall-clock: ~107 minutes (90 × 1.18 EGCA overhead)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "credit_assignment": "egca",
+            "egca_gate": "execution_divergence",
+            "egca_span_masking": True,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_24_002_cchain_churn_reduction_15b_300tasks",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Mitigating Plasticity Loss in Continual Reinforcement Learning by Reducing "
+            "Churn (arxiv:2506.00592, ICML 2025) establishes the mechanistic chain: "
+            "NTK rank decrease → churn increase (output variability for out-of-batch "
+            "states) → plasticity loss. C-CHAIN continuously minimises an auxiliary "
+            "churn loss L_churn = ||f(θ_new, x_buf) - f(θ_old, x_buf)||² on a rolling "
+            "replay buffer of recent out-of-batch states alongside the regular RL "
+            "gradient, which adaptively regularises the gradient step size to preserve "
+            "NTK rank. This is orthogonal to the KL-penalty approach in the queue "
+            "(exp_2026_05_15_002, exp_2026_05_17_001): KL constrains the policy's "
+            "probability distribution relative to a frozen reference model (distributional "
+            "regularisation), while C-CHAIN constrains gradient dynamics via NTK rank "
+            "preservation (no frozen reference model needed, cheaper per step). "
+            "Our 300-task regime is where plasticity loss begins: flat-200 = +2pts, "
+            "flat-400 = -1pt. If C-CHAIN at 300 tasks matches or exceeds +2pts while "
+            "KL-penalty at 300 tasks also achieves ~+2pts, the two mechanisms are "
+            "redundant; if C-CHAIN outperforms KL-penalty at 300 tasks, gradient "
+            "dynamics (not distributional drift) is the primary plasticity-loss driver, "
+            "motivating combining both for the 400-task regime. "
+            "Runner change: add churn_reduction='cchain' and churn_lambda float field; "
+            "after each GRPO gradient step, compute L_churn on a 256-entry prompt "
+            "buffer and add churn_lambda × L_churn to the optimizer gradient. "
+            "~80 additional lines. churn_lambda=0.1 (paper midpoint). "
+            "Estimated wall-clock: ~85 minutes (300 tasks on A800)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 300,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "churn_reduction": "cchain",
+            "churn_lambda": 0.1,
+            "churn_buffer_size": 256,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
         },
         "gpu": "auto",
     },
