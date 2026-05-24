@@ -22,3 +22,14 @@ Escalation: 9+ consecutive days of failed shepherd runs. Auto-research pipeline 
   outbound SSH from this environment, (b) move the shepherd cron to A800-local cron,
   or (c) use an SSH jump host / reverse tunnel.
 [2026-05-24T00:07:56Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) is TCP-unreachable (connection timed out after 10s). No state read, no actions taken. This run: FAILED. Next shepherd should retry; if persistent, check A800 power/network.
+
+[2026-05-24T02:04:45Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out (10s probe).
+  ssh binary absent in container PATH; paramiko installed and attempted; all network
+  probes (port 50507, 22, 2222) timed out. This is a persistent, recurring failure
+  spanning multiple shepherd runs (9+ consecutive days as of 2026-05-23).
+  Steps A/B/C/D/E all skipped — no state readable.
+Actions taken: none (per protocol: unreachable host → log failure and exit).
+Escalation: ONGOING. Pipeline is unmonitored. Manual intervention required:
+  (a) verify A800 uptime/network; (b) add outbound SSH allowance in cloud env network
+  policy; or (c) run shepherd directly on A800 via local cron.
