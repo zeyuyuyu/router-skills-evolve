@@ -1,0 +1,5 @@
+[2026-05-24T14:08:47Z] SHEPHERD RUN — FAILED
+  Reason: A800 unreachable. TCP probe to 117.74.66.181:50507 returned EWOULDBLOCK (port closed/filtered).
+  Attempted: paramiko SSH + direct sshpass (ssh binary absent in container).
+  Actions taken: none (cannot reach host).
+  Next step: retry at next shepherd tick; if repeated failures, check A800 uptime / network route.
