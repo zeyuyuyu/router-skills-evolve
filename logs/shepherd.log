@@ -83,3 +83,7 @@ restricted, shepherd must be moved to a container with A800 network access.
   Actions taken: none (cannot safely act without reading state.json).
   Recommendation: verify A800 network/sshd status; if server is down, check GPU node health.
   Next shepherd run will retry.
+[2026-05-24T10:07:40Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — connection timed out on both attempts (state.json fetch + system health check).
+  Actions taken: none (cannot read state, cannot assess conditions, cannot write remote shepherd.log).
+  Next: retry at next 2-hour shepherd tick. If persistent, check A800 power/network or contact admin.
