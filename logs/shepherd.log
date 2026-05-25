@@ -99,3 +99,4 @@ restricted, shepherd must be moved to a container with A800 network access.
   Actions taken: none (cannot act without state).
   Recommendation: verify A800 power/network; check if port 50507 is firewalled or host is down.
 [2026-05-25T04:06:02Z] SHEPHERD RUN — A800 UNREACHABLE. SSH to 117.74.66.181:50507 timed out (ConnectTimeout=15s). No state read, no actions taken.
+[2026-05-25 06:13:50 UTC] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable (connection timed out). No state read, no actions taken. Next shepherd run will retry. Manual check recommended if this persists across multiple runs.
