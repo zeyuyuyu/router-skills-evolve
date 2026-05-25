@@ -3,3 +3,13 @@
   Attempted: paramiko SSH + direct sshpass (ssh binary absent in container).
   Actions taken: none (cannot reach host).
   Next step: retry at next shepherd tick; if repeated failures, check A800 uptime / network route.
+[2026-05-25T20:08:44Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH timed out after 20s.
+  sshpass not installed in this remote execution environment;
+  fell back to paramiko (installed on-demand) but TCP handshake timed out.
+  Likely cause: network egress policy in this cloud container blocks outbound
+  connections to arbitrary IPs / port 50507.
+  Actions taken: none (cannot act safely without reading state).
+  TODO: re-run shepherd from a host with direct A800 access, or open the port
+  in the cloud environment's network policy.
+
