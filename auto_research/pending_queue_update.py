@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-24 by autonomous research agent.
+Pending queue update — last updated 2026-05-25 by autonomous research agent.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
-2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2).
-Total pending: 27 experiments.
+2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2).
+Total pending: 29 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -979,7 +979,7 @@ NEW_EXPERIMENTS = [
         },
         "gpu": "auto",
     },
-    # ── 2026-05-24 batch (2 experiments — queue > 20 cap, A800 day 10 offline) ─
+    # ── 2026-05-24 batch (2 experiments — queue > 20 cap, A800 day 10 offline) ──
     {
         "id": "exp_2026_05_24_001_egca_credit_assignment_15b",
         "priority": 9,
@@ -1071,6 +1071,153 @@ NEW_EXPERIMENTS = [
             "churn_reduction": "cchain",
             "churn_lambda": 0.1,
             "churn_buffer_size": 256,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-25 batch (2 experiments — queue > 20 cap, A800 day 11 offline) ──
+    {
+        "id": "exp_2026_05_25_001_epgrpo_entropy_gated_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "EP-GRPO: Entropy-Progress Aligned Group Relative Policy Optimization with "
+            "Implicit Process Guidance (arxiv:2605.04960, May 2026) identifies three "
+            "credit-assignment failures in standard GRPO that uniformly degrade code "
+            "generation: (1) uniform token-level granularity that ignores heterogeneous "
+            "informational value across token positions; (2) uniform advantage polarity "
+            "that can penalise correct intermediate steps; (3) zero-variance group collapse "
+            "that erases outcome-driven gradients on hard tasks. EP-GRPO addresses (1) via "
+            "entropy-gated modulation: at each token position, compute the model's output "
+            "entropy H(p_t) = -sum p_t log p_t; tokens in the top-20% entropy percentile "
+            "(called 'decision pivots') receive an amplified advantage multiplier "
+            "eta * advantage (eta=2.0 in the paper), while low-entropy tokens receive "
+            "a suppressed multiplier (1 - beta * (1-H_t/H_max), beta=0.3). This "
+            "concentrates gradient signal at the tokens where the model is genuinely "
+            "uncertain — the branching points in code generation (operator choices, "
+            "variable names at first use, conditional logic) — without requiring any "
+            "external tool, execution trace, or reference solution. "
+            "DISTINCT FROM EGCA (EXP-026): EGCA requires a second execution pass (18% "
+            "overhead), a canonical reference solution, and targets the causal execution-"
+            "level failure site. EP-GRPO uses the model's own logit distribution (zero "
+            "additional cost, no reference needed), targeting the distributional uncertainty "
+            "peaks. The two are complementary: EGCA is causal (where did execution diverge?); "
+            "EP-GRPO is distributional (where is the model most uncertain?). In practice, "
+            "the execution-divergence token and the entropy-peak token are correlated but "
+            "not identical — the model may be uncertain before making the wrong choice "
+            "(EP-GRPO's signal) or only after (EGCA's signal). "
+            "DISTINCT FROM F-GRPO (EXP-018): F-GRPO scales advantage at the task/group "
+            "level by success rate; EP-GRPO scales advantage at the individual token level "
+            "by entropy. Different granularity, different mechanism. "
+            "DISTINCT FROM DAPO (EXP-013): DAPO discards all-zero groups; EP-GRPO keeps "
+            "all groups but amplifies the gradient at high-entropy token positions within "
+            "each group. "
+            "Results on HumanEval and MBPP: EP-GRPO achieves +2.7 pts on HumanEval and "
+            "+1.9 pts on MBPP over vanilla GRPO on 7B models, with zero computational "
+            "overhead (entropy is free from the forward-pass logits). For our 1.5B MBPP "
+            "case, high-entropy tokens at code-fork positions are likely the same 1-8 "
+            "token patches that EGCA targets via execution traces. If both EGCA (+3.1 pts "
+            "on paper) and EP-GRPO (+2.7 pts on paper) show gains empirically on our setup, "
+            "combining them (entropy-gated masking + execution-trace masking) is motivated. "
+            "Runner change required: add advantage_masking='entropy_gated', "
+            "entropy_gate_percentile=80, entropy_gate_eta=2.0, entropy_gate_beta=0.3 to "
+            "grpo_continual; after rollout logits are computed, compute per-token entropy "
+            "from the softmax distribution, threshold at the 80th percentile, apply the "
+            "eta/beta scaling to the advantage tensor before the policy gradient step. "
+            "Estimated additional code: ~60 lines. Zero runtime overhead. "
+            "Estimated wall-clock: ~88 minutes (200 tasks × 4 rollouts, no overhead)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "advantage_masking": "entropy_gated",
+            "entropy_gate_percentile": 80,
+            "entropy_gate_eta": 2.0,
+            "entropy_gate_beta": 0.3,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_25_002_relex_rank1_extrapolation_15b",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "You Only Need Minimal RLVR Training: Extrapolating LLMs via Rank-1 "
+            "Trajectories (arxiv:2605.21468, May 20 2026, RELEX method, code at "
+            "github.com/weizhepei/RELEX) demonstrates that the LoRA parameter-update "
+            "trajectory during RLVR training is extremely low-rank — dominated by its "
+            "rank-1 singular direction — and that this rank-1 component evolves nearly "
+            "linearly with training steps. RELEX exploits this: run a short observation "
+            "window (e.g. 50 gradient steps), compute the SVD of the accumulated LoRA "
+            "delta (B × A), extract the rank-1 projection (u σ v^T), fit a linear "
+            "regression on σ(step) vs step, extrapolate σ to the target step count "
+            "(200 in our case), and reconstruct the extrapolated checkpoint. No "
+            "additional gradient steps needed beyond the observation window. "
+            "Results on math reasoning (AIME, AMC): RELEX reaches the performance of "
+            "full-length RLVR training (~200 gradient steps) using only ~50 observation "
+            "steps, a 4× compute reduction. The paper tests Qwen2.5-Math-1.5B and "
+            "Qwen3-1.7B with LoRA adapters, which are architecturally identical to our "
+            "Qwen2.5-Coder-1.5B-Instruct setup. "
+            "DIAGNOSTIC VALUE FOR OUR PROJECT: "
+            "This experiment tests whether our code GRPO training is also rank-1 dominated. "
+            "Three informative outcomes: "
+            "(a) Extrapolation from 50 tasks reaches ≥49/100 (matches full-200 result): "
+            "    → Code GRPO is rank-1, consistent with math RLVR. The rank-1 direction "
+            "    is established by task 50; tasks 51-200 only scale it. This means our "
+            "    +2pt gain was achievable in 50 tasks, and future experiments can use "
+            "    50-task observation + extrapolation instead of 200 full gradient steps "
+            "    (4× faster iteration). "
+            "(b) Extrapolation reaches ~47/100 (matches base, no gain): "
+            "    → Code GRPO at 1.5B is NOT rank-1. The training trajectory is higher-rank "
+            "    and genuinely requires 200 full steps for the improvement to materialise. "
+            "    This rules out RELEX as a speed-up and changes our understanding of how "
+            "    the 1.5B coder model's LoRA space evolves during GRPO. "
+            "(c) Extrapolation undershoots (e.g. 44/100, below base): "
+            "    → The rank-1 extrapolation overshoots the correct σ scale; the trajectory "
+            "    is nonlinear (likely saturates before step 200). This suggests the "
+            "    training dynamic is self-limiting and the +2pt gain exhausts around "
+            "    task 100, which directly motivates the C-CHAIN (EXP-027) and staircase "
+            "    (EXP-016, EXP-020) experiments. "
+            "DISTINCT FROM ALL EXISTING EXPERIMENTS: No prior experiment uses trajectory "
+            "extrapolation. Staircase/warm-start experiments use sequential gradient "
+            "descent on each chunk; RELEX substitutes gradient descent with SVD projection "
+            "for steps beyond the observation window. "
+            "Runner change required: add extrapolation_mode='rank1_relex', "
+            "observe_tasks=50, extrapolate_to=200 to grpo_continual. Implementation: "
+            "run GRPO for only observe_tasks steps, snapshot the LoRA adapter at each "
+            "10-task interval (5 snapshots), compute delta = adapter - base_lora for "
+            "each snapshot, SVD of delta, fit linear model on σ_1(step) vs step, "
+            "extrapolate to step=200, reconstruct the adapter as base_lora + u * σ_200 * v^T. "
+            "Estimated additional code: ~45 lines (numpy SVD + linear regression). "
+            "Estimated wall-clock: ~30 minutes (observe_tasks=50: ~22 min of training + "
+            "~8 min for 5 SVD snapshots + extrapolation + eval at 200-task scale)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "extrapolation_mode": "rank1_relex",
+            "observe_tasks": 50,
+            "extrapolate_to": 200,
+            "snapshot_interval": 10,
             "eval_limit": 100,
             "max_new_tokens": 192,
         },
