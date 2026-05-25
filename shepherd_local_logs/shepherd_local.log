@@ -1,0 +1,6 @@
+[2026-05-25T22:09:00Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable. SSH port 50507 returned connection timeout.
+  Port check: :80 OPEN, :50507 CLOSED, :22 CLOSED.
+  sshpass installed OK (openssh-client 9.6p1-3ubuntu13 also installed from apt).
+  Actions taken: none (cannot read state, cannot write remote shepherd.log).
+  Next shepherd run: will retry A800 connection. If still down, escalate to user.
