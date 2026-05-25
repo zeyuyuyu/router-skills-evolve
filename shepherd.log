@@ -81,3 +81,11 @@ Escalation: CRITICAL/ONGOING. Pipeline is unmonitored for 12+ days. Manual
   intervention required: (a) verify A800 uptime/network; (b) allow outbound TCP port
   50507 in cloud env network policy; (c) relocate shepherd cron to A800 local cron;
   or (d) use a reverse-tunnel / jump-host / VPN approach so the container can reach A800.
+[2026-05-25T18:07:29Z] SHEPHERD RUN — FAILED (persistent/critical)
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out (paramiko 20s connect timeout).
+  Failure streak: 13+ consecutive runs since ~2026-05-14. Steps A/B/C/D/E all skipped.
+  Actions taken: none (per protocol: unreachable host → log and exit).
+  Escalation: AUTO-RESEARCH PIPELINE IS DARK. Experiments unmonitored for 11+ days.
+    Required fix: (a) verify A800 power/network, (b) allow outbound TCP:50507 in cloud
+    env network policy, OR (c) relocate shepherd cron to run locally on A800.
+
