@@ -45,3 +45,27 @@ Escalation: CRITICAL/ONGOING. Pipeline is unmonitored for 10+ days. Manual
   intervention required: (a) verify A800 uptime/network; (b) allow outbound TCP port
   50507 in cloud env network policy; or (c) relocate shepherd cron to A800 local cron
   or use a reverse-tunnel / jump-host approach.
+
+[2026-05-25T08:06:03Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out (20s probe).
+  sshpass + openssh-client installed in container; all network probes timed out.
+  This is a persistent, ongoing failure: 11+ consecutive failed shepherd runs spanning
+  2026-05-14 through 2026-05-25. Steps A/B/C/D/E all skipped — no state readable,
+  no actions taken.
+Actions taken: none (per protocol: unreachable host → log failure and exit).
+Escalation: CRITICAL/ONGOING. Pipeline is unmonitored for 11+ days. Manual
+  intervention required: (a) verify A800 uptime/network; (b) allow outbound TCP port
+  50507 in cloud env network policy; or (c) relocate shepherd cron to A800 local cron
+  or use a reverse-tunnel / jump-host approach.
+
+[2026-05-25T08:06:47Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out (20s probe).
+  sshpass + openssh-client installed in container; all network probes timed out.
+  This is a persistent, ongoing failure: 11+ consecutive failed shepherd runs spanning
+  2026-05-14 through 2026-05-25. Steps A/B/C/D/E all skipped — no state readable,
+  no actions taken.
+Actions taken: none (per protocol: unreachable host → log failure and exit).
+Escalation: CRITICAL/ONGOING. Pipeline is unmonitored for 11+ days. Manual
+  intervention required: (a) verify A800 uptime/network; (b) allow outbound TCP port
+  50507 in cloud env network policy; or (c) relocate shepherd cron to A800 local cron
+  or use a reverse-tunnel / jump-host approach.
