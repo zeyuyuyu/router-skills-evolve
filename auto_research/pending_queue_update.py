@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-25 by autonomous research agent.
+Pending queue update — last updated 2026-05-26 by autonomous research agent.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
-2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2).
-Total pending: 29 experiments.
+2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2).
+Total pending: 31 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -1073,6 +1073,130 @@ NEW_EXPERIMENTS = [
             "churn_buffer_size": 256,
             "eval_limit": 100,
             "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-26 batch (2 experiments — queue > 20 cap, A800 day 12 offline) ──
+    {
+        "id": "exp_2026_05_26_001_mugrpo_offpolicy_staged_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Mu-GRPO (arxiv:2605.17570, May 2026) addresses a core inefficiency in standard "
+            "GRPO: alternating single rollout generation with single gradient steps causes "
+            "high context-switching overhead (model loading for inference vs. training). Mu-GRPO "
+            "reorganises training into a small number (e.g., 4) of large sequential "
+            "generate→optimize stages — each stage generates a large batch of rollouts then "
+            "runs many optimisation steps on the stale data. To stabilise learning under high "
+            "rollout staleness, Mu-GRPO adds two mechanisms: (1) relaxed clipping, which "
+            "preserves gradient signal from rollouts whose importance ratio has grown beyond "
+            "the standard PPO clip bound (eps=0.2) rather than zeroing it; (2) negative-"
+            "advantage veto, which identifies the 'trigger position' in a negative-advantage "
+            "rollout — the token position where the importance ratio first exceeds a veto "
+            "threshold — and zeroes out the gradient for all suffix tokens after that position. "
+            "The negative-advantage veto is specifically critical for code generation: standard "
+            "GRPO propagates the negative advantage signal uniformly across all tokens in a "
+            "failing rollout, which incorrectly penalises syntactically correct prefix tokens "
+            "(indentation, function signature, standard boilerplate) that are shared with "
+            "passing rollouts — a form of credit assignment corruption. The veto prevents "
+            "this by stopping the negative gradient at the point where the current policy "
+            "first deviates significantly from the generation policy, preserving the "
+            "valuable prefix gradient signal. "
+            "Practical benefit: ~2× wall-clock speedup vs. standard on-policy GRPO, because "
+            "the generate/optimize alternation overhead is eliminated. With 29 experiments "
+            "queued and the A800 offline for 12 days, any experiment that runs in half the "
+            "time effectively doubles throughput once connectivity is restored. "
+            "DISTINCT FROM EXISTING QUEUE: No prior experiment uses off-policy staged training "
+            "or negative-advantage veto. The closest existing experiment is DAPO (EXP-013, "
+            "dynamic sampling), which discards all-zero-advantage groups; Mu-GRPO's veto "
+            "operates at the per-token level within negative-advantage groups, keeping the "
+            "group but masking the corrupted suffix tokens. Orthogonal mechanisms. "
+            "Runner changes: add algorithm='mu_grpo', mu_grpo_stages=4, "
+            "negative_advantage_veto=True, relaxed_clipping=True to grpo_continual. "
+            "Implementation: split 200 tasks into 4 × 50-task stages; each stage generates "
+            "all 50×4=200 rollouts first, then runs gradient steps; apply veto + relaxed clip. "
+            "~80 additional lines. Estimated wall-clock: ~45 minutes (2× speedup over 90 min)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "algorithm": "mu_grpo",
+            "mu_grpo_stages": 4,
+            "negative_advantage_veto": True,
+            "relaxed_clipping": True,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_26_002_murphy_multiturn_selfcorrect_15b",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "MURPHY (arxiv:2511.07833, Ekbote et al., Amazon Science, Nov 2025 / ICLR 2026 "
+            "Workshop) extends GRPO to a multi-turn self-correction loop for code generation: "
+            "Turn 1 generates G=4 rollouts per task and executes tests. Any rollout that fails "
+            "to achieve max reward receives the executor's stdout/stderr (test names, assertion "
+            "errors, traceback) appended to the original prompt as context, and Turn 2 "
+            "generates G=4 new rollouts conditioned on this augmented context. MURPHY's credit "
+            "assignment propagates reward backward: if a Turn-2 rollout passes, the Turn-1 "
+            "trajectory that led to it (i.e., the attempt that received the execution feedback "
+            "and triggered the correction) receives partial credit proportional to the reward "
+            "difference (r_turn2 - r_turn1). This transforms the training signal from binary "
+            "(pass or fail) to a richer two-level signal that distinguishes between 'never "
+            "attempted a correct direction' (both turns fail) and 'attempted a correct direction "
+            "but made a recoverable error' (turn 1 fails, turn 2 succeeds with feedback). "
+            "Results on Qwen and OLMo models: up to 8% relative improvement in pass@1 over "
+            "standard GRPO on similar compute budgets. For our 1.5B baseline (47→49/100, "
+            "+2pts), 8% relative improvement over the trained model (49/100) would give "
+            "~53/100 (+6pts from base) — breaking the +2pt ceiling that has persisted across "
+            "all prior recipe variations. The mechanism is complementary to all 29 queued "
+            "experiments: EGCA (EXP-026) identifies error tokens post-hoc; EP-GRPO (EXP-028) "
+            "amplifies uncertain tokens; MURPHY provides explicit natural-language execution "
+            "feedback that guides the second-turn search. "
+            "DISTINCT FROM ALL EXISTING QUEUE: No prior experiment uses multi-turn rollout "
+            "generation with inter-turn feedback. The closest is the staircase experiments "
+            "(EXP-011, EXP-020) which train in sequential chunks but never provide execution "
+            "feedback between turns. MURPHY requires executing tests during training (not just "
+            "for reward), which the runner already does for binary reward computation — the "
+            "additional change is capturing and templating the execution output as context. "
+            "Compute budget: Turn 2 is only triggered for failing groups (~80% of tasks in "
+            "our setup based on history: 53% all-fail + 27% mixed). Total effective compute "
+            "≈ 1.8× standard, so 200 tasks × 1.8 ≈ 360 task-equivalents ≈ 162 min. "
+            "Well within the 4h A800 budget. "
+            "Runner changes: add multi_turn=True, max_turns=2, turn_feedback='execution_trace' "
+            "to grpo_continual; after Turn 1 reward computation, for rollouts with reward=0, "
+            "format 'Test failed: {stdout}\\n{stderr}' and append to prompt; run Turn 2 "
+            "generation + eval; compute credit-propagated advantage across both turns. "
+            "~120 additional lines. Estimated wall-clock: ~160 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "multi_turn": True,
+            "max_turns": 2,
+            "turn_feedback": "execution_trace",
+            "turn_feedback_format": "test_stdout_stderr",
+            "turn_credit_propagation": "delta_reward",
+            "eval_limit": 100,
+            "max_new_tokens": 256,
         },
         "gpu": "auto",
     },
