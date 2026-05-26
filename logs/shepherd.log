@@ -116,3 +116,4 @@ outbound network policy does not permit direct SSH to the A800 GPU server. No st
 read; no actions were taken.
 Recommendation: Run the shepherd script directly on A800 (cron job), or allow the
 cloud session to SSH out by adding A800's host:port to the environment's network allowlist.
+[2026-05-26T14:07:10Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 30s. No state read, no actions taken. SSH binary was missing from container and required apt install before attempt. All decision steps (A-E) skipped. Manual check recommended.
