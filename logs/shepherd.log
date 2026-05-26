@@ -116,3 +116,19 @@ outbound network policy does not permit direct SSH to the A800 GPU server. No st
 read; no actions were taken.
 Recommendation: Run the shepherd script directly on A800 (cron job), or allow the
 cloud session to SSH out by adding A800's host:port to the environment's network allowlist.
+[2026-05-26T18:06:00Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP probe returned errno=11
+  (EAGAIN/port filtered) on ports 50507, 22, and 53 — consistent with outbound
+  TCP being blocked by the cloud execution environment's network policy. sshpass
+  unavailable; paramiko installed and attempted; all probes timed out. This is
+  the 14th+ consecutive failure spanning 2026-05-14 through 2026-05-26 (~12 days).
+  Steps A/B/C/D/E all skipped — no state readable, no actions taken.
+Actions taken: none (per protocol: unreachable host → log failure and exit).
+Escalation: CRITICAL/ONGOING. Auto-research pipeline has been unmonitored for 12+
+  days. Manual intervention required:
+    (a) Verify A800 (117.74.66.181) is powered on and SSH daemon running on :50507.
+    (b) Re-create this cloud execution environment with outbound-SSH-allowed network
+        policy, OR allow outbound TCP to 117.74.66.181:50507 in current policy.
+    (c) As permanent fix: run shepherd cron locally on A800, or expose state.json
+        via a small HTTPS endpoint (e.g. FastAPI/ngrok on port 443) so the cloud
+        container can poll without raw SSH.
