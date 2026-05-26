@@ -109,3 +109,10 @@ restricted, shepherd must be moved to a container with A800 network access.
   network policy. To fix: (a) re-create the environment with an outbound-SSH-allowed
   policy, or (b) expose A800 state.json via HTTPS (e.g. a small FastAPI endpoint or
   ngrok) so shepherd can poll over port 443 instead.
+[2026-05-26T10:05:37Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) is unreachable from this cloud execution environment.
+TCP probe returned errno=11 (EAGAIN / port filtered). The remote execution container's
+outbound network policy does not permit direct SSH to the A800 GPU server. No state was
+read; no actions were taken.
+Recommendation: Run the shepherd script directly on A800 (cron job), or allow the
+cloud session to SSH out by adding A800's host:port to the environment's network allowlist.
