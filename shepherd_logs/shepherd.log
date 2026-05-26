@@ -1,0 +1,2 @@
+[2026-05-26T16:06:15Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable from cloud sandbox. TCP connection timed out after 10s. No SSH client binary available; attempted via Python paramiko (also timed out). Root cause: outbound TCP to non-standard port 50507 is likely blocked by the remote execution environment's network policy. Actions taken: none. Will retry on next shepherd invocation.
