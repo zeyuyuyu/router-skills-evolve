@@ -132,3 +132,9 @@ Escalation: CRITICAL/ONGOING. Auto-research pipeline has been unmonitored for 12
     (c) As permanent fix: run shepherd cron locally on A800, or expose state.json
         via a small HTTPS endpoint (e.g. FastAPI/ngrok on port 443) so the cloud
         container can poll without raw SSH.
+
+[2026-05-26T20:06:16Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable from this execution environment.
+  TCP probe (nc/curl/ssh) all timed out. Likely blocked by container outbound network policy.
+  No state read, no experiments checked, no actions taken.
+  Manual follow-up required: verify A800 is up and network routing allows this container to reach it.
