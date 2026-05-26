@@ -101,3 +101,9 @@ restricted, shepherd must be moved to a container with A800 network access.
   SSH client installed successfully, but host is not responding on port 50507.
   No state could be read; no actions taken.
   Manual check recommended: verify A800 is online and SSH port 50507 is accessible.
+
+[2026-05-26 00:07:01 UTC] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable from remote execution environment.
+TCP connection timed out; outbound network policy likely blocks this IP/port.
+Actions taken: none. All steps skipped per policy (write failure, exit).
+No experiments were launched, modified, or queried.
