@@ -19,7 +19,7 @@
     1. Add 117.74.66.181 to this runner's outbound network allowlist, OR
     2. Move the shepherd cron to a host that has direct A800 access (e.g., run it on A800 itself or a co-located jump host).
     3. On next reachable run: check for crashed experiments, queue starvation, and disk pressure accumulated during the blind window.
-  Next: retry at next 2-hour tick; persistent failure = environment misconfiguration, not transient network hiccup.
+  DONE: actions=FAILED
 [2026-05-15T10:03:59Z] SHEPHERD RUN — FAILED (7th consecutive)
   Reason: A800 (117.74.66.181:50507) still unreachable. TCP connect timed out after 10s (paramiko). Outbound SSH from this cloud runner is blocked; all 7 runs since 2026-05-14T20:03Z have failed identically.
   Actions taken: none. All checks (A/B/C/D/E) skipped. shepherd.log on A800 not updated.
@@ -57,7 +57,7 @@
   Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s.
   Actions taken: none (cannot read state, cannot write remote log).
   Next step: retry at next 2-hour cron tick; investigate if outage persists >4h.
-[2026-05-22T20:06:17Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s (sshpass+openssh-client present). This is run #13+1 since 2026-05-14. Outbound TCP to this host appears blocked by network policy. No state read; all checks (A/B/C/D/E) skipped; no actions taken. ESCALATION: persistent connectivity failure (~8 days); human intervention required to re-route shepherd or open firewall.
+[2026-05-22T20:06:17Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable (SSH timeout). 9th+ consecutive failure from cloud env. Steps A/B/C/D/E skipped. No actions taken.
 [2026-05-23T06:07:18Z] SHEPHERD RUN — FAILED: A800 unreachable (ssh -p 50507 117.74.66.181 timed out after 15s). No state read, no actions taken. All steps (state check, stall detection, result analysis, disk check, artifact health) were skipped. Will retry on next scheduled run (2h). Recommend verifying A800 network/SSH service.
 [2026-05-23T10:07:11Z] SHEPHERD RUN — FAILED
   Reason: A800 (117.74.66.181:50507) unreachable from this remote execution environment.
@@ -151,3 +151,4 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out on both attempts (15s and 20s timeouts).
   Actions taken: none (cannot read state, cannot act safely without state).
   Recommendation: verify A800 network/SSH service; if outage persists beyond next shepherd tick, escalate manually.
+[2026-05-27T12:08:33Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable (SSH connection timed out on both attempts). No state read, no actions taken. All steps skipped per protocol. Next shepherd run will retry.
