@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-26 by autonomous research agent.
+Pending queue update — last updated 2026-05-27 by autonomous research agent.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
-2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2).
-Total pending: 31 experiments.
+2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
+2026-05-27 (2).
+Total pending: 33 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -1197,6 +1198,128 @@ NEW_EXPERIMENTS = [
             "turn_credit_propagation": "delta_reward",
             "eval_limit": 100,
             "max_new_tokens": 256,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-27 batch (2 experiments — queue > 20 cap, A800 day 13 offline) ──
+    {
+        "id": "exp_2026_05_27_001_probl2_bregman_grpo_15b",
+        "priority": 9,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Beyond KL Divergence: Policy Optimization with Flexible Bregman Divergences "
+            "for LLM Reasoning (arxiv:2602.04380, Feb 2026) identifies a structural flaw in "
+            "all 31 queued experiments: every one uses KL divergence as the policy regulariser, "
+            "either implicitly (PPO-clip) or explicitly (kl_coeff). KL(π_new || π_old) → ∞ "
+            "when π_old(a)→0 but π_new(a)>0, causing gradient explosion at tokens whose "
+            "correct usage has near-zero base-model probability — exactly the failure mode for "
+            "hard MBPP tasks where the correct algorithm (e.g. `heapq.nlargest`, "
+            "`collections.Counter`, `bisect.insort`) has near-zero base probability. "
+            "ProbL2-GRPO replaces KL with the L2 divergence in probability space: "
+            "||π_new − π_old||^2, which has finite gradient everywhere (bounded second "
+            "derivative), preventing gradient explosion at low-probability tokens. "
+            "Key results: MBPP pass@1 60.1–60.8% (best with neural mirror map variants), "
+            "**70% variance reduction** vs KL-GRPO (±0.7 → ±0.2 training variance), no "
+            "additional hyperparameters needed, no frozen reference model required. "
+            "For our project: the variance reduction is immediately valuable — our 100-task "
+            "eval has ≈ binomial std of ±5pts, so a ×3 variance reduction (±5 → ±1.7) would "
+            "make the current +2pt gain clearly statistically significant instead of "
+            "potentially noise, and could stabilise 300-task training that currently degrades. "
+            "Explicitly deferred from 2026-05-26 report as 'highest-priority addition for "
+            "2026-05-27.' Runner change: replace KL term with L2 divergence "
+            "||π_new(a|s) - π_old(a|s)||^2 summed over vocabulary, with a "
+            "divergence_coeff=0.02 scale matching the prior kl_coeff. ~10 lines of change. "
+            "Estimated wall-clock: ~90 minutes (200 tasks, 4 rollouts, same budget)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "divergence_type": "probl2",
+            "divergence_coeff": 0.02,
+            "use_reference_model": False,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_27_002_dgpo_hellinger_credit_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "DGPO: Distribution Guided Policy Optimization for Fine Grained Credit Assignment "
+            "(arxiv:2605.03327, May 2026) introduces a two-stage token-level credit assignment "
+            "mechanism that is orthogonal to all 32 currently-queued experiments: "
+            "(1) Per-token Hellinger distance: H(π_t, π_ref_t) = sqrt(0.5 * sum[(√π_t(a) - "
+            "√π_ref_t(a))^2]) is computed between the current policy and the reference policy "
+            "at each token position in the rollout. Unlike KL divergence, Hellinger distance "
+            "is bounded in [0, 1], so tokens where the policy has drifted significantly from "
+            "reference get H_t ≈ 1 while tokens that haven't changed get H_t ≈ 0. This "
+            "identifies the specific token positions where the current training step is making "
+            "the most change — the 'action tokens' in code generation (operator choices, index "
+            "expressions, conditional branches) tend to have H_t > 0.5, while boilerplate "
+            "(indentation, `def`, `return`) tends to have H_t ≈ 0. "
+            "(2) Entropy gate: the Hellinger distance is scaled by the policy entropy H_t to "
+            "filter out high-drift tokens that are merely noisy (high H_t but also high entropy "
+            "= model is uncertain AND has drifted — likely a noisy update). The combined "
+            "credit signal dgpo_credit_t = H_t * entropy_t is used to redistribute the "
+            "sequence-level GRPO advantage A_group to individual tokens: "
+            "A_token_t = A_group * dgpo_credit_t / mean(dgpo_credit). "
+            "DISTINCT FROM ALL 32 EXISTING EXPERIMENTS: "
+            "- vs. EP-GRPO (EXP-028): EP-GRPO gates only by absolute entropy H_t of the "
+            "  current policy. DGPO additionally weights by Hellinger distance (relational "
+            "  to the reference policy), giving a signal for 'how much has this token's "
+            "  distribution actually changed during training?' — the two signals are "
+            "  complementary: a high-entropy, high-Hellinger token is a pivotal decision "
+            "  token where training is making significant distributional changes. "
+            "- vs. EGCA (EXP-026): EGCA requires a second execution pass (~18% overhead), "
+            "  a canonical reference solution, and identifies the causal failure token via "
+            "  execution-state divergence. DGPO uses the logits already computed (zero "
+            "  overhead), requires only a frozen reference policy snapshot (already computed "
+            "  for KL in kl_coeff experiments), and identifies token pivots via distributional "
+            "  drift. No execution runner integration required. "
+            "- vs. Mu-GRPO (EXP-030): Mu-GRPO uses importance ratio to veto gradient on "
+            "  negative-advantage rollout suffixes. DGPO's Hellinger gate applies to all "
+            "  rollouts (positive and negative) and redistributes advantage, not vetoes it. "
+            "Expected mechanism for code generation: the ~27/100 mixed-outcome MBPP tasks "
+            "have rollouts where only 1-8 tokens differ between passing and failing code. "
+            "DGPO's Hellinger gate should concentrate gradient mass on those 1-8 tokens "
+            "because: (a) they are where policy drift H_t is highest (training is actively "
+            "changing these positions), and (b) they have non-trivial entropy H(p_t) "
+            "(model is genuinely uncertain between correct and incorrect choices). "
+            "Implementation: requires a frozen reference policy copy (any of the existing "
+            "reference-model experiments' infrastructure), compute H_t per-token via "
+            "scipy.spatial.distance.hellinger or manual sqrt formula on logit softmax, "
+            "multiply by entropy, renormalise, scale advantage tensor element-wise. ~70 lines. "
+            "Estimated wall-clock: ~92 minutes (~2% overhead for per-token Hellinger computation "
+            "on rollout logits already resident in GPU memory)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "credit_assignment": "dgpo_hellinger",
+            "dgpo_entropy_gate": True,
+            "dgpo_hellinger_entropy_scale": True,
+            "dgpo_entropy_gate_percentile": 80,
+            "use_reference_model": True,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
         },
         "gpu": "auto",
     },
