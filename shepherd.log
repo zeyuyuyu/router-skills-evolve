@@ -88,3 +88,12 @@ Reason: A800 (117.74.66.181:50507) unreachable — TCP probe returned errno=11 (
 Actions taken: none.
 Escalation: CRITICAL/ONGOING — pipeline unmonitored for 12+ days. Fix needed:
   allow outbound SSH from cloud env, OR run shepherd cron locally on A800.
+[2026-05-27T18:06:17Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out (15s probe).
+  sshpass installed; paramiko 5.0.0 installed; TCP connect to 117.74.66.181:50507 returned
+  TIMEOUT — host/port unreachable from cloud execution environment.
+  15th+ consecutive failure (2026-05-14 through 2026-05-27). Steps A–E all skipped.
+Actions taken: none (protocol: unreachable host → log failure and exit).
+Escalation: CRITICAL/ONGOING — pipeline unmonitored for 13+ days. Recommended fix:
+  (a) run shepherd cron locally on A800, OR (b) set up reverse tunnel/VPN for cloud env
+  outbound access, OR (c) allow outbound TCP 50507 in cloud env network policy.
