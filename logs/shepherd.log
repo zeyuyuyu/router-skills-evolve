@@ -136,3 +136,14 @@ Escalation: CRITICAL/ONGOING. Auto-research pipeline has been unmonitored for 12
   Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s.
   Actions taken: none (cannot assess state without server access).
   Next shepherd: retry at next 2-hour cron tick; if persistent, check A800 network/power.
+[2026-05-27T02:06:20Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP probe returned errno=11
+  (EAGAIN/port filtered). sshpass unavailable on runner; paramiko installed and
+  attempted connect() with 30s timeout — timed out. This is the 15th+
+  consecutive failure spanning 2026-05-14 through 2026-05-27 (~13 days).
+  Steps A/B/C/D/E all skipped — no state readable, no actions taken.
+Actions taken: none (protocol: unreachable host → log failure and exit).
+Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
+  Recommended fix: run shepherd on A800 itself (cron on A800), or expose
+  state.json via HTTPS (e.g. FastAPI on :8080 with token auth) so this
+  cloud runner can poll without raw SSH.
