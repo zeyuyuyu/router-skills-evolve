@@ -106,3 +106,4 @@ restricted, shepherd must be moved to a container with A800 network access.
   SSH client installed successfully, but host is not responding on port 50507.
   No state could be read; no actions taken.
   Manual check recommended: verify A800 is online and SSH port 50507 is accessible.
+[2026-05-27T08:07:12Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable — TCP connect timed out on port 50507 and port 22. paramiko + sshpass installed OK but host not responding. No state.json read; all STEP 2 checks (A/B/C/D/E) skipped; no actions taken. This appears to be a persistent outbound SSH block from this runner's network policy. Recommend moving shepherd cron to a host with direct A800 access.
