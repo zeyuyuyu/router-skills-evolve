@@ -1,0 +1,7 @@
+[2026-05-27T00:07:38Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH port 50507 timed out.
+  TCP probe results: port 50507=TIMEOUT, port 22=TIMEOUT, port 80=OPEN.
+  The host appears up (HTTP port 80 responds) but SSH is not accessible.
+  Actions taken: none (cannot read state.json or modify any files on A800).
+  Recommendation: check if sshd is running on A800, firewall rules for port 50507,
+  or if the port mapping has changed. Retry next shepherd tick.
