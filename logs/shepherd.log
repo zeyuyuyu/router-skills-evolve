@@ -147,3 +147,7 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Recommended fix: run shepherd on A800 itself (cron on A800), or expose
   state.json via HTTPS (e.g. FastAPI on :8080 with token auth) so this
   cloud runner can poll without raw SSH.
+[2026-05-27T04:05:51Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out on both attempts (15s and 20s timeouts).
+  Actions taken: none (cannot read state, cannot act safely without state).
+  Recommendation: verify A800 network/SSH service; if outage persists beyond next shepherd tick, escalate manually.
