@@ -5,3 +5,4 @@
   Actions taken: none (cannot read state.json or modify any files on A800).
   Recommendation: check if sshd is running on A800, firewall rules for port 50507,
   or if the port mapping has changed. Retry next shepherd tick.
+[2026-05-28T06:08:46Z] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out on both attempts (15s and 20s timeouts). No state read, no actions taken. Shepherd loop aborted per protocol. Next cron tick should retry; if persistent, check A800 network/sshd status.
