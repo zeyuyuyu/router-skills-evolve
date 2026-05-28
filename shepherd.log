@@ -130,3 +130,4 @@ Escalation: CRITICAL/ONGOING — pipeline unmonitored for 14+ days. Network is b
       crontab -e → add: 0 */2 * * * python3 /data0/home/zeyuwang/auto_research/shepherd.py >> /data0/home/zeyuwang/auto_research/logs/shepherd.log 2>&1
   (b) Reverse SSH tunnel or VPN so this cloud container can reach 117.74.66.181:50507.
   (c) Adjust cloud-env network policy (https://code.claude.com/docs/en/claude-code-on-the-web) to allow outbound TCP 50507.
+[2026-05-28 10:06:38 UTC] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connect timed out after 10s. No state read, no actions taken. All steps skipped.
