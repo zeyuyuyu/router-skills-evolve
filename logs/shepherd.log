@@ -152,3 +152,7 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Actions taken: none (cannot read state, cannot act safely without state).
   Recommendation: verify A800 network/SSH service; if outage persists beyond next shepherd tick, escalate manually.
 [2026-05-27T12:08:33Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable (SSH connection timed out on both attempts). No state read, no actions taken. All steps skipped per protocol. Next shepherd run will retry.
+[2026-05-28T00:00:00Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable from cloud execution environment.
+  SSH timed out after 15s. No state read, no actions taken.
+  Suggested: verify A800 is online and that outbound SSH is permitted from this cloud env.
