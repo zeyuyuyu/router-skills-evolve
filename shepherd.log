@@ -143,3 +143,11 @@ Escalation: CRITICAL/ONGOING — pipeline unmonitored for 14+ days. Structural n
   (b) Open outbound TCP port 50507 in cloud-env network policy:
       https://code.claude.com/docs/en/claude-code-on-the-web
   (c) Set up reverse SSH tunnel from A800 → this cloud container.
+[2026-05-29 08:06:43 UTC] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — outbound TCP to port 50507 blocked by cloud execution environment network policy. 'sshpass' installed but ssh binary absent initially (installed during run), then TCP connect timed out after 8s. 21st+ consecutive failure. Steps A–E all skipped; no state readable, no actions taken.
+Actions taken: none (protocol: unreachable host → log failure and exit).
+Escalation: CRITICAL/ONGOING — pipeline unmonitored. This session's cloud environment does NOT have outbound network access to the A800 host on this port. No progress possible until network path is established.
+Recommended remediation (unchanged):
+  (a) [HIGHEST PRIORITY] Run shepherd.py directly on A800 via local cron — eliminates cloud dependency entirely.
+  (b) Open outbound TCP 50507 in cloud-env network policy: https://code.claude.com/docs/en/claude-code-on-the-web
+  (c) Reverse SSH tunnel from A800 to this container.
