@@ -151,3 +151,12 @@ Recommended remediation (unchanged):
   (a) [HIGHEST PRIORITY] Run shepherd.py directly on A800 via local cron — eliminates cloud dependency entirely.
   (b) Open outbound TCP 50507 in cloud-env network policy: https://code.claude.com/docs/en/claude-code-on-the-web
   (c) Reverse SSH tunnel from A800 to this container.
+[2026-05-29 18:05:58 UTC] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — outbound TCP to port 50507 blocked by cloud execution environment network policy. SSH connect timed out (10s). 22nd+ consecutive failure. Steps A–E all skipped; no state readable, no actions taken.
+Actions taken: none (protocol: unreachable host → log failure and exit).
+Escalation: CRITICAL/ONGOING — pipeline unmonitored. Cloud execution environment lacks outbound network access to A800 on this port. No shepherd progress possible until network path is established.
+Recommended remediation (unchanged from prior runs):
+  (a) [HIGHEST PRIORITY] Run shepherd.py directly on A800 via local cron — eliminates cloud dependency entirely.
+      crontab -e  →  add: 0 */2 * * * python3 /data0/home/zeyuwang/auto_research/shepherd.py >> /data0/home/zeyuwang/auto_research/logs/shepherd.log 2>&1
+  (b) Open outbound TCP 50507 in cloud-env network policy: https://code.claude.com/docs/en/claude-code-on-the-web
+  (c) Reverse SSH tunnel from A800 to this container.
