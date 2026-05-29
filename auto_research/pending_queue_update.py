@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-29 by autonomous research agent.
+Pending queue update — last updated 2026-05-29 by weekly paper pipeline.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
 2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
-2026-05-27 (2), 2026-05-28 (2), 2026-05-29 (2).
-Total pending: 37 experiments.
+2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4).
+Total pending: 41 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -1777,6 +1777,126 @@ NEW_EXPERIMENTS = [
                 },
             ],
             "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+
+    # ── 2026-05-29 paper-pipeline batch (4 experiments — weekly paper reviewer pass) ──
+    {
+        "id": "exp_2026_05_29_003_grpo_multi_seed_3x_15b",
+        "priority": 9,
+        "kind": "joint_cycle_multiseed",
+        "rationale": (
+            "W1 (weekly review 2026-05-29): All GRPO results are n=1 seed. "
+            "The +2pp best result (47->49/100) is within the binomial standard error "
+            "(sigma ~5pp) and is statistically unverifiable without multiple seeds. "
+            "Run 3 independent seeds (42, 43, 44) of the identical 1.5B GRPO 200x4 "
+            "recipe to produce mean +/- std. If mean >= +1pp and std <= 2pp, the "
+            "result is publishable. If std > 3pp, the result is a fluke. "
+            "This is the single highest-priority experiment for AAAI 2027 submission. "
+            "~270 min total (3x 90 min, parallelizable across 3 GPUs)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "seeds": [42, 43, 44],
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+            "parallelizable": True,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_29_004_humaneval_grpo_adapter_eval_15b",
+        "priority": 8,
+        "kind": "forgetting_eval",
+        "rationale": (
+            "W3 (weekly review 2026-05-29): The GRPO adapter is only evaluated on MBPP "
+            "eval100. The HumanEval 99%% accuracy result uses the base small model + "
+            "routing. Reviewers will ask whether the adapter generalizes to HumanEval. "
+            "Evaluate qwen25_coder_15b_grpo_200x4 on HumanEval (164 tasks), specifically "
+            "the 9 large-required signature patterns (L|advanced/list/num, L|crypto/str, "
+            "L|list/num, L|list/str, M|advanced/list, M|bool/num, M|bool/str, "
+            "M|list/num/sort, M|list/num/str). If the adapter newly solves 1-2 of these, "
+            "the paper can claim closed-loop improvement. ~30 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "adapter": "/data0/home/zeyuwang/router-skills-evolve-runs/rl_15b/qwen25_coder_15b_grpo_200x4",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve/data/HumanEval.jsonl",
+            "eval_limit": 164,
+            "max_new_tokens": 384,
+            "prompt_style": "qwen-chat",
+            "focus_signatures": [
+                "L|advanced/list/num", "L|crypto/str", "L|list/num", "L|list/str",
+                "M|advanced/list", "M|bool/num", "M|bool/str", "M|list/num/sort",
+                "M|list/num/str",
+            ],
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_29_005_router_gold_label_eval_100",
+        "priority": 8,
+        "kind": "forgetting_eval",
+        "rationale": (
+            "W2 (weekly review 2026-05-29): UncommonRoute labels are weak labels. "
+            "Randomly sample 100 examples from the 334-example router test split. "
+            "For each, run Qwen2.5-Coder-1.5B-Instruct (small) and GPT-4o (large) on "
+            "the actual task via the execution suite. Use actual pass/fail results as "
+            "gold routing labels. Report learned router accuracy vs. gold labels. "
+            "If accuracy >= 90%%, the paper's soundness is confirmed. "
+            "If < 85%%, the router section needs rescoping. ~90 min."
+        ),
+        "spec": {
+            "router_model": "/data0/home/zeyuwang/router-skills-evolve-runs/learned-router-mixed-pretrained",
+            "router_threshold": 0.57,
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/uncommonroute_bench.jsonl",
+            "eval_limit": 100,
+            "eval_split": "test",
+            "gold_label_method": "execute_both_models",
+            "small_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "large_model": "gpt-4o",
+            "output": "/data0/home/zeyuwang/router-skills-evolve-results/router_gold_label_eval_100.json",
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_29_006_grpo_kl_penalty_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "W9 + ceiling break (weekly review 2026-05-29): Current best recipe has no "
+            "explicit KL (only PPO clip). REINFORCE++ (arxiv:2501.03262) and DAPO "
+            "(arxiv:2503.14476) show token-level KL prevents distribution collapse on "
+            "all-fail groups. Adding kl_coeff=0.02, kl_level=token may both improve mean "
+            "result and reduce variance across seeds (W1). Identical hyperparameters to "
+            "best recipe except kl_coeff=0.02 and reference_model=base. ~90 min."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+            "kl_coeff": 0.02,
+            "kl_level": "token",
+            "reference_model": "base",
         },
         "gpu": "auto",
     },

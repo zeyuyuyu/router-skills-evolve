@@ -1,0 +1,36 @@
+{
+  "paper_version": 1,
+  "target_venue": "AAAI 2027",
+  "secondary_venue": null,
+  "rush_mode": false,
+  "aaai_deadline": "2026-08-15",
+  "emnlp_deadline": "2026-06-19",
+  "neurips_deadline": "2026-05-23",
+  "scores": {
+    "novelty": 5,
+    "soundness": 4,
+    "significance": 6,
+    "writing": 6
+  },
+  "composite": 5.25,
+  "status": "provisional — A800 offline day 15, LLM results n=1 seed",
+  "last_updated": "2026-05-29",
+  "a800_outage_since": "2026-05-14T20:03Z",
+  "queue_size": 41,
+  "paper_files": {
+    "tex": "auto_research/paper/paper.tex",
+    "md": "auto_research/paper/paper.md",
+    "bib": "auto_research/paper/references.bib",
+    "review": "auto_research/paper/reviews/review-2026-05-29.md"
+  },
+  "strongest_claims": {
+    "skills_routing": "99% accuracy, 83% cost reduction on HumanEval 164",
+    "learned_router": "93.04% accuracy, 2.12% fallback on 848 routing examples",
+    "grpo_lm": "+2pp absolute MBPP pass@1 (47% -> 49%), n=1 seed"
+  },
+  "critical_blockers": [
+    "EXP-038: multi-seed GRPO (n=3) to verify +2pp claim",
+    "EXP-039: HumanEval eval of GRPO adapter for cross-benchmark generalization",
+    "EXP-040: gold-label router evaluation to verify 93.04% claim"
+  ]
+}
