@@ -160,3 +160,4 @@ Recommended remediation (unchanged from prior runs):
       crontab -e  →  add: 0 */2 * * * python3 /data0/home/zeyuwang/auto_research/shepherd.py >> /data0/home/zeyuwang/auto_research/logs/shepherd.log 2>&1
   (b) Open outbound TCP 50507 in cloud-env network policy: https://code.claude.com/docs/en/claude-code-on-the-web
   (c) Reverse SSH tunnel from A800 to this container.
+[2026-05-29T20:06:24Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 15s. No state read, no actions taken. All checks skipped. Will retry on next cron tick.
