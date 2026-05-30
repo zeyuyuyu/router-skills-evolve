@@ -161,3 +161,17 @@ Recommended remediation (unchanged from prior runs):
   (b) Open outbound TCP 50507 in cloud-env network policy: https://code.claude.com/docs/en/claude-code-on-the-web
   (c) Reverse SSH tunnel from A800 to this container.
 [2026-05-29T20:06:24Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 15s. No state read, no actions taken. All checks skipped. Will retry on next cron tick.
+
+[2026-05-30T04:07:07Z] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out (ConnectTimeout=15s). sshpass installed during run; openssh-client installed (1:9.6p1-3ubuntu13); TCP connect still timed out. This is the 23rd+ consecutive failure with identical root cause: outbound TCP to port 50507 blocked by cloud execution environment network policy.
+Steps A–E: all skipped (no state readable).
+Actions taken: none.
+Escalation: CRITICAL/ONGOING — auto_research pipeline is unmonitored by this shepherd. No remedy from within this container is possible. The log from 2026-05-29 confirms all prior run attempts (22+) have the identical outcome.
+Recommended remediation (unchanged — no evidence of prior action):
+  (a) [HIGHEST PRIORITY] Add local cron on A800 directly:
+      crontab -e  →  0 */2 * * * python3 /data0/home/zeyuwang/auto_research/shepherd.py >> /data0/home/zeyuwang/auto_research/logs/shepherd.log 2>&1
+  (b) Open outbound TCP 50507 in cloud-env network policy OR change the SSH port on A800 to 443/80 which may be permitted.
+      Docs: https://code.claude.com/docs/en/claude-code-on-the-web
+  (c) Reverse SSH tunnel: on A800 run:
+      ssh -N -R 19922:localhost:50507 <cloud-relay>
+      Then shepherd SSHes to localhost:19922 instead.
