@@ -1,0 +1,1 @@
+[2026-05-30 12:06:37 UTC] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out (ConnectTimeout=15s). No actions taken. No state read. No routines triggered.
