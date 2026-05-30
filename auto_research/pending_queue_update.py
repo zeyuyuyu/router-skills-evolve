@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-29 by weekly paper pipeline.
+Pending queue update — last updated 2026-05-30 by daily pipeline.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
 2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
-2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4).
-Total pending: 41 experiments.
+2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4),
+2026-05-30 daily (2).
+Total pending: 43 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -1897,6 +1898,181 @@ NEW_EXPERIMENTS = [
             "kl_coeff": 0.02,
             "kl_level": "token",
             "reference_model": "base",
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-30 batch (2 experiments — queue > 20 cap, A800 day 16 offline) ──
+    {
+        "id": "exp_2026_05_30_001_vpo_vector_pertestcase_reward_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Vector Policy Optimization (arxiv:2605.22817, Bahlous-Boldi et al., MIT / "
+            "Improbable AI, May 21 2026) replaces the GRPO scalar advantage estimator with "
+            "a vector advantage computed per-test-case: for each rollout i in a group of G=4, "
+            "reward vector r_i ∈ {0,1}^T (T = number of test cases in the MBPP task, "
+            "typically T=3) is the per-test binary result. VPO advantage: "
+            "  A_i = (1/T) * sum_t (r_i^t - mean_t(r)) / (std_t(r) + eps) "
+            "where mean_t(r) and std_t(r) are computed across the G rollouts for test t. "
+            "This advantage estimator is a drop-in replacement for the GRPO scalar "
+            "advantage and requires no additional hyperparameters. "
+            "WHY VPO IS DISTINCT FROM P-GRPO (EXP-016): "
+            "P-GRPO (exp_2026_05_16_001) uses a scalar partial reward "
+            "(passing_asserts/total_asserts), then computes standard GRPO advantage from "
+            "those scalar rewards. If rollout A passes tests {1,2} and rollout B passes "
+            "tests {2,3}, P-GRPO assigns IDENTICAL scalar rewards (2/3) and thus identical "
+            "advantages — the model receives no signal to maintain diverse test coverage. "
+            "VPO computes advantage dimension-by-dimension: on test dimension 1, rollout A "
+            "has r=1 vs rollout B r=0 → A gets high advantage on dimension 1; on test "
+            "dimension 3, rollout B r=1 vs rollout A r=0 → B gets high advantage on "
+            "dimension 3. The model is rewarded for BOTH rollout patterns, maintaining "
+            "both in the generation distribution. "
+            "WHY VPO IS DISTINCT FROM GCPO (EXP-036): "
+            "GCPO (exp_2026_05_29_001) uses AST-level solution uniqueness to reward "
+            "algorithmically diverse passing rollouts. VPO uses test-case coverage patterns "
+            "to reward diverse partial-passing rollouts. A rollout can be AST-unique but "
+            "pass the same tests as another (GCPO-unique, VPO-same), or AST-identical but "
+            "pass different tests (GCPO-duplicate, VPO-different). The two mechanisms "
+            "capture orthogonal aspects of solution diversity. "
+            "MECHANISM FOR OUR PROJECT: "
+            "The 53/100 all-fail tasks: if every rollout fails every test, "
+            "mean_t(r)=0, std_t(r)=0, A_i=0 — identical to GRPO (no regression risk). "
+            "The 27/100 mixed-outcome tasks: VPO provides differential advantage to rollouts "
+            "based on WHICH tests they pass, not just WHETHER they pass. This encourages "
+            "the model to maintain coverage of all 3 test dimensions, preventing the "
+            "winner-takes-all collapse that GCPO addresses at the AST level. The two "
+            "mechanisms are complementary and potentially composable (VPO+GCPO). "
+            "KEY PAPER RESULT: Across 4 code/reasoning tasks, VPO matches or beats GRPO "
+            "on pass@1, with widening advantage at pass@k and best@k as k grows. For "
+            "evolutionary search (our pass@k eval scenario in EXP-021), VPO models "
+            'unlock problems that GRPO models cannot solve at all ("gap widening as '
+            'search budget grows"). '
+            "IMPLEMENTATION: Replace scalar binary reward with per-test-case vector in the "
+            "rollout evaluation loop; replace standard GRPO advantage computation "
+            "(r - group_mean) / group_std with the VPO vector advantage "
+            "(1/T) * sum_t (r_t - mean_t) / (std_t + eps); all other training code "
+            "unchanged. ~30 additional lines. Estimated wall-clock: ~90 minutes "
+            "(200 tasks × 4 rollouts; near-zero overhead — test case evaluation already "
+            "done for binary reward, VPO just decomposes the aggregate into T dimensions)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "vector_pertestcase",
+            "reward_aggregation": "vpo",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_30_002_unlearnable_filtered_grpo_15b",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "The Unlearnability Phenomenon in RLVR for Language Models "
+            "(arxiv:2605.16787, May 2026) identifies a training-data quality problem "
+            "that is orthogonal to all 42 queued experiments: among the hard training "
+            "tasks (where the model cannot currently produce a passing rollout), a "
+            "subset are 'unlearnable' — their gradient directions are anti-correlated "
+            "with the gradient directions from learnable tasks, actively interfering "
+            "with learning on the tasks where progress IS possible. The paper shows "
+            "that unlearnable examples have representation-level issues: the final-layer "
+            "embeddings of unlearnable hard tasks cluster far from all solved tasks in "
+            "embedding space, meaning gradient updates on unlearnable tasks push the "
+            "model's representations toward a region that conflicts with the solved "
+            "task representations. "
+            "PRACTICAL PROXY FOR OUR SETUP (without expensive gradient cosine similarity "
+            "computation): Run a pre-exploration phase with N=8 rollouts per task at "
+            "temperature=0.9 (high diversity) before any training. Mark as 'unlearnable' "
+            "any task where 0/8 rollouts produce code that even partially passes "
+            "(i.e., all 8 rollouts score 0 on ALL test cases). These are the tasks "
+            "with no gradient signal available under any reasonable exploration. "
+            "Filter: run GRPO only on tasks where at least 1/8 rollouts passes at "
+            "least 1 test case — estimated ~130-150 of 200 training tasks (based on "
+            "our known distribution: 53/100 eval tasks are all-fail at standard G=4, "
+            "but some of these may be 'learnable' at high temperature G=8). "
+            "MECHANISTIC DISTINCTION FROM ALL 42 EXISTING QUEUED EXPERIMENTS: "
+            "- vs. Easy-to-Hard curriculum (EXP-001, EXP-002, EXP-007): Curriculum keeps "
+            "  ALL tasks in the training set, reordering them easy→hard. EXP-039 "
+            "  PERMANENTLY REMOVES the unlearnable subset (not a reordering but a "
+            "  permanent exclusion). "
+            "- vs. DAPO (EXP-013): DAPO dynamically resamples groups during training "
+            "  until every group is mixed-outcome. EXP-039 does a ONE-TIME static filter "
+            "  BEFORE training starts — no runtime overhead during training itself. "
+            "- vs. F-GRPO (EXP-018): F-GRPO scales advantage by task success rate but "
+            "  KEEPS all tasks; zero-advantage tasks (all-fail) receive zero gradient "
+            "  either way. EXP-039 removes them, freeing per-step compute for more "
+            "  gradient steps on learnable tasks within the same wall-clock budget. "
+            "- vs. MT-GRPO minmax (EXP-019): MT-GRPO adjusts sampling frequency for "
+            "  hard tasks upward. EXP-039 removes the unlearnable SUBSET of hard tasks, "
+            "  then MT-GRPO could be applied to the remaining hard tasks (composable). "
+            "- vs. Scaffold-GRPO hint injection (EXP-018/003): Scaffold injects hints "
+            "  to TRY to make unlearnable tasks learnable. EXP-039 diagnoses and "
+            "  REMOVES them — a defeatist but faster approach. "
+            "EXPECTED BENEFITS: "
+            "(1) More gradient steps per learnable task within the same 200-iteration "
+            "    budget: if 50 tasks are filtered, each remaining task gets 200/150 = "
+            "    1.33× more gradient exposure. "
+            "(2) No gradient interference from unlearnable tasks: the paper estimates "
+            "    that removing unlearnable examples improves the signal-to-noise ratio "
+            "    of gradient updates by ~30-40%, which is expected to manifest as faster "
+            "    convergence and higher peak performance on learnable tasks. "
+            "(3) Faster wall-clock: training on ~150 tasks instead of 200 reduces "
+            "    wall-clock by ~25% (from ~90 to ~67 minutes), plus ~15 min for "
+            "    pre-exploration phase = ~82 minutes total vs. ~90 minutes standard. "
+            "RISK: if the 'unlearnable' tasks under this proxy are in fact learnable "
+            "with better training (e.g., the curriculum or scaffold hints in other "
+            "queued experiments), then filtering them is overcautious. But the "
+            "EXP-039 result directly informs whether those other interventions are "
+            "needed: if EXP-039 matches +2pts without touching the unlearnable tasks, "
+            "they contribute nothing and can be deprioritized in the training set. "
+            "If EXP-039 falls below +2pts, the unlearnable tasks contain some latent "
+            "signal that the other experiments (with scaffold hints, etc.) need to "
+            "address. "
+            "RUNNER CHANGE: add explore_prefilter=True, explore_rollouts=8, "
+            "explore_temperature=0.9, explore_min_partial_pass=1 to grpo_continual. "
+            "Before the GRPO training loop, run N=8 forward passes per task, compute "
+            "per-test-case results, mark tasks with 0 partial passes across all 8 "
+            "rollouts as 'unlearnable', exclude from training. ~40 additional lines. "
+            "Estimated wall-clock: ~82 minutes (~15 min exploration + ~67 min GRPO)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "explore_prefilter": True,
+            "explore_rollouts": 8,
+            "explore_temperature": 0.9,
+            "explore_min_partial_pass": 1,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
         },
         "gpu": "auto",
     },
