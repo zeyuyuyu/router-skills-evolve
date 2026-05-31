@@ -368,3 +368,10 @@ Also tightened watchdog process detection so it treats both Phase 1
 `collect_traces.py` and downstream `run_full_pipeline.sh` work as active. This
 avoids duplicate restarts while skill/router/ablation aggregation is still
 running after trace collection finishes.
+
+Root cause for the repeated post-`task_id=3` stalls was direct GPU egress:
+the stuck Python process was in `SYN-SENT` to `api.commonstack.ai:443`.
+`models.list` through the local proxy was healthy, so the watchdog now forces
+`OPENAI_BASE_URL`, `SCALING_API_BASE`, and `COMMONSTACK_BASE_URL` to the same
+`OPENAI_API_BASE` proxy URL. This prevents values sourced from `.env` from
+silently bypassing the CPU reverse tunnel on GPU.
