@@ -330,3 +330,29 @@ Current stop conditions:
 - per-task timeout `1800s`;
 - 3 consecutive zero-cost failures;
 - watchdog max restarts `6`.
+
+### 2026-05-31 16:53 CST
+
+Observed that resume itself works, but real tau2 `task_id=3` repeatedly stalls
+before the first user-simulator LLM response. Existing rows remain preserved:
+
+- Rows: `3/30`
+- Success: `3/3`
+- Recorded cost: `$0.087717`
+
+Added an operator skip mechanism so a known-bad task can be written as a
+complete failure trace row and the run can continue from the next task:
+
+```bash
+SCALING_SKIP_TASK_IDS=3 \
+EXPERIMENT_NAME=real_tau2_30_20260531_082412 \
+bash scaling/watch_real_tau2.sh
+```
+
+Local validation:
+
+- `python3 -m compileall -q experiments/scaling/collect_traces.py scaling`
+- `SCALING_SKIP_TASK_IDS=mock-retail-train-0003 bash scaling/run_full_pipeline.sh --smoke --mock`
+
+The mock pipeline completed through trace collection, skill evolution, router
+training, E2E ablation, final table generation, and curve generation.

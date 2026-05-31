@@ -30,6 +30,8 @@
 #   SCALING_MAX_COST_USD  optional Phase 1 trace collection cost cap
 #   SCALING_TASK_TIMEOUT_S optional per-task wall-time cap
 #   SCALING_MAX_ZERO_COST_FAILURES optional API/runtime failure guard
+#   SCALING_SKIP_TASK_IDS optional comma-separated task_ids to write as skipped
+#                     failure rows during Phase 1 resume
 #   SKIP_LLM          set to 1 to skip Phase 3 (useful while colleague's
 #                     train framework is being set up)
 
@@ -109,6 +111,7 @@ preflight() {
   echo "  MAX_COST_USD    = ${SCALING_MAX_COST_USD:-none}"
   echo "  TASK_TIMEOUT_S  = ${SCALING_TASK_TIMEOUT_S:-none}"
   echo "  ZERO_COST_FAILS = ${SCALING_MAX_ZERO_COST_FAILURES:-none}"
+  echo "  SKIP_TASK_IDS   = ${SCALING_SKIP_TASK_IDS:-none}"
   echo "  TAU2_DOMAIN     = $TAU2_DOMAIN"
   echo "  RESULTS_DIR     = $RESULTS_DIR"
   echo "  SMOKE=$SMOKE MOCK=$MOCK DRY_RUN=$DRY_RUN RESUME_FROM=$RESUME_FROM SKIP_LLM=$SKIP_LLM"
@@ -178,6 +181,7 @@ preflight() {
   "max_cost_usd": ${SCALING_MAX_COST_USD:-null},
   "task_timeout_s": ${SCALING_TASK_TIMEOUT_S:-null},
   "max_zero_cost_failures": ${SCALING_MAX_ZERO_COST_FAILURES:-null},
+  "skip_task_ids": "$(printf '%s' "${SCALING_SKIP_TASK_IDS:-}")",
   "resume_from": $RESUME_FROM,
   "git_sha": "$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)",
   "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -216,6 +220,7 @@ phase1_collect_traces() {
   [[ -n "${SCALING_MAX_COST_USD:-}" ]] && cmd+=(--max-cost-usd "$SCALING_MAX_COST_USD")
   [[ -n "${SCALING_TASK_TIMEOUT_S:-}" ]] && cmd+=(--task-timeout-s "$SCALING_TASK_TIMEOUT_S")
   [[ -n "${SCALING_MAX_ZERO_COST_FAILURES:-}" ]] && cmd+=(--max-zero-cost-failures "$SCALING_MAX_ZERO_COST_FAILURES")
+  [[ -n "${SCALING_SKIP_TASK_IDS:-}" ]] && cmd+=(--skip-task-ids "$SCALING_SKIP_TASK_IDS")
   $MOCK && cmd+=(--mock)
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
   "${cmd[@]}" 2>&1 | tee "$out/phase1.log"

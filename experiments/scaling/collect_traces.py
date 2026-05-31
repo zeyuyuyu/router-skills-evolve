@@ -83,6 +83,39 @@ def _load_existing_traces(path: Path) -> tuple[dict[str, dict[str, Any]], int]:
     return rows, invalid
 
 
+def _parse_task_ids(raw: str | None) -> set[str]:
+    if not raw:
+        return set()
+    return {part.strip() for part in raw.split(",") if part.strip()}
+
+
+def _signature_for_task(task: dict[str, Any]) -> str:
+    prompt = task.get("prompt", "")
+    head = (prompt or "").strip().split("\n")[0][:80]
+    bucket = len(prompt or "") // 200
+    return f"{head}::len_bucket={bucket}" if prompt else ""
+
+
+def _failure_trace(task: dict[str, Any], cycle: int, decision: str, error: str) -> dict[str, Any]:
+    return {
+        "task_id": str(task.get("task_id", "")),
+        "signature": _signature_for_task(task),
+        "decision": decision,
+        "attempts": 0,
+        "attempts_count": 0,
+        "final_success": False,
+        "final_model": "",
+        "total_cost": 0.0,
+        "round": cycle,
+        "small_success": False,
+        "large_success": False,
+        "small_cost": 0.0,
+        "large_cost": 0.0,
+        "prompt": task.get("prompt", ""),
+        "error": error,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bench", required=True, choices=["tau2_bench", "swe_bench"])
@@ -102,6 +135,8 @@ def main() -> int:
                     help="wall-time cap for a single task pair; writes an error row and continues on timeout.")
     ap.add_argument("--max-zero-cost-failures", type=int, default=None,
                     help="stop after this many consecutive zero-cost failed trace rows, usually an API/runtime issue.")
+    ap.add_argument("--skip-task-ids", default=None,
+                    help="comma-separated task_id list to write as skipped failure rows and continue.")
     args = ap.parse_args()
 
     if args.max_cost_usd is None and os.environ.get("SCALING_MAX_COST_USD"):
@@ -110,6 +145,10 @@ def main() -> int:
         args.task_timeout_s = int(os.environ["SCALING_TASK_TIMEOUT_S"])
     if args.max_zero_cost_failures is None and os.environ.get("SCALING_MAX_ZERO_COST_FAILURES"):
         args.max_zero_cost_failures = int(os.environ["SCALING_MAX_ZERO_COST_FAILURES"])
+    if args.skip_task_ids is None and os.environ.get("SCALING_SKIP_TASK_IDS"):
+        args.skip_task_ids = os.environ["SCALING_SKIP_TASK_IDS"]
+
+    skip_task_ids = _parse_task_ids(args.skip_task_ids)
 
     if args.mock:
         os.environ["SCALING_MOCK"] = "1"
@@ -130,6 +169,8 @@ def main() -> int:
         if existing or invalid:
             print(f"[collect_traces] resume_existing: loaded {len(existing)} valid rows "
                   f"from {out_path} (ignored {invalid} invalid rows)", file=sys.stderr)
+    if skip_task_ids:
+        print(f"[collect_traces] skip_task_ids={','.join(sorted(skip_task_ids))}", file=sys.stderr)
 
     total_cost = sum(float(row.get("total_cost") or 0.0) for row in existing.values())
     n_success = sum(1 for row in existing.values() if row.get("final_success"))
@@ -154,6 +195,19 @@ def main() -> int:
                           f"success={n_success}/{n_done}  skipped_existing={n_done}  "
                           f"elapsed={elapsed:.1f}s",
                           file=sys.stderr)
+                continue
+            if task_id in skip_task_ids:
+                trace = _failure_trace(
+                    task,
+                    args.cycle,
+                    decision="skipped:operator_requested",
+                    error="operator requested skip via --skip-task-ids",
+                )
+                fh.write(json.dumps(trace, ensure_ascii=False) + "\n")
+                fh.flush()
+                existing[task_id] = trace
+                n_done += 1
+                print(f"[collect_traces] task {task_id} SKIPPED by operator request", file=sys.stderr)
                 continue
             try:
                 with _task_timeout(args.task_timeout_s):
@@ -197,18 +251,12 @@ def main() -> int:
             except Exception as e:  # noqa: BLE001
                 print(f"[collect_traces] task {task_id} FAILED: {e}", file=sys.stderr)
                 # write a failure row so downstream can see it
-                fh.write(json.dumps({
-                    "task_id": task_id,
-                    "signature": "",
-                    "decision": "error",
-                    "attempts": 0,
-                    "attempts_count": 0,
-                    "final_success": False,
-                    "final_model": "",
-                    "total_cost": 0.0,
-                    "round": args.cycle,
-                    "error": str(e),
-                }) + "\n")
+                fh.write(json.dumps(_failure_trace(
+                    task,
+                    args.cycle,
+                    decision="error",
+                    error=str(e),
+                ), ensure_ascii=False) + "\n")
                 fh.flush()
                 n_done += 1
                 zero_cost_failures += 1

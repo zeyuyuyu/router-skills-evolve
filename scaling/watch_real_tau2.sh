@@ -20,6 +20,7 @@
 #   SCALING_MAX_COST_USD=2 \
 #   SCALING_TASK_TIMEOUT_S=600 \
 #   SCALING_MAX_ZERO_COST_FAILURES=3 \
+#   SCALING_SKIP_TASK_IDS=3 \
 #   setsid -f bash scaling/watch_real_tau2.sh
 
 set -euo pipefail
@@ -38,6 +39,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${SCALING_MAX_COST_USD:=2}"
 : "${SCALING_TASK_TIMEOUT_S:=600}"
 : "${SCALING_MAX_ZERO_COST_FAILURES:=3}"
+: "${SCALING_SKIP_TASK_IDS:=}"
 : "${TAU2_MAX_STEPS:=30}"
 : "${TAU2_DOMAIN:=retail}"
 
@@ -96,10 +98,10 @@ export COMMONSTACK_BASE_URL="${COMMONSTACK_BASE_URL:-$OPENAI_API_BASE}"
 export PYTHON="${PYTHON:-python3}"
 export PYTHONPATH="$REPO_ROOT:$REPO_ROOT/experiments/tau2_stage2/code:${PYTHONPATH:-}"
 export BUNDLE_ROOT TAU2_MAX_STEPS TAU2_DOMAIN
-export SCALING_MAX_COST_USD SCALING_TASK_TIMEOUT_S SCALING_MAX_ZERO_COST_FAILURES
+export SCALING_MAX_COST_USD SCALING_TASK_TIMEOUT_S SCALING_MAX_ZERO_COST_FAILURES SCALING_SKIP_TASK_IDS
 
 restarts=0
-log "watchdog start experiment=$EXPERIMENT_NAME n_tasks=$N_TASKS cost_cap=$SCALING_MAX_COST_USD"
+log "watchdog start experiment=$EXPERIMENT_NAME n_tasks=$N_TASKS cost_cap=$SCALING_MAX_COST_USD skip_task_ids=${SCALING_SKIP_TASK_IDS:-none}"
 
 while true; do
   rows=$(trace_metric rows)
