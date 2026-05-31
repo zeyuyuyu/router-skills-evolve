@@ -198,6 +198,7 @@ phase1_collect_traces() {
     --large-model "$LARGE_MODEL"
     --cycle "$cycle"
     --out "$out/traces.jsonl"
+    --resume-existing
   )
   $MOCK && cmd+=(--mock)
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }

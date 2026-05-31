@@ -197,7 +197,7 @@ bash scaling/run_full_pipeline.sh
 | `--model-config <name>` | `$MODEL_SWEEP` | tau2_stage2 的 run YAML 名（去掉 `.yaml`） |
 | `--n-cycles N` | `$N_CYCLES` | 几轮迭代；MERA 推荐 4，main 分支跑过 8 |
 | `--schedule {SLR,LSR,LRS,SR-L,...}` | `SLR` | Skills → LLM → Router 顺序；做 ablation 时换 |
-| `--resume <cycle>` | none | 从指定 cycle 继续，跳过前面阶段 |
+| `--resume <cycle>` | none | 从指定 cycle 继续，跳过前面 cycle；Phase 1 trace collection 会跳过已有 `task_id` |
 | `--dry-run` | off | 只打印计划，不真跑 |
 
 跑完看 `results/$EXPERIMENT_NAME/MANIFEST.json`，里面有每个 phase 的耗时、artifact 路径、success/failure。
