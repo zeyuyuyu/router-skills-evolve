@@ -1,0 +1,22 @@
+compute_environment: LOCAL_MACHINE
+distributed_type: FSDP
+mixed_precision: bf16
+num_machines: 1
+num_processes: 8       # 8x H200
+machine_rank: 0
+main_training_function: main
+fsdp_config:
+  fsdp_version: 2
+  # FULL_STATE_DICT makes trainer.save_model() produce a normal HF checkpoint
+  # usable by vLLM/eval. FSDP run YAMLs set save_only_model=true so periodic
+  # checkpoints do not also dump optimizer state.
+  fsdp_state_dict_type: FULL_STATE_DICT
+  fsdp_auto_wrap_policy: TRANSFORMER_BASED_WRAP
+  # Dense Qwen3.5 checkpoints use model_type=qwen3_5 and expose only this
+  # transformer block class. Accelerate FSDP2 requires every listed class to
+  # exist in the current model, so MoE classes must stay in a separate config.
+  fsdp_transformer_layer_cls_to_wrap: Qwen3_5DecoderLayer
+  fsdp_cpu_ram_efficient_loading: true
+  fsdp_offload_params: false
+  fsdp_reshard_after_forward: false       # required with chunked_nll
+  fsdp_activation_checkpointing: true

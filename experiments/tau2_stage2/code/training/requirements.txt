@@ -1,0 +1,71 @@
+# τ²-bench Stage-2 training framework — pinned for CUDA 13.0 + Python 3.12 on 8× H200.
+#
+# Driven by `code/training/orchestration/setup_env_server.sh`. Install order on cloud:
+#   1) conda create -n tau2-stage2 python=3.12 cuda-toolkit=13.0 -c nvidia
+#   2) pip install --index-url https://download.pytorch.org/whl/cu130 torch==2.11.0
+#      (cu13 wheels live only on the +cu130 index; PyPI default has no cu13 build)
+#   3) pip install ninja packaging wheel psutil   # flash-attn source-build prereqs
+#      MAX_JOBS=4 pip install --no-build-isolation flash-attn==2.8.3
+#      (no cu13 wheel exists; source build only — see flash-attn note below)
+#   4) pip install -r requirements.txt
+#      (iter-16: vllm 0.20.2 now installed via this step, no GitHub-wheel detour.
+#       Iter-15+16 verified: switching to flash-attn-4 is NOT safe — TRL 1.4.0
+#       FLASH_ATTENTION_VARIANTS lacks 'flash_attention_4' (silent BFD packing
+#       cross-contamination risk), GDN bypasses dispatch on Qwen3.6-35B-A3B,
+#       and FA4 varlen backward unsupported on sm_90 per FA4 PR #42435.)
+#   5) git clone tau2-bench at pinned SHA, then pip install -e ".[voice,knowledge]"
+#   5b) conda install -c conda-forge -y portaudio   # libportaudio for pyaudio dlopen
+#   5c) pip install -e $BUNDLE_ROOT/code             # registers `training`, `pipeline`, etc.
+
+# Core
+torch==2.11.0               # cu130 wheels confirmed on download.pytorch.org/whl/cu130
+transformers==5.8.0         # qwen3_5 / qwen3_5_moe modules added 5.2.0
+accelerate==1.13.0          # FSDP2 stable since 1.8.0
+trl==1.4.0                  # released 2026-05-09; ships chunked_nll loss_type
+peft==0.19.1
+datasets==4.8.5             # trl 1.3.0+ requires datasets ≥4.7.0
+
+# FSDP2 + FA2
+flash-attn==2.8.3           # NO cu13 prebuilt; source build (~30-60 min on H200).
+                            # nvcc peaks ~12-15 GB/job (Dao-AILab/flash-attention#1038);
+                            # MAX_JOBS=4 is safe; only bump to 8 if free RAM > 128 GB.
+                            # Iter-15 (2026-05-11): FA4 4.0.0b12 with [cu13] extra
+                            # is the future Hopper-native path (transformers 5.4+
+                            # dispatch via attn_implementation="flash_attention_4"),
+                            # but it's BETA — see setup_env_server.sh Stage 3 doc
+                            # block for opt-in instructions. FA2 source-build is
+                            # PRIMARY for the production sweep.
+# bitsandbytes removed iter-6: no run config in plan_c_prime uses 4-bit/8-bit
+# quantization or paged optimizers, and 0.49.2 has no cu13 prebuilt wheel
+# (would source-build on cloud and brittle-load). Re-add with a cu13-ready
+# pin if any future run YAML opts into bnb.
+
+# Eval
+vllm==0.20.2                # hard-pins torch==2.11.0; supports Qwen3.5/3.6 + GDN.
+                            # Iter-16 (2026-05-11): bumped 0.20.1 → 0.20.2 per
+                            # user direction. docs.vllm.ai recommends plain
+                            # `pip install vllm`; the PyPI manylinux wheel is the
+                            # CUDA-12.9-default build (no +cuXXX in filename, but
+                            # the wheel IS cu129 internally per docs: "vLLM's
+                            # binaries are compiled with CUDA 12.9... by default").
+                            # CUDA forward-compat: cu12.9 binaries run on cu13
+                            # driver, kernels JIT to Hopper sm_90 at first launch.
+                            # Diff v0.20.1→v0.20.2 is 6 commits (DSV4 topk revert,
+                            # MXFP4+torch.compile MoE fix, KV-block alloc fix,
+                            # Qwen3-VL deepstack bound check, Docker automation);
+                            # no tool_parser changes — qwen3_coder still registered.
+                            # +cu130 wheel does NOT exist on GitHub releases for
+                            # any v0.20.x (verified via HTTP HEAD 2026-05-11);
+                            # this PyPI install replaces the prior GitHub-wheel
+                            # detour in setup_env_server.sh Stage 3b (removed).
+
+# Misc
+pyyaml==6.0.3
+pytest==9.0.3
+pytest-asyncio==1.3.0       # required at TEST time only — pyproject.toml sets
+                            # asyncio_mode=auto, and filterwarnings=error makes
+                            # pytest INTERNALERROR if the plugin is missing.
+matplotlib==3.10.9
+pandas==3.0.2
+huggingface-hub==1.14.0     # transformers 5.8 requires ≥1.5
+hf_transfer==0.1.9          # enables fast resumable downloads when HF_HUB_ENABLE_HF_TRANSFER=1 (set by train.py)

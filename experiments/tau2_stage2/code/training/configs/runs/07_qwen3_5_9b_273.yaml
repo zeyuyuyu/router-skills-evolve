@@ -1,0 +1,56 @@
+run_id: 07_qwen3_5_9b_273
+model:
+  name: Qwen/Qwen3.5-9B
+  revision: c202236235762e1c871ad0ccb60c8ee5ba337b9a
+  is_moe: false
+data:
+  n_train_runs: 273
+training:
+  output_dir: train_outputs/07_qwen3_5_9b_273
+  num_train_epochs: 5
+  learning_rate: 1.0e-5
+  warmup_steps: 0.05    # float<1 = ratio (TRL/transformers 5.x)
+  lr_scheduler_type: cosine
+  cosine_min_lr_ratio: 0.10
+  weight_decay: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  max_grad_norm: 1.0
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 8
+  per_device_eval_batch_size: 1
+  bf16: true
+  # gradient_checkpointing must be false on FSDP runs — transformers/trainer.py:828-833
+  # raises ValueError when accelerate_fsdp2.yaml's fsdp_activation_checkpointing=true
+  # AND SFTConfig.gradient_checkpointing=true are both set. FSDP's
+  # activation_checkpointing is the canonical layer for FSDP runs.
+  gradient_checkpointing: false
+  torch_compile: false
+  max_seq_length: 32768
+  packing: true
+  packing_strategy: bfd
+  padding_free: true
+  attn_implementation: flash_attention_2
+  completion_only_loss: true
+  assistant_only_loss: false
+  use_liger_kernel: false
+  loss_type: chunked_nll
+  dataloader_num_workers: 4
+  eval_strategy: epoch
+  save_strategy: best
+  save_total_limit: 2
+  # FSDP2 + FULL_STATE_DICT can save a normal HF best checkpoint, but
+  # transformers' end-of-train load_best_model_at_end path tries to copy
+  # regular tensors into DTensor-wrapped params and fails. train.py publishes
+  # checkpoint-best from trainer.state instead, so skip the in-process reload.
+  load_best_model_at_end: false
+  metric_for_best_model: eval_loss
+  greater_is_better: false
+  early_stopping_patience: 2
+  logging_steps: 10
+  seed: 1234
+  data_seed: 42
+distributed:
+  strategy: fsdp2
+  accelerate_config: configs/accelerate_fsdp2_dense.yaml
+moe: null

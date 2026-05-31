@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "code/scripts/build_try/stage2_emit.py",
+    "--src",
+    "../evol-llm-data-try",
+    "--dst",
+    "data_processed/stage2_v1",
+    "--partition",
+    "code/scripts/build_try/partition_stage2_v1.json"
+  ],
+  "build_name": "stage2_v1",
+  "built_at": "2026-05-07T15:35:48Z",
+  "dst": "data_processed/stage2_v1",
+  "git_sha": "3af58dcd757b5b5d8ab95796c4f75942b0455fea",
+  "host": "Tony",
+  "n_runs_diag": 10,
+  "n_runs_eval": 70,
+  "n_runs_total": 369,
+  "n_runs_train": 273,
+  "n_runs_val": 16,
+  "partition_sha256": "5d1983ba1461b0c5e819872a8eb7aaf6438e74a77b282b2fbc878ee5e09fe07a",
+  "schema_version": 1,
+  "src": "../evol-llm-data-try"
+}

@@ -1,0 +1,19 @@
+# Local-inference virtual $/M for the student (PROJECT_CHARTER.md §3.3).
+# Derivation: 8×H100 @ $24/hr / 16000 tok/s aggregate throughput ≈ $0.42/M total.
+# Split across in/out 1:1 since student sees symmetric prompt + completion.
+central:
+  input_usd_per_m: 0.21
+  output_usd_per_m: 0.21
+sensitivity_sweep_usd_per_m:  # total (in+out)
+  - 0.10
+  - 0.25
+  - 0.42
+  - 0.60
+  - 1.00
+market_to_market:             # hosted-inference list prices (not on CommonStack)
+  together_3b:
+    input_usd_per_m: 0.20
+    output_usd_per_m: 0.20
+  fireworks_3b:
+    input_usd_per_m: 0.22
+    output_usd_per_m: 0.22

@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evol-llm-tau2-stage2"
+version = "0.1.0"
+description = "τ²-bench Stage-2 SFT training framework — server-side bundle (cloud handoff)."
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  # Lightweight runtime deps for pipeline.runner / adapters / core. The heavy
+  # ML stack (torch, transformers, vllm, flash-attn, …) is installed by
+  # training/orchestration/setup_env_server.sh, not via this manifest, so the
+  # CUDA-13.0-pinned versions stay in code/training/requirements.txt where
+  # they're easier to inspect.
+  "pydantic>=2.7,<3",
+  "pyyaml>=6,<7",
+  "httpx>=0.27,<1",
+  "python-dotenv>=1.0,<2",
+  "tenacity>=8.3",
+  "rich>=13.7,<14",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=9,<10",
+  "pytest-asyncio>=1.0,<2",   # 1.x supports pytest 9
+  "pytest-mock>=3.12,<4",
+  "respx>=0.21,<1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "adapters*", "pipeline*", "training*", "scripts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["training/tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+  "error",
+  # tau2-bench (cloned at runtime) uses stdlib audioop which is deprecated in
+  # 3.13 but works on 3.12; ignore so pytest doesn't fail on import-time
+  # DeprecationWarnings from voice modules we never exercise.
+  "ignore::DeprecationWarning:tau2.voice.synthesis.audio_effects.effects",
+  "ignore::DeprecationWarning:tau2.voice.utils.audio_preprocessing",
+]
+markers = [
+  "slow: tests that download a model or run real training; opt-in only.",
+]
