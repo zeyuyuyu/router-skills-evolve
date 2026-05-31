@@ -2,8 +2,9 @@
 # Watchdog for unattended real tau2 scaling runs.
 #
 # It resumes the same EXPERIMENT_NAME until one of the stop conditions is true:
-#   - traces.jsonl has N_TASKS rows;
 #   - e2e_ablation_summary.json exists;
+#   - traces.jsonl has N_TASKS rows and the pipeline process is still running
+#     toward downstream aggregation;
 #   - accumulated trace cost reaches SCALING_MAX_COST_USD;
 #   - the same run command exits MAX_RESTARTS times.
 #
@@ -107,14 +108,7 @@ while true; do
     log "complete: found $SUMMARY_FILE"
     exit 0
   fi
-  if (( rows >= N_TASKS )); then
-    log "phase1 complete: rows=$rows; waiting for pipeline aggregation if process is still running"
-    if ! is_running; then
-      log "rows complete and no process; exiting"
-      exit 0
-    fi
-  fi
-  if "$PYTHON" - "$cost" "$SCALING_MAX_COST_USD" <<'PY'
+  if (( rows < N_TASKS )) && "$PYTHON" - "$cost" "$SCALING_MAX_COST_USD" <<'PY'
 import sys
 cost = float(sys.argv[1])
 cap = float(sys.argv[2])
@@ -127,6 +121,9 @@ PY
   fi
 
   if is_running; then
+    if (( rows >= N_TASKS )); then
+      log "phase1 complete: rows=$rows; waiting for downstream aggregation"
+    fi
     sleep "$WATCH_INTERVAL_S"
     continue
   fi
@@ -136,7 +133,11 @@ PY
     exit 2
   fi
   restarts=$((restarts + 1))
-  log "starting/resuming run restart=$restarts"
+  if (( rows >= N_TASKS )); then
+    log "rows complete but summary missing; resuming pipeline downstream restart=$restarts"
+  else
+    log "starting/resuming run restart=$restarts"
+  fi
   bash "$REPO_ROOT/scaling/run_full_pipeline.sh" \
     --n-tasks "$N_TASKS" \
     --n-cycles "$N_CYCLES" \
