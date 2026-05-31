@@ -77,6 +77,38 @@ else:
 PY
 }
 
+last_active_task_id() {
+  "$PYTHON" - "$RUN_LOG" <<'PY'
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if not path.exists():
+    raise SystemExit(0)
+text = path.read_text(errors="ignore")
+matches = re.findall(r"task=([^,\s]+)", text)
+print(matches[-1] if matches else "")
+PY
+}
+
+append_skip_task() {
+  local task_id=$1
+  [[ -z "$task_id" ]] && return 0
+  case ",${SCALING_SKIP_TASK_IDS:-}," in
+    *,"$task_id",*) ;;
+    *)
+      if [[ -n "${SCALING_SKIP_TASK_IDS:-}" ]]; then
+        SCALING_SKIP_TASK_IDS="${SCALING_SKIP_TASK_IDS},${task_id}"
+      else
+        SCALING_SKIP_TASK_IDS="${task_id}"
+      fi
+      export SCALING_SKIP_TASK_IDS
+      log "skip: added stale task_id=$task_id skip_task_ids=$SCALING_SKIP_TASK_IDS"
+      ;;
+  esac
+}
+
 is_running() {
   pgrep -af "$EXPERIMENT_NAME|collect_traces.py --bench tau2_bench --n-tasks $N_TASKS" >/dev/null 2>&1
 }
@@ -134,6 +166,8 @@ PY
       stale_s=$((now - log_mtime))
       if (( stale_s >= WATCH_STALE_S )); then
         log "stale: run.log unchanged for ${stale_s}s >= ${WATCH_STALE_S}s; restarting active process"
+        active_task_id=$(last_active_task_id || true)
+        append_skip_task "$active_task_id"
         stop_running
       fi
     fi

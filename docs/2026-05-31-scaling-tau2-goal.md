@@ -356,3 +356,10 @@ Local validation:
 
 The mock pipeline completed through trace collection, skill evolution, router
 training, E2E ablation, final table generation, and curve generation.
+
+Follow-up: GPU proxy was verified alive (`models_ok`), but tau2 `task_id=4`
+showed the same stall pattern as `task_id=3`. The watchdog now parses the last
+`task=...` entry from `run.log` when a run becomes stale, appends that task id
+to `SCALING_SKIP_TASK_IDS`, kills the stuck process, and resumes the same
+experiment. This keeps completed rows and cost accounting intact while allowing
+the real run to advance past pathological tau2 tasks.
