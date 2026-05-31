@@ -571,3 +571,32 @@ Trace collection continues under the budget guard:
   `127.0.0.1:<port> -> 127.0.0.1:18082`
 - active processes remain watchdog, `run_full_pipeline.sh`, and
   `collect_traces.py`.
+
+### 2026-05-31 18:18 CST
+
+The unattended real tau2 run completed successfully:
+
+- traces: `30/30`
+- trace final success: `22/30` (`73.3%`)
+- recorded API cost: `$1.1980596`
+- model config: `05_qwen3_5_4b_273`
+- bench/domain: `tau2_bench` / `retail`
+- LLM training: skipped (`--skip-llm`)
+- generated artifacts:
+  - `results/real_tau2_30_20260531_082412/cycle_0/traces.jsonl`
+  - `results/real_tau2_30_20260531_082412/cycle_0/skillbook.json`
+  - `results/real_tau2_30_20260531_082412/cycle_0/router/router.joblib`
+  - `results/real_tau2_30_20260531_082412/cycle_0/e2e_ablation_summary.json`
+  - `results/real_tau2_30_20260531_082412/final_ablation_table.md`
+  - `results/real_tau2_30_20260531_082412/curve.png`
+
+Final ablation table:
+
+| System variant | Routing Acc | Large F1 | Fallback | Cost vs Always-Large | Task Pass |
+|---|---:|---:|---:|---:|---:|
+| Base (always-small + fallback) | 50.00% | 0.00% | 50.00% | 10.00% | 50.00% |
+| + Skills evolve | 50.00% | 0.00% | 50.00% | 10.00% | 50.00% |
+| + Router training | 80.00% | 82.35% | 3.33% | 67.00% | 70.00% |
+| Full (+ LLM training) | 80.00% | 82.35% | 3.33% | 67.00% | 70.00% |
+
+Because this run used `--skip-llm`, the full variant matches router training.
