@@ -22,8 +22,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +33,28 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from experiments.scaling.benches import load_adapter  # noqa: E402
+
+
+class TaskTimeoutError(TimeoutError):
+    """Raised when one benchmark task exceeds the configured wall-time cap."""
+
+
+@contextmanager
+def _task_timeout(seconds: int | None):
+    if not seconds or seconds <= 0:
+        yield
+        return
+
+    def _raise_timeout(_signum: int, _frame: object) -> None:
+        raise TaskTimeoutError(f"task exceeded timeout of {seconds}s")
+
+    old_handler = signal.signal(signal.SIGALRM, _raise_timeout)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
 
 
 def _load_existing_traces(path: Path) -> tuple[dict[str, dict[str, Any]], int]:
@@ -74,10 +98,18 @@ def main() -> int:
                     help="append to an existing output file and skip task_ids that already have valid trace rows.")
     ap.add_argument("--max-cost-usd", type=float, default=None,
                     help="stop before starting another task once accumulated trace cost reaches this USD cap.")
+    ap.add_argument("--task-timeout-s", type=int, default=None,
+                    help="wall-time cap for a single task pair; writes an error row and continues on timeout.")
+    ap.add_argument("--max-zero-cost-failures", type=int, default=None,
+                    help="stop after this many consecutive zero-cost failed trace rows, usually an API/runtime issue.")
     args = ap.parse_args()
 
     if args.max_cost_usd is None and os.environ.get("SCALING_MAX_COST_USD"):
         args.max_cost_usd = float(os.environ["SCALING_MAX_COST_USD"])
+    if args.task_timeout_s is None and os.environ.get("SCALING_TASK_TIMEOUT_S"):
+        args.task_timeout_s = int(os.environ["SCALING_TASK_TIMEOUT_S"])
+    if args.max_zero_cost_failures is None and os.environ.get("SCALING_MAX_ZERO_COST_FAILURES"):
+        args.max_zero_cost_failures = int(os.environ["SCALING_MAX_ZERO_COST_FAILURES"])
 
     if args.mock:
         os.environ["SCALING_MOCK"] = "1"
@@ -101,6 +133,7 @@ def main() -> int:
 
     total_cost = sum(float(row.get("total_cost") or 0.0) for row in existing.values())
     n_success = sum(1 for row in existing.values() if row.get("final_success"))
+    zero_cost_failures = 0
     n_done = 0
     t0 = time.time()
     mode = "a" if args.resume_existing else "w"
@@ -123,18 +156,25 @@ def main() -> int:
                           file=sys.stderr)
                 continue
             try:
-                trace = adapter.run_task_pair(
-                    task,
-                    small_model=args.small_model,
-                    large_model=args.large_model,
-                    cycle=args.cycle,
-                )
+                with _task_timeout(args.task_timeout_s):
+                    trace = adapter.run_task_pair(
+                        task,
+                        small_model=args.small_model,
+                        large_model=args.large_model,
+                        cycle=args.cycle,
+                    )
                 fh.write(json.dumps(trace, ensure_ascii=False) + "\n")
                 fh.flush()
                 n_done += 1
-                total_cost += float(trace.get("total_cost") or 0.0)
+                trace_cost = float(trace.get("total_cost") or 0.0)
+                total_cost += trace_cost
                 if trace.get("final_success"):
                     n_success += 1
+                    zero_cost_failures = 0
+                elif trace_cost <= 0:
+                    zero_cost_failures += 1
+                else:
+                    zero_cost_failures = 0
                 if i %10 == 0 or i == len(tasks):
                     elapsed = time.time() - t0
                     print(f"[collect_traces] {i}/{len(tasks)}  "
@@ -144,6 +184,14 @@ def main() -> int:
                 if args.max_cost_usd is not None and total_cost >= args.max_cost_usd:
                     print(f"[collect_traces] COST CAP reached after task {i}: "
                           f"total_cost=${total_cost:.6f} >= cap=${args.max_cost_usd:.6f}; stopping",
+                          file=sys.stderr)
+                    break
+                if (
+                    args.max_zero_cost_failures is not None
+                    and zero_cost_failures >= args.max_zero_cost_failures
+                ):
+                    print(f"[collect_traces] ZERO-COST FAILURE CAP reached after task {i}: "
+                          f"{zero_cost_failures} consecutive failed rows with zero cost; stopping",
                           file=sys.stderr)
                     break
             except Exception as e:  # noqa: BLE001
@@ -163,6 +211,15 @@ def main() -> int:
                 }) + "\n")
                 fh.flush()
                 n_done += 1
+                zero_cost_failures += 1
+                if (
+                    args.max_zero_cost_failures is not None
+                    and zero_cost_failures >= args.max_zero_cost_failures
+                ):
+                    print(f"[collect_traces] ZERO-COST FAILURE CAP reached after task {i}: "
+                          f"{zero_cost_failures} consecutive exceptions; stopping",
+                          file=sys.stderr)
+                    break
 
     elapsed = time.time() - t0
     print(f"[collect_traces] DONE  out={out_path}  "

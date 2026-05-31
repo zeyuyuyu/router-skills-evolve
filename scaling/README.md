@@ -204,12 +204,17 @@ bash scaling/run_full_pipeline.sh
 Cost guard:
 
 ```bash
-SCALING_MAX_COST_USD=2 bash scaling/run_full_pipeline.sh --n-tasks 30 --skip-llm
+SCALING_MAX_COST_USD=2 \
+SCALING_TASK_TIMEOUT_S=1800 \
+SCALING_MAX_ZERO_COST_FAILURES=3 \
+bash scaling/run_full_pipeline.sh --n-tasks 30 --skip-llm
 ```
 
 Phase 1 stops before starting another task once accumulated `total_cost`
 reaches the cap. Already-written `traces.jsonl` rows are preserved and skipped
-on resume.
+on resume. `SCALING_TASK_TIMEOUT_S` prevents a single task from hanging
+forever; `SCALING_MAX_ZERO_COST_FAILURES` stops repeated API/runtime failures
+that return no billable trace cost.
 
 If the GPU cannot reach CommonStack directly, run
 `python scaling/commonstack_proxy.py --port 18082` on a networked host and
