@@ -221,6 +221,20 @@ If the GPU cannot reach CommonStack directly, run
 expose it with `ssh -N -R 18082:127.0.0.1:18082 <gpu-host>`, then set
 `OPENAI_API_BASE=http://127.0.0.1:18082/v1` on the GPU.
 
+For unattended real runs, prefer the watchdog so a transient process/API
+failure resumes from existing trace rows:
+
+```bash
+EXPERIMENT_NAME=real_tau2_30_YYYYmmdd_HHMMSS \
+BUNDLE_ENV=/root/cwy/projects/evol/evol-llm-tau2-stage2-ship/.env \
+PYTHON=/root/cwy/projects/evol/evol-llm-tau2-stage2-ship/code/.venv/bin/python \
+OPENAI_API_BASE=http://127.0.0.1:18082/v1 \
+SCALING_MAX_COST_USD=2 \
+SCALING_TASK_TIMEOUT_S=1800 \
+SCALING_MAX_ZERO_COST_FAILURES=3 \
+setsid -f bash scaling/watch_real_tau2.sh
+```
+
 跑完看 `results/$EXPERIMENT_NAME/MANIFEST.json`，里面有每个 phase 的耗时、artifact 路径、success/failure。
 
 ---
