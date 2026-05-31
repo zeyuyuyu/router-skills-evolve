@@ -18,7 +18,7 @@
 #   EXPERIMENT_NAME   default: scaling_$(date -u +%Y%m%d_%H%M%S)
 #   BENCH             tau2_bench (default) | swe_bench (NotImplemented stub)
 #   MODEL_SWEEP       one of experiments/tau2_stage2/code/training/configs/runs/*.yaml (basename)
-#                     default: 04_qwen3_5_4b_273
+#                     default: 05_qwen3_5_4b_273
 #                     for smoke: smoke_2b
 #   N_CYCLES          MERA default 4; main-branch 5/20 ran 8
 #   SCHEDULE          Skills(S)/LLM(L)/Router(R) order. Default: SLR.
@@ -63,7 +63,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${BUNDLE_ROOT:=$REPO_ROOT/experiments/tau2_stage2}"
 : "${EXPERIMENT_NAME:=scaling_$(date -u +%Y%m%d_%H%M%S)}"
 : "${BENCH:=tau2_bench}"
-: "${MODEL_SWEEP:=04_qwen3_5_4b_273}"
+: "${MODEL_SWEEP:=05_qwen3_5_4b_273}"
 : "${N_CYCLES:=4}"
 : "${SCHEDULE:=SLR}"
 : "${SMALL_MODEL:=deepseek/deepseek-v3.2}"

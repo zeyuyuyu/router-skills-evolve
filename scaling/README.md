@@ -13,7 +13,7 @@
 | `scaling/run_full_pipeline.sh` | ✅ Ready | Zeyu |
 | `scaling/README.md` (this file) | ✅ Ready | Zeyu |
 | `experiments/scaling/collect_traces.py` (Phase 1) | ✅ Ready | Zeyu |
-| `experiments/scaling/benches/tau2_bench/adapter.py` | 🟡 **Wrapper ready; tau2 `run_task` signature may need 1-line patch** — see §11 TODO #1 | **Teammate** |
+| `experiments/scaling/benches/tau2_bench/adapter.py` | ✅ **Wrapper fixed and real 1-task tau2 sanity verified** — see §11 TODO #1 | **Teammate** |
 | `experiments/scaling/benches/swe_bench/adapter.py` | ❌ **Stub only** — fill in if SWE-Bench is selected | **Teammate** (2–3 days) |
 | `experiments/scaling/aggregate_cycles.py` (Phase 6) | ✅ Ready | Zeyu |
 | `experiments/scaling/train_router_simple.py` (Phase 4, bench-agnostic) | ✅ Ready | Zeyu |
@@ -26,7 +26,7 @@
 
 **Why we wrote new `*_simple.py` versions** for Phases 4 and 5: the main-branch `train_learnable_router.py` and `run_e2e_ablation.py` both hard-code `data/HumanEval.jsonl` for the prompt source (they look up prompts by `task_id` from HumanEval). On tau2-bench / SWE-Bench tasks that lookup always misses → "No supervised router examples could be built from traces". The `*_simple` versions read `prompt` from the trace row directly, so they work for any bench whose adapter follows our trace schema.
 
-**Translation**: pipeline is wired end-to-end and **smoke-tested working** (`bash scaling/run_full_pipeline.sh --smoke --mock` passes all 5 phases on a no-GPU laptop). To run on real tau2-bench data, **finish TODO #1 (verify adapter signature) and optionally #3 (scaling-trace-driven LLM training)** — listed in §11.
+**Translation**: pipeline is wired end-to-end and **smoke-tested working** (`bash scaling/run_full_pipeline.sh --smoke --mock` passes all 5 phases on a no-GPU laptop). The tau2 adapter signature and domain task loading have also been real-sanity verified on GPU via a one-task run. Before any large spend, still decide §10 and optionally #3 (scaling-trace-driven LLM training).
 
 ---
 
@@ -115,7 +115,7 @@ LLM 训练侧已有的结论：
 - **磁盘**: ≥500 GB（多个 model checkpoint + bench data + traces）
 
 ### 软件 Software
-- Python 3.12 (conda)
+- Python 3.12 (conda or an existing no-conda venv; current GPU sanity used the no-conda tau2_stage2 `.venv`)
 - 见 `experiments/tau2_stage2/code/training/requirements.txt`
 - 额外 router/skills 需要：`scikit-learn`, `sentence-transformers`, `lightgbm`
 
@@ -147,14 +147,14 @@ export HF_TOKEN=hf_...
 export BUNDLE_ROOT=$(pwd)/experiments/tau2_stage2
 export EXPERIMENT_NAME=scaling_$(date -u +%Y%m%d_%H%M%S)
 export BENCH=tau2_bench            # 或 swe_bench (需要先做 §6 SWE adapter)
-export MODEL_SWEEP=04_qwen3_5_4b_273   # 选一个 run config；smoke 选 smoke_2b
+export MODEL_SWEEP=05_qwen3_5_4b_273   # 选一个 run config；smoke 选 smoke_2b
 export N_CYCLES=4                   # MERA 默认 4，main 分支 5/20 跑过 8
 
-# (3) Smoke test (1 cycle, 1 model, 30 tasks)
-bash run_full_pipeline.sh --smoke
+# (3) Smoke test (1 cycle, 30 mock tasks, no API/GPU)
+bash scaling/run_full_pipeline.sh --smoke --mock
 
 # (4) 真正跑：完整 N-cycle iterated pipeline
-bash run_full_pipeline.sh
+bash scaling/run_full_pipeline.sh
 
 # (5) 结果在
 # results/scaling_$STAMP/cycle{0..N}/e2e_ablation_summary.json
@@ -173,7 +173,7 @@ bash run_full_pipeline.sh
 1. **复用** `experiments/tau2_stage2/code/training/` 整个目录当 LLM track 的训练后端
 2. **新增** `experiments/scaling/skills/`（从 main 分支 `src/skills.py` 复制 + 扩展支持多 domain）
 3. **新增** `experiments/scaling/router/`（从 main 分支 `src/learned_router/` 复制）
-4. **新增** `experiments/scaling/run_full_pipeline.sh`（即下面 §5 的 shell）
+4. **新增** `scaling/run_full_pipeline.sh`（即下面 §5 的 shell）
 5. **修改** `experiments/tau2_stage2/code/training/orchestration/train_pipeline.sh` 让它接受 `--training-data` 参数，可以喂 Skills+Router 阶段产生的过滤数据集，不只是 stage2_v1 corpus
 
 ### 不要 fork 走的代价 Cost of forking
@@ -262,7 +262,7 @@ $EXPERIMENT_NAME/
 {
   "cycle": 0,
   "bench": "tau2_bench",
-  "model_config": "04_qwen3_5_4b_273",
+  "model_config": "05_qwen3_5_4b_273",
   "n_eval": 848,
   "variants": {
     "base": {"routing_acc": 0.6828, "large_f1": 0.0, "fallback": 0.3172, "cost_vs_large": 0.3354, "task_pass": 0.47},
@@ -293,14 +293,16 @@ $EXPERIMENT_NAME/
 
 ## 9. Smoke test 通过标准 / Smoke acceptance criteria
 
-`bash run_full_pipeline.sh --smoke` 跑完后，下面四件事都满足才算 smoke 过：
+`bash scaling/run_full_pipeline.sh --smoke --mock` 跑完后，下面几件事都满足才算 mock smoke 过：
 
 - [ ] `cycle_0/traces.jsonl` 行数 ≥ 30
-- [ ] `cycle_0/skillbook.json` 含 ≥ 5 个 signature
-- [ ] `cycle_0/llm_adapter/training_log.json` 最后 loss < 0.5（smoke 用过拟合验证训练链路）
+- [ ] `cycle_0/skillbook.json` 存在且包含至少 1 个 signature（mock prompts intentionally cluster tightly）
+- [ ] `cycle_0/llm_adapter/STATUS` 为 `skipped`（smoke 默认跳过 LLM 训练）
+- [ ] `cycle_0/router/router.joblib` 存在
 - [ ] `cycle_0/e2e_ablation_summary.json` 中 `variants.full.routing_acc > variants.base.routing_acc` （任意 margin，证明 router 起作用了）
+- [ ] `final_ablation_table.md` 和 `curve.png` 生成
 
-smoke 应在单 GPU 上 30 分钟内跑完。
+mock smoke 应在 CPU 上几分钟内跑完，不需要 API key 或 GPU。
 
 ---
 
@@ -317,14 +319,24 @@ smoke 应在单 GPU 上 30 分钟内跑完。
 
 ## 11. Teammate TODO (with effort estimates)
 
-### TODO #1 — Verify tau2 adapter `run_task` signature  (status: wired; real-run smoke still needed)
+### TODO #1 — Verify tau2 adapter `run_task` signature  (status: done for current tau2_stage2 bundle)
 
 **Where**: `experiments/scaling/benches/tau2_bench/adapter.py:_run_one`
 
 `_run_one` now matches the colleague adapter signature:
 `run_task(task, config: RunTaskConfig, *, domain=None)`. It constructs a
 `RunTaskConfig` with `agent`, `user`, `seed`, `max_steps`, and `max_errors`
-before calling tau2. To re-verify:
+before calling tau2. The wrapper also loads tau2 tasks by domain
+(`retail`/`airline`/`telecom`) and extracts prompts from nested
+`user_scenario` rows, which are both required for the real tau2 bundle.
+
+Verified on 2026-05-31 with:
+
+- local mock orchestration: `bash scaling/run_full_pipeline.sh --smoke --mock`
+- GPU real sanity: `1` retail task, `deepseek/deepseek-v3.2` small model,
+  `openai/gpt-5.4-2026-03-05` large model, nonzero recorded cost
+
+To re-verify after upstream tau2_stage2 changes:
 
 ```bash
 # Activate the tau2_stage2 venv/environment first

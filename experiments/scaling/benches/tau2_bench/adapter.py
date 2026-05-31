@@ -17,6 +17,7 @@ rest of the pipeline without GPUs / OpenAI key).
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import random
 import sys
@@ -69,6 +70,27 @@ def _extract_signature(prompt: str) -> str:
     return f"{head}::len_bucket={bucket}"
 
 
+def _task_prompt(task: dict[str, Any]) -> str:
+    """Return a stable text prompt for router/skill features.
+
+    tau2 task rows keep the user-facing scenario under a nested
+    `user_scenario.instructions` object rather than a flat `prompt` field.
+    Preserve existing flat fields for other adapters/forks, then fall back to
+    a compact JSON rendering of the scenario/description.
+    """
+    for key in ("prompt", "user_message", "scenario", "instruction"):
+        value = task.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+    scenario = task.get("user_scenario")
+    if scenario:
+        return json.dumps(scenario, ensure_ascii=False, sort_keys=True)
+    description = task.get("description")
+    if description:
+        return json.dumps(description, ensure_ascii=False, sort_keys=True)
+    return json.dumps(task, ensure_ascii=False, sort_keys=True)[:2000]
+
+
 class Adapter:
     """tau2-bench adapter."""
 
@@ -93,8 +115,11 @@ class Adapter:
 
         if self._tau2_adapter is None:
             self._lazy_import_tau2()
-        subset = "eval" if split == "eval" else "train"
-        raw = self._tau2_adapter.load_tasks(subset)
+        # tau2-bench stores tasks by domain (retail/airline/telecom), not by
+        # train/eval split. The scaling pipeline still passes `split` for
+        # bench-agnostic compatibility, but this adapter's real data source is
+        # the selected domain.
+        raw = self._tau2_adapter.load_tasks(self.domain)
         return [self._normalize_task(t) for t in raw[:n]]
 
     # ----------------------------------------------------------- run pair
@@ -169,7 +194,7 @@ class Adapter:
     def _normalize_task(self, t: dict[str, Any]) -> dict:
         return {
             "task_id": str(t.get("task_id") or t.get("id") or hashlib.md5(str(t).encode()).hexdigest()[:12]),
-            "prompt": t.get("prompt") or t.get("user_message") or t.get("scenario", ""),
+            "prompt": _task_prompt(t),
             "domain": self.domain,
             "_raw": t,
         }
