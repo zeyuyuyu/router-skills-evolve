@@ -557,3 +557,17 @@ Trace collection continued under the cost cap:
   `127.0.0.1:<port> -> 127.0.0.1:18082`
 - active processes remain watchdog, `run_full_pipeline.sh`, and
   `collect_traces.py`.
+
+### 2026-05-31 18:03 CST
+
+Trace collection continues under the budget guard:
+
+- progress: `25/30` rows
+- success: `20/25`
+- recorded cost: `$0.9611714`
+- last completed task: `task_id=24`, `probe:small→small_OK`
+- `run.log` update age: `0s`
+- active socket remains through proxy:
+  `127.0.0.1:<port> -> 127.0.0.1:18082`
+- active processes remain watchdog, `run_full_pipeline.sh`, and
+  `collect_traces.py`.
