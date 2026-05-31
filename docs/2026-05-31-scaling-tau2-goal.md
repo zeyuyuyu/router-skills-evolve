@@ -411,3 +411,15 @@ Current unattended stop conditions:
 - stop after 3 consecutive zero-cost failures;
 - restart/auto-skip stale tasks after `600s` with no `run.log` progress;
 - continue downstream skill/router/ablation after 30 trace rows.
+
+### 2026-05-31 17:15 CST
+
+Unattended run continued without further intervention:
+
+- progress: `6/30` rows
+- success: `4/6`
+- recorded cost: `$0.1634547`
+- last completed task: `task_id=5`, `probe:small→small_OK`
+- active socket remains through proxy:
+  `127.0.0.1:<port> -> 127.0.0.1:18082`
+- run log shows `task=6` in progress.
