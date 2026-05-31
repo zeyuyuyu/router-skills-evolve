@@ -13,10 +13,10 @@
     "writing": 6
   },
   "composite": 5.25,
-  "status": "provisional — A800 offline day 15, LLM results n=1 seed",
-  "last_updated": "2026-05-29",
+  "status": "provisional — A800 offline day 17, LLM results n=1 seed; tau2 §5.4 added",
+  "last_updated": "2026-05-31",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "queue_size": 41,
+  "queue_size": 45,
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
