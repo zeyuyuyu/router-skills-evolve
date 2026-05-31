@@ -543,3 +543,17 @@ Trace collection reached two thirds of the 30-task target:
   `127.0.0.1:<port> -> 127.0.0.1:18082`
 - active processes remain watchdog, `run_full_pipeline.sh`, and
   `collect_traces.py`.
+
+### 2026-05-31 17:53 CST
+
+Trace collection continued under the cost cap:
+
+- progress: `21/30` rows
+- success: `16/21`
+- recorded cost: `$0.69877735`
+- last completed task: `task_id=20`, `probe:small_fail→large_OK`
+- `run.log` update age: `1s`
+- active socket remains through proxy:
+  `127.0.0.1:<port> -> 127.0.0.1:18082`
+- active processes remain watchdog, `run_full_pipeline.sh`, and
+  `collect_traces.py`.
