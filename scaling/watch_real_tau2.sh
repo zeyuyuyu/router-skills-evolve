@@ -6,6 +6,7 @@
 #   - traces.jsonl has N_TASKS rows and the pipeline process is still running
 #     toward downstream aggregation;
 #   - accumulated trace cost reaches SCALING_MAX_COST_USD;
+#   - a running process makes no log progress for WATCH_STALE_S seconds;
 #   - the same run command exits MAX_RESTARTS times.
 #
 # Required env:
@@ -17,7 +18,7 @@
 #   PYTHON=/path/to/.venv/bin/python \
 #   OPENAI_API_BASE=http://127.0.0.1:18082/v1 \
 #   SCALING_MAX_COST_USD=2 \
-#   SCALING_TASK_TIMEOUT_S=1800 \
+#   SCALING_TASK_TIMEOUT_S=600 \
 #   SCALING_MAX_ZERO_COST_FAILURES=3 \
 #   setsid -f bash scaling/watch_real_tau2.sh
 
@@ -28,13 +29,14 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${N_TASKS:=30}"
 : "${N_CYCLES:=1}"
 : "${WATCH_INTERVAL_S:=60}"
+: "${WATCH_STALE_S:=600}"
 : "${MAX_RESTARTS:=6}"
 : "${BUNDLE_ROOT:=$REPO_ROOT/experiments/tau2_stage2}"
 : "${BUNDLE_ENV:=$BUNDLE_ROOT/.env}"
 : "${OPENAI_API_BASE:=http://127.0.0.1:18082/v1}"
 : "${OPENAI_BASE_URL:=$OPENAI_API_BASE}"
 : "${SCALING_MAX_COST_USD:=2}"
-: "${SCALING_TASK_TIMEOUT_S:=1800}"
+: "${SCALING_TASK_TIMEOUT_S:=600}"
 : "${SCALING_MAX_ZERO_COST_FAILURES:=3}"
 : "${TAU2_MAX_STEPS:=30}"
 : "${TAU2_DOMAIN:=retail}"
@@ -42,6 +44,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RESULTS_DIR="$REPO_ROOT/results/$EXPERIMENT_NAME"
 TRACE_FILE="$RESULTS_DIR/cycle_0/traces.jsonl"
 SUMMARY_FILE="$RESULTS_DIR/cycle_0/e2e_ablation_summary.json"
+RUN_LOG="$RESULTS_DIR/run.log"
 WATCH_LOG="$RESULTS_DIR/watchdog.log"
 mkdir -p "$RESULTS_DIR"
 
@@ -123,6 +126,14 @@ PY
   if is_running; then
     if (( rows >= N_TASKS )); then
       log "phase1 complete: rows=$rows; waiting for downstream aggregation"
+    elif [[ -f "$RUN_LOG" ]]; then
+      now=$(date +%s)
+      log_mtime=$(stat -c %Y "$RUN_LOG" 2>/dev/null || echo "$now")
+      stale_s=$((now - log_mtime))
+      if (( stale_s >= WATCH_STALE_S )); then
+        log "stale: run.log unchanged for ${stale_s}s >= ${WATCH_STALE_S}s; restarting active process"
+        stop_running
+      fi
     fi
     sleep "$WATCH_INTERVAL_S"
     continue
