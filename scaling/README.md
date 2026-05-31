@@ -6,6 +6,30 @@
 
 ---
 
+## ⚠ Status & TODO (READ FIRST)
+
+| 组件 / Component | 状态 / Status | Owner |
+|---|---|---|
+| `scaling/run_full_pipeline.sh` | ✅ Ready | Zeyu |
+| `scaling/README.md` (this file) | ✅ Ready | Zeyu |
+| `experiments/scaling/collect_traces.py` (Phase 1) | ✅ Ready | Zeyu |
+| `experiments/scaling/benches/tau2_bench/adapter.py` | 🟡 **Wrapper ready; tau2 `run_task` signature may need 1-line patch** — see §11 TODO #1 | **Teammate** |
+| `experiments/scaling/benches/swe_bench/adapter.py` | ❌ **Stub only** — fill in if SWE-Bench is selected | **Teammate** (2–3 days) |
+| `experiments/scaling/aggregate_cycles.py` (Phase 6) | ✅ Ready | Zeyu |
+| `experiments/scaling/train_router_simple.py` (Phase 4, bench-agnostic) | ✅ Ready | Zeyu |
+| `experiments/scaling/run_e2e_ablation_simple.py` (Phase 5, bench-agnostic) | ✅ Ready | Zeyu |
+| `experiments/scaling/tau2_train_wrapper.sh` (Phase 3) | 🟡 **`MODE=colleague_corpus` works; `MODE=scaling_traces` needs data injection wired** — see §11 TODO #3 | **Teammate** |
+| `experiments/tau2_stage2/` (colleague's SFT framework) | ✅ **Merged from `codex/tau2-stage2-training-eval` into `main`**; teammate's prior work preserved | — |
+| `experiments/run_evolve.py` (HumanEval-coupled, **not** used) | n/a | — |
+| `experiments/train_learnable_router.py` (HumanEval-coupled, **not** used) | n/a | — |
+| `experiments/run_e2e_ablation.py` (HumanEval-coupled, **not** used) | n/a | — |
+
+**Why we wrote new `*_simple.py` versions** for Phases 4 and 5: the main-branch `train_learnable_router.py` and `run_e2e_ablation.py` both hard-code `data/HumanEval.jsonl` for the prompt source (they look up prompts by `task_id` from HumanEval). On tau2-bench / SWE-Bench tasks that lookup always misses → "No supervised router examples could be built from traces". The `*_simple` versions read `prompt` from the trace row directly, so they work for any bench whose adapter follows our trace schema.
+
+**Translation**: pipeline is wired end-to-end and **smoke-tested working** (`bash scaling/run_full_pipeline.sh --smoke --mock` passes all 5 phases on a no-GPU laptop). To run on real tau2-bench data, **finish TODO #1 (verify adapter signature) and optionally #3 (scaling-trace-driven LLM training)** — listed in §11.
+
+---
+
 ## 0. 之前实验的硬数字（基线对照）/ Baseline numbers to beat
 
 主分支已经在 8×A800 上跑出的真实结果（见 `docs/E2E_ABLATION_RESULTS.md`、`docs/HANDOFF.md`）：
@@ -288,6 +312,80 @@ smoke 应在单 GPU 上 30 分钟内跑完。
 2. **模型 sweep 范围？** 默认从 colleague 的 `runs/01..10` 里挑哪几个跑？建议起手 `01_qwen3_5_2b_273`（small floor）+ `05_qwen3_5_4b_273`（main candidate）+ `07_qwen3_5_9b_273`（high capacity） 三个，35B-A3B 等 small/medium 出曲线后再决定
 3. **N cycles**：4 还是 8？8 cycle 时间约 2× 但能更稳验证 schedule
 4. **要不要做 schedule ablation**？(SLR vs LSR vs LRS)；要做的话训练时间 ×3
+
+---
+
+## 11. Teammate TODO (with effort estimates)
+
+### TODO #1 — Verify tau2 adapter `run_task` signature  (effort: ~30 min)
+
+**Where**: `experiments/scaling/benches/tau2_bench/adapter.py:_run_one`
+
+I called `self._tau2_adapter.run_task(task["_raw"], student_model=model)` based on the colleague's `Tau2BenchAdapter` class signature visible in the branch. The exact kwarg name may differ (`student_model` vs `model` vs `model_name`). To verify:
+
+```bash
+# Activate colleague's env first
+cd experiments/tau2_stage2
+conda activate tau2-stage2
+
+# Inspect the real signature
+python -c "
+from adapters.tau2_bench.adapter import Tau2BenchAdapter
+import inspect
+print(inspect.signature(Tau2BenchAdapter.run_task))
+"
+```
+
+If the signature differs from what `_run_one` calls, patch `adapter.py:_run_one` to match. Look for `# TODO(colleague)` markers.
+
+**Smoke test the fix**:
+```bash
+SCALING_MOCK=0 OPENAI_API_KEY=$YOUR_KEY \
+  python experiments/scaling/collect_traces.py \
+    --bench tau2_bench --n-tasks 5 \
+    --small-model deepseek/deepseek-v3.2 \
+    --large-model openai/gpt-5.4-2026-03-05 \
+    --out /tmp/test_traces.jsonl
+# Expect: 5 rows in /tmp/test_traces.jsonl with non-empty final_model + non-zero total_cost
+```
+
+### TODO #2 — Run full smoke (mock) on your machine  (effort: ~5 min)
+
+Just to verify the pipeline orchestration is wired correctly before doing any GPU work:
+
+```bash
+bash scaling/run_full_pipeline.sh --smoke --mock
+```
+
+Should produce `results/scaling_*/cycle_0/` with `traces.jsonl`, `skillbook.json`, `router/`, `e2e_ablation_summary.json`, and `final_ablation_table.md` — all using synthetic data, no API/GPU. Confirms shell + Python imports are clean on your box.
+
+### TODO #3 — (Optional) Wire scaling traces into tau2_stage2 SFT  (effort: 2–3 days)
+
+**Where**: `experiments/scaling/tau2_train_wrapper.sh` — currently defaults to `MODE=colleague_corpus` (trains on the colleague's pre-existing `data_processed/stage2_v1/` corpus, ignoring our Phase 3 extracted slice).
+
+**Why optional**: with `MODE=colleague_corpus`, the LLM track trains on the same data every cycle (so cycle-N LLM ≈ cycle-0 LLM). Skills + Router still iterate properly, so we still get a valid 3-track ablation, just with a flat LLM line.
+
+**To wire scaling traces** (Phase 3 traces → LLM training data):
+1. Write `experiments/scaling/convert_traces_to_stage2.py` that turns `training_data.jsonl` (output of `extract_training_data.py`) into colleague's prompt-completion format. See `experiments/tau2_stage2/code/training/data/convert_to_prompt_completion.py` for the target schema.
+2. Drop into `experiments/tau2_stage2/data_processed/stage2_v1/train.jsonl` (overwrite or new split).
+3. Update `_build_meta.json` so the validator passes (colleague has `data_audit.py` that checks).
+4. Change `tau2_train_wrapper.sh:MODE=scaling_traces` branch to call the converter then invoke `train_pipeline.sh`.
+
+For the first scaling run, **leave as `colleague_corpus`** — get the system working end-to-end first, then wire trace-driven LLM training as a v2.
+
+### TODO #4 — Decide Open Questions (§10)  (effort: 15 min discussion with Zeyu)
+
+The four open questions in §10 (bench / model sweep / N cycles / schedule ablation) need to be locked before kicking off the real run. Ping Zeyu on WeChat when you're at this step.
+
+### TODO #5 — (If SWE-Bench is chosen) Implement SWE-Bench adapter  (effort: 2–3 days)
+
+See `experiments/scaling/benches/swe_bench/adapter.py` module docstring for the full implementation TODO. Only do this if §10 Q1 lands on SWE-Bench.
+
+---
+
+## 12. 一句话给同事的话术 / One-liner for handoff
+
+> Pipeline 接好了，`scaling/` 在 main 上。直接 `bash scaling/run_full_pipeline.sh --smoke --mock` 试一下 orchestration，过了之后看 `scaling/README.md §11` 的 5 个 TODO；TODO #1 是 30 分钟的 tau2 adapter 签名 fix，#2 是 mock 验证，剩下三个按情况做。卡住任何一步直接微信我。
 
 ---
 

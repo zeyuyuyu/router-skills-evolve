@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
 # run_full_pipeline.sh
 #
-# End-to-end: Skills evolve + Router training + LLM training + E2E ablation
-# multi-cycle iteration. Default bench: tau2-bench. Supports SWE-Bench via
-# adapter (see README §6).
+# End-to-end: Skills evolve + Router training + LLM training + E2E ablation,
+# multi-cycle iteration. Default bench: tau2-bench. SWE-Bench adapter is a stub.
 #
-# Usage:
-#   bash run_full_pipeline.sh                 # full run
-#   bash run_full_pipeline.sh --smoke         # 30-task smoke, 1 cycle, ~30 min
-#   bash run_full_pipeline.sh --dry-run       # print plan, no execution
-#   bash run_full_pipeline.sh --resume 2      # restart from cycle 2
+# Quick smoke (no GPU / no API key required — uses mock adapter):
+#   bash scaling/run_full_pipeline.sh --smoke --mock
 #
-# Requires env vars:
-#   OPENAI_API_KEY  (Phase 1 trace collection + tau2 judge)
-#   HF_TOKEN        (Qwen3 download; required for 35B-A3B)
-#   BUNDLE_ROOT     (default: $PWD/experiments/tau2_stage2)
+# Real run (8×H200 or 8×A800; OPENAI_API_KEY + HF_TOKEN required):
+#   bash scaling/run_full_pipeline.sh
+#
+# Required env vars (for non-mock runs):
+#   OPENAI_API_KEY  Phase 1 large-model invocation + tau2 NL judge
+#   HF_TOKEN        Qwen3 download (required for 35B-A3B)
 #
 # Optional env vars:
-#   EXPERIMENT_NAME   (default: scaling_$(date -u +%Y%m%d_%H%M%S))
-#   BENCH             (default: tau2_bench; alt: swe_bench)
-#   MODEL_SWEEP       (default: 04_qwen3_5_4b_273)
-#   N_CYCLES          (default: 4)
-#   SCHEDULE          (default: SLR; alt: LSR LRS SRL RSL RLS)
-#   SMALL_MODEL       (default: deepseek/deepseek-v3.2)
-#   LARGE_MODEL       (default: openai/gpt-5.4-2026-03-05)
+#   EXPERIMENT_NAME   default: scaling_$(date -u +%Y%m%d_%H%M%S)
+#   BENCH             tau2_bench (default) | swe_bench (NotImplemented stub)
+#   MODEL_SWEEP       one of experiments/tau2_stage2/code/training/configs/runs/*.yaml (basename)
+#                     default: 04_qwen3_5_4b_273
+#                     for smoke: smoke_2b
+#   N_CYCLES          MERA default 4; main-branch 5/20 ran 8
+#   SCHEDULE          Skills(S)/LLM(L)/Router(R) order. Default: SLR.
+#                     Alternatives: LSR LRS SRL RSL RLS
+#   SMALL_MODEL       default: deepseek/deepseek-v3.2
+#   LARGE_MODEL       default: openai/gpt-5.4-2026-03-05
+#   TAU2_DOMAIN       airline | retail | telecom (default: retail)
+#   SKIP_LLM          set to 1 to skip Phase 3 (useful while colleague's
+#                     train framework is being set up)
 
 set -euo pipefail
 
@@ -32,18 +36,21 @@ set -euo pipefail
 # ─────────────────────────────────────────────────────────────────────────────
 
 SMOKE=false
+MOCK=false
 DRY_RUN=false
 RESUME_FROM=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --smoke) SMOKE=true; shift ;;
+    --mock) MOCK=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     --resume) RESUME_FROM="$2"; shift 2 ;;
     --bench) BENCH="$2"; shift 2 ;;
     --model-config) MODEL_SWEEP="$2"; shift 2 ;;
     --n-cycles) N_CYCLES="$2"; shift 2 ;;
     --schedule) SCHEDULE="$2"; shift 2 ;;
-    -h|--help) sed -n '1,30p' "$0"; exit 0 ;;
+    --skip-llm) SKIP_LLM=1; shift ;;
+    -h|--help) sed -n '1,40p' "$0"; exit 0 ;;
     *) echo "[ERROR] Unknown flag: $1"; exit 2 ;;
   esac
 done
@@ -52,7 +59,8 @@ done
 # 1. Config defaults
 # ─────────────────────────────────────────────────────────────────────────────
 
-: "${BUNDLE_ROOT:=$PWD/experiments/tau2_stage2}"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+: "${BUNDLE_ROOT:=$REPO_ROOT/experiments/tau2_stage2}"
 : "${EXPERIMENT_NAME:=scaling_$(date -u +%Y%m%d_%H%M%S)}"
 : "${BENCH:=tau2_bench}"
 : "${MODEL_SWEEP:=04_qwen3_5_4b_273}"
@@ -60,21 +68,29 @@ done
 : "${SCHEDULE:=SLR}"
 : "${SMALL_MODEL:=deepseek/deepseek-v3.2}"
 : "${LARGE_MODEL:=openai/gpt-5.4-2026-03-05}"
+: "${TAU2_DOMAIN:=retail}"
+: "${SKIP_LLM:=0}"
+
+export TAU2_DOMAIN
 
 if $SMOKE; then
   MODEL_SWEEP="smoke_2b"
   N_CYCLES=1
   N_TASKS=30
+  SKIP_LLM=1   # smoke skips LLM training by default
 else
-  N_TASKS=848   # tau2-bench eval split size; SWE-Bench Lite uses 300
+  N_TASKS=848   # tau2-bench eval split size; SWE-Bench Lite ≈ 300
 fi
 
-REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+if $MOCK; then
+  export SCALING_MOCK=1
+fi
+
 RESULTS_DIR="$REPO_ROOT/results/$EXPERIMENT_NAME"
 mkdir -p "$RESULTS_DIR"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Pre-flight checks
+# 2. Pre-flight
 # ─────────────────────────────────────────────────────────────────────────────
 
 preflight() {
@@ -84,35 +100,55 @@ preflight() {
   echo "  MODEL_SWEEP     = $MODEL_SWEEP"
   echo "  N_CYCLES        = $N_CYCLES"
   echo "  SCHEDULE        = $SCHEDULE  (Skills→LLM→Router default)"
+  echo "  TAU2_DOMAIN     = $TAU2_DOMAIN"
   echo "  RESULTS_DIR     = $RESULTS_DIR"
-  echo "  SMOKE=$SMOKE DRY_RUN=$DRY_RUN RESUME_FROM=$RESUME_FROM"
+  echo "  SMOKE=$SMOKE MOCK=$MOCK DRY_RUN=$DRY_RUN RESUME_FROM=$RESUME_FROM SKIP_LLM=$SKIP_LLM"
   echo
+  # Python detection (system may have python3 but no python)
+  PYTHON="${PYTHON:-}"
+  if [[ -z "$PYTHON" ]]; then
+    if   command -v python3 >/dev/null 2>&1; then PYTHON=python3
+    elif command -v python  >/dev/null 2>&1; then PYTHON=python
+    else echo "[FATAL] No python interpreter found"; exit 3
+    fi
+  fi
+  echo "  PYTHON          = $PYTHON ($($PYTHON --version 2>&1))"
 
-  # secrets
-  [[ -z "${OPENAI_API_KEY:-}" ]] && { echo "[FATAL] OPENAI_API_KEY not set"; exit 3; }
-  [[ -z "${HF_TOKEN:-}" ]] && echo "[WARN] HF_TOKEN not set — 35B-A3B download will be slow/rate-limited"
 
-  # disk
-  free_gb=$(df -BG "$REPO_ROOT" | tail -1 | awk '{print $4}' | tr -d 'G')
-  (( free_gb < 100 )) && { echo "[FATAL] Need ≥100 GB free; have ${free_gb}G"; exit 3; }
+
+  # Secret checks (skipped in mock mode)
+  if ! $MOCK; then
+    [[ -z "${OPENAI_API_KEY:-}" ]] && { echo "[FATAL] OPENAI_API_KEY not set (or run with --mock)"; exit 3; }
+    [[ -z "${HF_TOKEN:-}" ]] && echo "[WARN] HF_TOKEN not set — large model download will be slow"
+  fi
+
+  # Disk
+  free_gb=$(df -BG "$REPO_ROOT" 2>/dev/null | tail -1 | awk '{print $4}' | tr -d 'G' || echo 999)
+  if ! $MOCK && (( free_gb < 100 )); then
+    echo "[FATAL] Need ≥100 GB free for non-mock runs; have ${free_gb}G"; exit 3
+  fi
 
   # GPUs
-  if command -v nvidia-smi >/dev/null; then
-    n_gpu=$(nvidia-smi -L | wc -l)
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    n_gpu=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0)
     echo "  GPUs detected: $n_gpu"
-    if ! $SMOKE && (( n_gpu < 8 )); then
+    if ! $SMOKE && ! $MOCK && (( n_gpu < 8 )); then
       echo "[WARN] Full run designed for 8 GPUs; have $n_gpu"
     fi
   fi
 
-  # shepherd junk cleanup (per README §8 pitfall 5)
+  # tau2_stage2 bundle presence (non-mock only)
+  if [[ "$BENCH" == "tau2_bench" ]] && ! $MOCK && [[ ! -d "$BUNDLE_ROOT" ]]; then
+    echo "[FATAL] BUNDLE_ROOT=$BUNDLE_ROOT does not exist."
+    echo "        Merge codex/tau2-stage2-training-eval branch first:"
+    echo "          git merge origin/codex/tau2-stage2-training-eval --no-edit"
+    exit 3
+  fi
+
+  # Shepherd junk cleanup (see README common pitfall 5)
   shopt -s nullglob
-  junk=(shepherd.log shepherd_*.log .shepherd shepherd_logs shepherd_local_*)
-  for f in "${junk[@]}"; do
-    if [[ -e "$f" ]]; then
-      echo "  Removing shepherd junk: $f"
-      $DRY_RUN || rm -rf "$f"
-    fi
+  for f in "$REPO_ROOT"/shepherd.log "$REPO_ROOT"/shepherd_*.log "$REPO_ROOT"/.shepherd "$REPO_ROOT"/shepherd_logs "$REPO_ROOT"/shepherd_local_*; do
+    [[ -e "$f" ]] && { echo "  Removing shepherd junk: $(basename "$f")"; $DRY_RUN || rm -rf "$f"; }
   done
 
   # snapshot config
@@ -123,11 +159,14 @@ preflight() {
   "model_sweep": "$MODEL_SWEEP",
   "n_cycles": $N_CYCLES,
   "schedule": "$SCHEDULE",
+  "tau2_domain": "$TAU2_DOMAIN",
   "small_model": "$SMALL_MODEL",
   "large_model": "$LARGE_MODEL",
   "smoke": $SMOKE,
+  "mock": $MOCK,
+  "skip_llm": $([ "$SKIP_LLM" -eq 1 ] && echo true || echo false),
   "resume_from": $RESUME_FROM,
-  "git_sha": "$(git rev-parse --short HEAD 2>/dev/null || echo unknown)",
+  "git_sha": "$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)",
   "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "host": "$(hostname)"
 }
@@ -137,12 +176,6 @@ EOF
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Phase implementations
 # ─────────────────────────────────────────────────────────────────────────────
-#
-# Each phase reads its inputs from previous cycle's outputs and writes to
-# results/$EXPERIMENT_NAME/cycle_$N/.
-#
-# All scripts are expected to exist in main branch's experiments/ directory.
-# For tau2-bench LLM training we route through colleague's tau2_stage2 framework.
 
 phase1_collect_traces() {
   local cycle=$1
@@ -150,22 +183,23 @@ phase1_collect_traces() {
   mkdir -p "$out"
   echo "  [Phase 1] Trace collection — bench=$BENCH cycle=$cycle"
 
-  # Inputs:
-  #   - small model: cycle 0 → SMALL_MODEL; cycle ≥1 → previous adapter
-  #   - large model: LARGE_MODEL (always)
+  # In cycles ≥1, the "small model" is the previous cycle's trained adapter.
   local small_arg="$SMALL_MODEL"
   if (( cycle > 0 )); then
-    small_arg="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
+    local prev="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
+    [[ -e "$prev" ]] && small_arg="$prev"
   fi
 
   local cmd=(
-    python experiments/scaling/collect_traces.py
+    "$PYTHON" "$REPO_ROOT/experiments/scaling/collect_traces.py"
     --bench "$BENCH"
     --n-tasks "$N_TASKS"
     --small-model "$small_arg"
     --large-model "$LARGE_MODEL"
+    --cycle "$cycle"
     --out "$out/traces.jsonl"
   )
+  $MOCK && cmd+=(--mock)
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
   "${cmd[@]}" 2>&1 | tee "$out/phase1.log"
 }
@@ -173,46 +207,69 @@ phase1_collect_traces() {
 phase2_skills_evolve() {
   local cycle=$1
   local out="$RESULTS_DIR/cycle_$cycle"
-  echo "  [Phase 2] Skills evolve (SkillBook) — cycle=$cycle"
+  echo "  [Phase 2] Skills evolve — cycle=$cycle"
 
-  local prev_skillbook=""
-  if (( cycle > 0 )); then
-    prev_skillbook="--prev-skillbook $RESULTS_DIR/cycle_$((cycle-1))/skillbook.json"
-  fi
+  $DRY_RUN && { echo "  DRY: build skillbook from $out/traces.jsonl"; return; }
 
-  local cmd=(
-    python experiments/run_evolve.py
-    --traces "$out/traces.jsonl"
-    $prev_skillbook
-    --out "$out/skillbook.json"
-  )
-  $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
-  "${cmd[@]}" 2>&1 | tee "$out/phase2.log"
+  # Build SkillBook directly from our traces using src/skills.py
+  "$PYTHON" - <<PY 2>&1 | tee "$out/phase2.log"
+import json, sys
+from pathlib import Path
+sys.path.insert(0, "$REPO_ROOT")
+from src.skills import SkillBook
+
+sb = SkillBook()
+prev = Path("$RESULTS_DIR/cycle_$((cycle-1))/skillbook.json")
+if $cycle > 0 and prev.exists():
+    sb.load(prev)
+    print(f"[skills] carried over from cycle $((cycle-1))")
+
+n = 0
+with open("$out/traces.jsonl") as fh:
+    for line in fh:
+        try:
+            t = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        prompt = t.get("prompt") or t.get("signature") or t.get("task_id", "")
+        model  = t.get("final_model", "")
+        succ   = bool(t.get("final_success", False))
+        if prompt and model:
+            sb.update(prompt, model, succ, t.get("task_id", ""))
+            n += 1
+
+out_path = Path("$out/skillbook.json")
+sb.save(out_path)
+size = len(getattr(sb, "skills", {}))
+print(f"[skills_evolve] ingested {n} traces  SkillBook size={size}  wrote {out_path}")
+PY
 }
 
 phase3_llm_train() {
   local cycle=$1
   local out="$RESULTS_DIR/cycle_$cycle"
-  echo "  [Phase 3] LLM training (via tau2_stage2 framework) — cycle=$cycle model=$MODEL_SWEEP"
 
-  # Extract training slice: where small model failed but is "learnable"
-  $DRY_RUN || python experiments/extract_training_data.py \
+  if [[ "$SKIP_LLM" -eq 1 ]]; then
+    echo "  [Phase 3] LLM training — SKIPPED (SKIP_LLM=1 or smoke mode)"
+    mkdir -p "$out/llm_adapter"
+    echo "skipped" > "$out/llm_adapter/STATUS"
+    return
+  fi
+
+  echo "  [Phase 3] LLM training — cycle=$cycle model=$MODEL_SWEEP"
+
+  $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/extract_training_data.py" \
     --traces "$out/traces.jsonl" \
-    --skillbook "$out/skillbook.json" \
     --output "$out/training_data.jsonl" \
-    2>&1 | tee -a "$out/phase3_extract.log"
+    2>&1 | tee "$out/phase3_extract.log"
 
-  # Reuse colleague's tau2_stage2 SFT framework
-  # NOTE: tau2_stage2/code/training/orchestration/train_pipeline.sh assumes its
-  # own data_processed/ layout; we patch via env var to point at our extract.
   TRAINING_DATA="$out/training_data.jsonl" \
   TRAIN_OUTPUT_DIR="$out/llm_adapter" \
   RUN_CONFIG="$MODEL_SWEEP" \
   BUNDLE_ROOT="$BUNDLE_ROOT" \
-  $DRY_RUN || bash "$BUNDLE_ROOT/code/training/orchestration/train_pipeline.sh" \
+  MODE="${TAU2_TRAIN_MODE:-colleague_corpus}" \
+    bash "$REPO_ROOT/experiments/scaling/tau2_train_wrapper.sh" \
     2>&1 | tee "$out/phase3_train.log"
-
-  $DRY_RUN && echo "  DRY: would invoke tau2_stage2 train_pipeline.sh with RUN_CONFIG=$MODEL_SWEEP"
 }
 
 phase4_router_train() {
@@ -220,28 +277,21 @@ phase4_router_train() {
   local out="$RESULTS_DIR/cycle_$cycle"
   echo "  [Phase 4] Router training — cycle=$cycle"
 
-  # Re-label traces using the NEW LLM (small_model boundary shifted)
-  $DRY_RUN || python experiments/extract_training_data.py \
-    --traces "$out/traces.jsonl" \
-    --small-model "$out/llm_adapter/checkpoint-best" \
-    --output "$out/router_train.jsonl" \
-    --mode router_labels \
-    2>&1 | tee -a "$out/phase4_label.log"
-
+  # Use scaling/train_router_simple.py (bench-agnostic, reads `prompt` from
+  # trace rows directly). main-branch experiments/train_learnable_router.py
+  # is HumanEval-coupled and won't work on tau2 / SWE traces.
   local cmd=(
-    python experiments/train_learnable_router.py
-    --train-data "$out/router_train.jsonl"
-    --output "$out/router.pkl"
+    "$PYTHON" "$REPO_ROOT/experiments/scaling/train_router_simple.py"
+    --traces "$out/traces.jsonl"
+    --output-dir "$out/router"
   )
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
   "${cmd[@]}" 2>&1 | tee "$out/phase4_train.log"
 
-  # Tune threshold on held-out
-  $DRY_RUN || python experiments/tune_learnable_router_threshold.py \
-    --router "$out/router.pkl" \
-    --eval-data "$out/router_train.jsonl" \
-    --output "$out/router_threshold.json" \
-    2>&1 | tee "$out/phase4_tune.log"
+  # Threshold tuning: simple-router defaults to 0.5. The dedicated tuner in
+  # main branch is also HumanEval-coupled. For scaling we leave it at 0.5;
+  # threshold sweeps can be done post-hoc against the saved router.
+  echo '{"threshold": 0.5, "tuner": "skipped (uses scaling/train_router_simple default)"}' > "$out/router_threshold.json"
 }
 
 phase5_e2e_ablation() {
@@ -249,26 +299,36 @@ phase5_e2e_ablation() {
   local out="$RESULTS_DIR/cycle_$cycle"
   echo "  [Phase 5] E2E ablation — cycle=$cycle"
 
+  local thresh=0.5
+  if [[ -f "$out/router_threshold.json" ]]; then
+    thresh=$($PYTHON -c "import json; print(json.load(open('$out/router_threshold.json')).get('threshold', 0.5))" 2>/dev/null || echo 0.5)
+  fi
+
+  # Use scaling/run_e2e_ablation_simple.py (bench-agnostic).
+  # main-branch run_e2e_ablation.py is HumanEval-coupled and won't work on tau2 traces.
   local cmd=(
-    python experiments/run_e2e_ablation.py
-    --bench "$BENCH"
+    "$PYTHON" "$REPO_ROOT/experiments/scaling/run_e2e_ablation_simple.py"
+    --traces "$out/traces.jsonl"
     --skillbook "$out/skillbook.json"
-    --router "$out/router.pkl"
-    --router-threshold "$out/router_threshold.json"
-    --llm-adapter "$out/llm_adapter/checkpoint-best"
-    --eval-tasks "$N_TASKS"
+    --router-dir "$out/router"
+    --router-threshold "$thresh"
     --output "$out/e2e_ablation_summary.json"
+    --markdown-output "$out/e2e_ablation_summary.md"
   )
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
   "${cmd[@]}" 2>&1 | tee "$out/phase5.log"
 
-  echo "  Cycle $cycle ablation:"
-  python -c "
+  # Inject metadata so aggregate_cycles can plot it correctly
+  $DRY_RUN || "$PYTHON" - <<PY
 import json
-d = json.load(open('$out/e2e_ablation_summary.json'))
-for variant, m in d['variants'].items():
-    print(f'    {variant:8s}  routing_acc={m[\"routing_acc\"]:.2%!|(MISSING)  task_pass={m[\"task_pass\"]:.2%!}(MISSING)')
-" || true
+from pathlib import Path
+p = Path("$out/e2e_ablation_summary.json")
+if p.exists():
+    d = json.loads(p.read_text())
+    d.update({"cycle": $cycle, "bench": "$BENCH",
+              "model_config": "$MODEL_SWEEP", "schedule": "$SCHEDULE"})
+    p.write_text(json.dumps(d, indent=2))
+PY
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -278,24 +338,19 @@ for variant, m in d['variants'].items():
 run_cycle() {
   local cycle=$1
   echo "═══ Cycle $cycle / $((N_CYCLES-1))  schedule=$SCHEDULE ═══"
-  local out="$RESULTS_DIR/cycle_$cycle"
-  mkdir -p "$out"
+  mkdir -p "$RESULTS_DIR/cycle_$cycle"
 
-  # Phase 1 (trace collection) always first
   phase1_collect_traces "$cycle"
 
-  # Phases 2/3/4 ordered by $SCHEDULE
-  # S = Skills, L = LLM, R = Router
   for stage in $(echo "$SCHEDULE" | grep -o .); do
     case "$stage" in
       S) phase2_skills_evolve "$cycle" ;;
-      L) phase3_llm_train "$cycle" ;;
-      R) phase4_router_train "$cycle" ;;
+      L) phase3_llm_train     "$cycle" ;;
+      R) phase4_router_train  "$cycle" ;;
       *) echo "[FATAL] Unknown schedule stage: $stage"; exit 4 ;;
     esac
   done
 
-  # Phase 5 always last
   phase5_e2e_ablation "$cycle"
 }
 
@@ -307,7 +362,7 @@ aggregate() {
   echo "═══ Aggregation ═══"
   $DRY_RUN && { echo "  DRY: would aggregate cycles 0..$((N_CYCLES-1))"; return; }
 
-  python experiments/scaling/aggregate_cycles.py \
+  "$PYTHON" "$REPO_ROOT/experiments/scaling/aggregate_cycles.py" \
     --experiment-dir "$RESULTS_DIR" \
     --n-cycles "$N_CYCLES" \
     --output-md "$RESULTS_DIR/final_ablation_table.md" \

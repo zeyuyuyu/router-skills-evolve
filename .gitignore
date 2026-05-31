@@ -49,3 +49,4 @@ data/mbpp/
 # 下载的模型权重
 models/
 hf_cache/
+results/
