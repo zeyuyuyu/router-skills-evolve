@@ -384,3 +384,30 @@ contains direct CommonStack base URL values.
 Also fixed watchdog process matching to avoid `pgrep -f` matching its own
 search pattern. Without this, the watchdog could report `running=yes` even
 when only the watchdog itself was alive.
+
+### 2026-05-31 17:13 CST
+
+Repaired the in-flight trace file by backing up and removing the two artificial
+operator-skip rows created while GPU egress was misconfigured:
+
+- Backup: `results/real_tau2_30_20260531_082412/cycle_0/traces.jsonl.bak.20260531_090612`
+- Removed task ids: `3`, `4`
+- Restarted from 3 valid trace rows.
+
+Verified the fixed watchdog/run state on GPU:
+
+- `collect_traces.py` env:
+  - `OPENAI_API_BASE=http://127.0.0.1:18082/v1`
+  - `OPENAI_BASE_URL=http://127.0.0.1:18082/v1`
+  - `SCALING_API_BASE=http://127.0.0.1:18082/v1`
+  - `COMMONSTACK_BASE_URL=http://127.0.0.1:18082/v1`
+- active socket: `127.0.0.1:<port> -> 127.0.0.1:18082`
+- progress after restart: `5/30` rows, `3/5` success, recorded cost `$0.1431099`
+- active processes: watchdog, `run_full_pipeline.sh`, and `collect_traces.py`
+
+Current unattended stop conditions:
+
+- stop before the next task if recorded trace cost reaches `$2`;
+- stop after 3 consecutive zero-cost failures;
+- restart/auto-skip stale tasks after `600s` with no `run.log` progress;
+- continue downstream skill/router/ablation after 30 trace rows.
