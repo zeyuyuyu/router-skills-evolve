@@ -286,3 +286,47 @@ EXPERIMENT_NAME=real_tau2_30_20260531_082412 \
 SCALING_MAX_COST_USD=2 \
 bash scaling/run_full_pipeline.sh --n-tasks 30 --n-cycles 1 --skip-llm
 ```
+
+### 2026-05-31 16:31-16:35 CST
+
+Converted the 30-task run to watchdog mode for unattended execution.
+
+Status before cutover:
+
+- Rows: `3/30`
+- Success: `3/3`
+- Recorded cost: `$0.087717`
+
+Actions:
+
+- Added `scaling/watch_real_tau2.sh`.
+- Stopped the original background process, preserving completed trace rows.
+- Started watchdog for the same experiment:
+  `real_tau2_30_20260531_082412`.
+
+Watchdog evidence:
+
+```text
+status rows=3/30 success=3 cost=0.08771715000000001 running=no
+starting/resuming run restart=1
+```
+
+The resumed `collect_traces.py` process includes:
+
+```text
+--resume-existing --max-cost-usd 2 --task-timeout-s 1800 --max-zero-cost-failures 3
+```
+
+and logged:
+
+```text
+resume_existing: loaded 3 valid rows ... (ignored 0 invalid rows)
+```
+
+Current stop conditions:
+
+- complete 30 trace rows;
+- cost cap `$2`;
+- per-task timeout `1800s`;
+- 3 consecutive zero-cost failures;
+- watchdog max restarts `6`.
