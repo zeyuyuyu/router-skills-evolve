@@ -423,3 +423,25 @@ Unattended run continued without further intervention:
 - active socket remains through proxy:
   `127.0.0.1:<port> -> 127.0.0.1:18082`
 - run log shows `task=6` in progress.
+
+### 2026-05-31 17:21 CST
+
+Trace collection continued:
+
+- progress: `8/30` rows
+- success: `6/8`
+- recorded cost: `$0.19561025`
+- last completed task: `task_id=7`, `probe:small→small_OK`
+- `run.log` update age: `0s`
+- active socket remains through proxy:
+  `127.0.0.1:<port> -> 127.0.0.1:18082`
+
+Pre-installed downstream router dependencies into the GPU no-conda venv so the
+pipeline does not fail after trace collection:
+
+- `scikit-learn==1.8.0`
+- `joblib==1.5.3`
+- `threadpoolctl==3.6.0`
+
+Installed with wheel files copied from CPU and `pip install --no-index
+--no-deps`, preserving existing GPU `numpy==2.3.5` and `scipy==1.17.1`.
