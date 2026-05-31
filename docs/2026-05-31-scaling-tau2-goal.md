@@ -206,3 +206,83 @@ Safe next step after this branch is reviewed/merged:
 
 Recommendation: this branch is ready to push for review; it proves the
 teammate TODO #1/#2 path without starting an expensive formal run.
+
+### 2026-05-31 16:05-16:18 CST
+
+Ran a 5-task real tau2 pilot on GPU through the CPU reverse proxy.
+
+- Result dir:
+  `/root/cwy/projects/evol/router-skills-evolve/results/real_tau2_5_proxy_20260531_080522`
+- Models: small `deepseek/deepseek-v3.2`, large
+  `openai/gpt-5.4-2026-03-05`
+- Domain: `retail`
+- `TAU2_MAX_STEPS=30`
+- Rows: `5`
+- Final success: `5/5`
+- Total recorded cost: `$0.120481`
+- Average cost: `$0.024096/task`
+
+Trace summary:
+
+| task_id | small_success | large_success | final_success | total_cost |
+|---|---:|---:|---:|---:|
+| `0` | false | true | true | `$0.075255` |
+| `1` | true | true | true | `$0.012609` |
+| `2` | true | true | true | `$0.007920` |
+| `3` | true | true | true | `$0.011979` |
+| `4` | true | true | true | `$0.012717` |
+
+Conclusion: real tau2 retail tasks can run end to end. Most of the cost comes
+from tasks where the small model fails and the large model is invoked.
+
+### 2026-05-31 16:18-16:25 CST
+
+Added unattended-run controls:
+
+- `collect_traces.py --resume-existing` skips completed `task_id` rows.
+- `collect_traces.py --max-cost-usd <N>` / `SCALING_MAX_COST_USD=<N>` stops
+  Phase 1 once accumulated trace cost reaches the cap.
+- `scaling/run_full_pipeline.sh --n-tasks <N>` now supports real pilot sizes
+  without editing the script.
+- `scaling/commonstack_proxy.py` provides a repeatable CPU-side CommonStack
+  proxy for the GPU network issue.
+
+Started detached real pipeline:
+
+- Experiment: `real_tau2_30_20260531_082412`
+- GPU result dir:
+  `/root/cwy/projects/evol/router-skills-evolve/results/real_tau2_30_20260531_082412`
+- Command shape:
+  `SCALING_MAX_COST_USD=2 bash scaling/run_full_pipeline.sh --n-tasks 30 --n-cycles 1 --skip-llm`
+- API route: GPU `http://127.0.0.1:18082/v1` -> SSH reverse tunnel ->
+  CPU `scaling/commonstack_proxy.py` -> `https://api.commonstack.ai`
+- Stop conditions:
+  - complete 30 tasks;
+  - stop before the next task if recorded cost reaches `$2`;
+  - stop on process/API failure, with completed traces preserved for resume.
+
+Status commands:
+
+```bash
+ssh -p 26419 10.100.0.13 \
+  'tail -f /root/cwy/projects/evol/router-skills-evolve/results/real_tau2_30_20260531_082412/run.log'
+
+ssh -p 26419 10.100.0.13 \
+  'wc -l /root/cwy/projects/evol/router-skills-evolve/results/real_tau2_30_20260531_082412/cycle_0/traces.jsonl'
+```
+
+Stop command:
+
+```bash
+ssh -p 26419 10.100.0.13 \
+  'pkill -f "real_tau2_30_20260531_082412|collect_traces.py --bench tau2_bench --n-tasks 30"'
+```
+
+Resume command uses the same `EXPERIMENT_NAME`; existing trace rows are
+skipped:
+
+```bash
+EXPERIMENT_NAME=real_tau2_30_20260531_082412 \
+SCALING_MAX_COST_USD=2 \
+bash scaling/run_full_pipeline.sh --n-tasks 30 --n-cycles 1 --skip-llm
+```
