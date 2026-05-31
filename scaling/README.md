@@ -317,26 +317,28 @@ smoke 应在单 GPU 上 30 分钟内跑完。
 
 ## 11. Teammate TODO (with effort estimates)
 
-### TODO #1 — Verify tau2 adapter `run_task` signature  (effort: ~30 min)
+### TODO #1 — Verify tau2 adapter `run_task` signature  (status: wired; real-run smoke still needed)
 
 **Where**: `experiments/scaling/benches/tau2_bench/adapter.py:_run_one`
 
-I called `self._tau2_adapter.run_task(task["_raw"], student_model=model)` based on the colleague's `Tau2BenchAdapter` class signature visible in the branch. The exact kwarg name may differ (`student_model` vs `model` vs `model_name`). To verify:
+`_run_one` now matches the colleague adapter signature:
+`run_task(task, config: RunTaskConfig, *, domain=None)`. It constructs a
+`RunTaskConfig` with `agent`, `user`, `seed`, `max_steps`, and `max_errors`
+before calling tau2. To re-verify:
 
 ```bash
-# Activate colleague's env first
+# Activate the tau2_stage2 venv/environment first
 cd experiments/tau2_stage2
-conda activate tau2-stage2
 
 # Inspect the real signature
-python -c "
+PYTHONPATH=code python -c "
 from adapters.tau2_bench.adapter import Tau2BenchAdapter
 import inspect
 print(inspect.signature(Tau2BenchAdapter.run_task))
 "
 ```
 
-If the signature differs from what `_run_one` calls, patch `adapter.py:_run_one` to match. Look for `# TODO(colleague)` markers.
+If this signature changes upstream, update `_run_one` in the scaling adapter.
 
 **Smoke test the fix**:
 ```bash

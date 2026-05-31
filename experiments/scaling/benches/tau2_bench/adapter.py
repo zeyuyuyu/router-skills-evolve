@@ -8,7 +8,7 @@ run_e2e_ablation) already consume.
 Prerequisites — run BEFORE invoking this adapter:
     cd experiments/tau2_stage2
     bash code/training/orchestration/setup_env_server.sh    # clones tau2-bench@17e07b1d under code/vendor/
-    conda activate tau2-stage2
+    # activate the project venv / environment you use for tau2_stage2
 
 If `--mock` is passed to collect_traces, the adapter generates synthetic
 deterministic trace data WITHOUT invoking tau2 (useful for smoke testing the
@@ -25,6 +25,41 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 TAU2_BUNDLE = REPO_ROOT / "experiments" / "tau2_stage2"
+DEFAULT_API_BASE = "https://api.commonstack.ai/v1"
+DEFAULT_USER_MODEL = "openai/gpt-5.2"
+
+
+def _openai_compatible_args() -> dict[str, str]:
+    """LiteLLM args for an OpenAI-compatible gateway.
+
+    The scaling entrypoint documents OPENAI_API_KEY for real runs. In practice
+    this key is often a CommonStack key, so default the base URL to CommonStack
+    unless the caller provides OPENAI_API_BASE / OPENAI_BASE_URL.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("COMMONSTACK_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY or COMMONSTACK_API_KEY must be set for non-mock tau2 runs"
+        )
+    api_base = (
+        os.environ.get("SCALING_API_BASE")
+        or os.environ.get("OPENAI_API_BASE")
+        or os.environ.get("OPENAI_BASE_URL")
+        or os.environ.get("COMMONSTACK_BASE_URL")
+        or DEFAULT_API_BASE
+    )
+    return {
+        "api_base": api_base,
+        "api_key": api_key,
+        "custom_llm_provider": "openai",
+    }
+
+
+def _litellm_openai_model(model: str) -> str:
+    """Route a gateway wire model through LiteLLM's OpenAI-compatible provider."""
+    if model.startswith("openai/openai/"):
+        return model
+    return f"openai/{model}"
 
 
 def _extract_signature(prompt: str) -> str:
@@ -142,15 +177,47 @@ class Adapter:
     def _run_one(self, task: dict, model: str) -> dict:
         """Single tau2 task run with a given model.
 
-        TODO(colleague): wire `Tau2BenchAdapter.run_task` properly. Current
-        implementation invokes it via the run_task signature documented in
-        the colleague's adapter.py. If signature differs, patch here.
+        The tau2_stage2 adapter expects a RunTaskConfig rather than a direct
+        `student_model=` kwarg. Keep the wrapper small: scaling controls which
+        model is evaluated; tau2_stage2 owns the benchmark loop and grading.
         """
         try:
-            res = self._tau2_adapter.run_task(task["_raw"], student_model=model)
+            from core.schemas.artifacts import LLMSpec, RunTaskConfig
+
+            llm_args = _openai_compatible_args()
+            user_model = os.environ.get("TAU2_USER_MODEL", DEFAULT_USER_MODEL)
+            seed = int(os.environ.get("SCALING_SEED", "0"))
+            max_steps = int(os.environ.get("TAU2_MAX_STEPS", "100"))
+            max_errors = int(os.environ.get("TAU2_MAX_ERRORS", "10"))
+            config = RunTaskConfig(
+                agent=LLMSpec(
+                    model=_litellm_openai_model(model),
+                    args=dict(llm_args),
+                ),
+                user=LLMSpec(
+                    model=_litellm_openai_model(user_model),
+                    args=dict(llm_args),
+                ),
+                seed=seed,
+                max_steps=max_steps,
+                max_errors=max_errors,
+            )
+            res = self._tau2_adapter.run_task(
+                task["_raw"],
+                config,
+                domain=task.get("domain") or self.domain,
+            )
+            if isinstance(res, dict):
+                success = bool(res.get("evaluation", {}).get("passed", False))
+                cost = float(res.get("cost_total", 0.0))
+            else:
+                success = bool(getattr(res, "passed", False))
+                cost = float(getattr(res, "agent_cost_usd", 0.0) or 0.0) + float(
+                    getattr(res, "user_cost_usd", 0.0) or 0.0
+                )
             return {
-                "success": bool(res.get("evaluation", {}).get("passed", False)),
-                "cost": float(res.get("cost_total", 0.0)),
+                "success": success,
+                "cost": cost,
                 "raw": res,
             }
         except Exception as e:  # noqa: BLE001 — surface as failed task, log
