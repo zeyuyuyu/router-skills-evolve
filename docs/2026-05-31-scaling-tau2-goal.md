@@ -502,3 +502,17 @@ Trace collection reached the halfway point:
   `127.0.0.1:<port> -> 127.0.0.1:18082`
 - active processes remain watchdog, `run_full_pipeline.sh`, and
   `collect_traces.py`.
+
+### 2026-05-31 17:40 CST
+
+Trace collection continued steadily:
+
+- progress: `18/30` rows
+- success: `15/18`
+- recorded cost: `$0.48092725`
+- last completed task: `task_id=17`, `probe:small→small_OK`
+- `run.log` update age: `3s`
+- active socket remains through proxy:
+  `127.0.0.1:<port> -> 127.0.0.1:18082`
+- active processes remain watchdog, `run_full_pipeline.sh`, and
+  `collect_traces.py`.
