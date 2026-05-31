@@ -26,6 +26,8 @@
 #   SMALL_MODEL       default: deepseek/deepseek-v3.2
 #   LARGE_MODEL       default: openai/gpt-5.4-2026-03-05
 #   TAU2_DOMAIN       airline | retail | telecom (default: retail)
+#   N_TASKS           default: 848 real tasks; 30 in smoke
+#   SCALING_MAX_COST_USD  optional Phase 1 trace collection cost cap
 #   SKIP_LLM          set to 1 to skip Phase 3 (useful while colleague's
 #                     train framework is being set up)
 
@@ -48,6 +50,7 @@ while [[ $# -gt 0 ]]; do
     --bench) BENCH="$2"; shift 2 ;;
     --model-config) MODEL_SWEEP="$2"; shift 2 ;;
     --n-cycles) N_CYCLES="$2"; shift 2 ;;
+    --n-tasks) N_TASKS="$2"; shift 2 ;;
     --schedule) SCHEDULE="$2"; shift 2 ;;
     --skip-llm) SKIP_LLM=1; shift ;;
     -h|--help) sed -n '1,40p' "$0"; exit 0 ;;
@@ -76,10 +79,10 @@ export TAU2_DOMAIN
 if $SMOKE; then
   MODEL_SWEEP="smoke_2b"
   N_CYCLES=1
-  N_TASKS=30
+  : "${N_TASKS:=30}"
   SKIP_LLM=1   # smoke skips LLM training by default
 else
-  N_TASKS=848   # tau2-bench eval split size; SWE-Bench Lite ≈ 300
+  : "${N_TASKS:=848}"   # tau2-bench eval split size; SWE-Bench Lite ≈ 300
 fi
 
 if $MOCK; then
@@ -99,7 +102,9 @@ preflight() {
   echo "  BENCH           = $BENCH"
   echo "  MODEL_SWEEP     = $MODEL_SWEEP"
   echo "  N_CYCLES        = $N_CYCLES"
+  echo "  N_TASKS         = $N_TASKS"
   echo "  SCHEDULE        = $SCHEDULE  (Skills→LLM→Router default)"
+  echo "  MAX_COST_USD    = ${SCALING_MAX_COST_USD:-none}"
   echo "  TAU2_DOMAIN     = $TAU2_DOMAIN"
   echo "  RESULTS_DIR     = $RESULTS_DIR"
   echo "  SMOKE=$SMOKE MOCK=$MOCK DRY_RUN=$DRY_RUN RESUME_FROM=$RESUME_FROM SKIP_LLM=$SKIP_LLM"
@@ -158,6 +163,7 @@ preflight() {
   "bench": "$BENCH",
   "model_sweep": "$MODEL_SWEEP",
   "n_cycles": $N_CYCLES,
+  "n_tasks": $N_TASKS,
   "schedule": "$SCHEDULE",
   "tau2_domain": "$TAU2_DOMAIN",
   "small_model": "$SMALL_MODEL",
@@ -165,6 +171,7 @@ preflight() {
   "smoke": $SMOKE,
   "mock": $MOCK,
   "skip_llm": $([ "$SKIP_LLM" -eq 1 ] && echo true || echo false),
+  "max_cost_usd": ${SCALING_MAX_COST_USD:-null},
   "resume_from": $RESUME_FROM,
   "git_sha": "$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)",
   "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -200,6 +207,7 @@ phase1_collect_traces() {
     --out "$out/traces.jsonl"
     --resume-existing
   )
+  [[ -n "${SCALING_MAX_COST_USD:-}" ]] && cmd+=(--max-cost-usd "$SCALING_MAX_COST_USD")
   $MOCK && cmd+=(--mock)
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
   "${cmd[@]}" 2>&1 | tee "$out/phase1.log"

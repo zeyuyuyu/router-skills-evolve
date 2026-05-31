@@ -195,10 +195,21 @@ bash scaling/run_full_pipeline.sh
 | `--smoke` | off | 跑 30 个任务、1 cycle、smoke 2B 模型 — 应该在 30 分钟内出结果 |
 | `--bench {tau2_bench,swe_bench}` | `$BENCH` | 选 bench；swe_bench 需要先做 §6 adapter |
 | `--model-config <name>` | `$MODEL_SWEEP` | tau2_stage2 的 run YAML 名（去掉 `.yaml`） |
+| `--n-tasks N` | `$N_TASKS` | real run 的 Phase 1 task 数；默认 tau2 全量 848 |
 | `--n-cycles N` | `$N_CYCLES` | 几轮迭代；MERA 推荐 4，main 分支跑过 8 |
 | `--schedule {SLR,LSR,LRS,SR-L,...}` | `SLR` | Skills → LLM → Router 顺序；做 ablation 时换 |
 | `--resume <cycle>` | none | 从指定 cycle 继续，跳过前面 cycle；Phase 1 trace collection 会跳过已有 `task_id` |
 | `--dry-run` | off | 只打印计划，不真跑 |
+
+Cost guard:
+
+```bash
+SCALING_MAX_COST_USD=2 bash scaling/run_full_pipeline.sh --n-tasks 30 --skip-llm
+```
+
+Phase 1 stops before starting another task once accumulated `total_cost`
+reaches the cap. Already-written `traces.jsonl` rows are preserved and skipped
+on resume.
 
 跑完看 `results/$EXPERIMENT_NAME/MANIFEST.json`，里面有每个 phase 的耗时、artifact 路径、success/failure。
 

@@ -72,7 +72,12 @@ def main() -> int:
                     help="generate synthetic deterministic traces (no API/GPU). Equivalent to SCALING_MOCK=1.")
     ap.add_argument("--resume-existing", action="store_true",
                     help="append to an existing output file and skip task_ids that already have valid trace rows.")
+    ap.add_argument("--max-cost-usd", type=float, default=None,
+                    help="stop before starting another task once accumulated trace cost reaches this USD cap.")
     args = ap.parse_args()
+
+    if args.max_cost_usd is None and os.environ.get("SCALING_MAX_COST_USD"):
+        args.max_cost_usd = float(os.environ["SCALING_MAX_COST_USD"])
 
     if args.mock:
         os.environ["SCALING_MOCK"] = "1"
@@ -94,12 +99,19 @@ def main() -> int:
             print(f"[collect_traces] resume_existing: loaded {len(existing)} valid rows "
                   f"from {out_path} (ignored {invalid} invalid rows)", file=sys.stderr)
 
+    total_cost = sum(float(row.get("total_cost") or 0.0) for row in existing.values())
     n_success = sum(1 for row in existing.values() if row.get("final_success"))
     n_done = 0
     t0 = time.time()
     mode = "a" if args.resume_existing else "w"
     with out_path.open(mode) as fh:
         for i, task in enumerate(tasks, 1):
+            if args.max_cost_usd is not None and total_cost >= args.max_cost_usd:
+                print(f"[collect_traces] COST CAP reached before task {i}: "
+                      f"total_cost=${total_cost:.6f} >= cap=${args.max_cost_usd:.6f}; stopping",
+                      file=sys.stderr)
+                break
+
             task_id = str(task.get("task_id", f"unknown-{i}"))
             if task_id in existing:
                 n_done += 1
@@ -120,13 +132,20 @@ def main() -> int:
                 fh.write(json.dumps(trace, ensure_ascii=False) + "\n")
                 fh.flush()
                 n_done += 1
+                total_cost += float(trace.get("total_cost") or 0.0)
                 if trace.get("final_success"):
                     n_success += 1
                 if i %10 == 0 or i == len(tasks):
                     elapsed = time.time() - t0
                     print(f"[collect_traces] {i}/{len(tasks)}  "
-                          f"success={n_success}/{n_done}  elapsed={elapsed:.1f}s",
+                          f"success={n_success}/{n_done}  "
+                          f"cost=${total_cost:.6f}  elapsed={elapsed:.1f}s",
                           file=sys.stderr)
+                if args.max_cost_usd is not None and total_cost >= args.max_cost_usd:
+                    print(f"[collect_traces] COST CAP reached after task {i}: "
+                          f"total_cost=${total_cost:.6f} >= cap=${args.max_cost_usd:.6f}; stopping",
+                          file=sys.stderr)
+                    break
             except Exception as e:  # noqa: BLE001
                 print(f"[collect_traces] task {task_id} FAILED: {e}", file=sys.stderr)
                 # write a failure row so downstream can see it
@@ -148,6 +167,7 @@ def main() -> int:
     elapsed = time.time() - t0
     print(f"[collect_traces] DONE  out={out_path}  "
           f"final_success={n_success}/{n_done} ({100*n_success/max(1,n_done):.1f}%)  "
+          f"total_cost=${total_cost:.6f}  "
           f"elapsed={elapsed:.1f}s", file=sys.stderr)
     return 0
 
