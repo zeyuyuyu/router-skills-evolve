@@ -363,3 +363,8 @@ showed the same stall pattern as `task_id=3`. The watchdog now parses the last
 to `SCALING_SKIP_TASK_IDS`, kills the stuck process, and resumes the same
 experiment. This keeps completed rows and cost accounting intact while allowing
 the real run to advance past pathological tau2 tasks.
+
+Also tightened watchdog process detection so it treats both Phase 1
+`collect_traces.py` and downstream `run_full_pipeline.sh` work as active. This
+avoids duplicate restarts while skill/router/ablation aggregation is still
+running after trace collection finishes.
