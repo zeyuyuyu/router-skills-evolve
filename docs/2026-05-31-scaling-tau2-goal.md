@@ -375,3 +375,8 @@ the stuck Python process was in `SYN-SENT` to `api.commonstack.ai:443`.
 `OPENAI_BASE_URL`, `SCALING_API_BASE`, and `COMMONSTACK_BASE_URL` to the same
 `OPENAI_API_BASE` proxy URL. This prevents values sourced from `.env` from
 silently bypassing the CPU reverse tunnel on GPU.
+
+Implementation note: the watchdog saves the intended proxy URL as
+`WATCH_API_BASE` before sourcing `.env`, then rewrites all OpenAI/CommonStack
+base URL variables after sourcing. This is necessary because the GPU `.env`
+contains direct CommonStack base URL values.
