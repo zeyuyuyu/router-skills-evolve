@@ -459,3 +459,17 @@ Trace collection is still healthy:
   `127.0.0.1:<port> -> 127.0.0.1:18082`
 - active processes remain watchdog, `run_full_pipeline.sh`, and
   `collect_traces.py`.
+
+### 2026-05-31 17:29 CST
+
+Trace collection progressed again:
+
+- progress: `11/30` rows
+- success: `8/11`
+- recorded cost: `$0.3579073`
+- last completed task: `task_id=10`, `probe:small→small_OK`
+- `run.log` shows `task=11` in progress
+- active socket remains through proxy:
+  `127.0.0.1:<port> -> 127.0.0.1:18082`
+- active processes remain watchdog, `run_full_pipeline.sh`, and
+  `collect_traces.py`.
