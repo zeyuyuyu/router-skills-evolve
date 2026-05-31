@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-30 by daily pipeline.
+Pending queue update — last updated 2026-05-31 by daily pipeline.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
 2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
 2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4),
-2026-05-30 daily (2).
-Total pending: 43 experiments.
+2026-05-30 daily (2), 2026-05-31 daily (2).
+Total pending: 45 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -1898,6 +1898,165 @@ NEW_EXPERIMENTS = [
             "kl_coeff": 0.02,
             "kl_level": "token",
             "reference_model": "base",
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-05-31 batch (2 experiments — queue > 20 cap, A800 day 17 offline) ──
+    {
+        "id": "exp_2026_05_31_001_popo_positive_only_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Beyond Negative Rollouts: Positive-Only Policy Optimization with Implicit "
+            "Negative Gradients (arxiv:2605.06650, Xu and Fang, May 7 2026) proposes POPO, "
+            "an RLVR framework that learns exclusively from online positive rollouts and "
+            "derives implicit negative gradients through bounded importance sampling — "
+            "no explicit negative-reward rollout is ever used to form a gradient update. "
+            "The theoretical insight: when a rollout with positive advantage is selected "
+            "and a bounded importance sampling correction is applied (IS ratio clipped to "
+            "[1/(1+eps), 1/(1-eps)]), the KKT optimality conditions guarantee that policy "
+            "probability mass displaced from high-reward tokens implicitly flows away from "
+            "the low-reward alternatives without explicitly penalising them. "
+            "MECHANISTIC CASE FOR OUR PROJECT: "
+            "The 53/100 all-fail tasks produce only negative-reward rollouts — these are "
+            "the primary source of noisy 'zero-advantage' gradient groups in standard GRPO. "
+            "POPO bypasses these entirely: only groups with at least 1 positive rollout "
+            "(the ~27/100 mixed-outcome training tasks) contribute to gradient updates. "
+            "For those 27 tasks, the positive rollout receives a normalised advantage "
+            "A_i = IS_weight(r_i) = (1 if r_i > 0, 0 otherwise) / Z, where Z is the "
+            "IS normalisation factor, and the model parameters are updated to maximise "
+            "the probability of that exact rollout without penalising the negatives. "
+            "DISTINCT FROM ALL 43 QUEUED EXPERIMENTS: "
+            "- vs. DAPO (EXP-013): DAPO dynamically RESAMPLES groups until every group "
+            "  contains ≥1 pass AND ≥1 fail rollout; POPO trains only on positive groups "
+            "  as-is (no resampling), using IS to derive implicit negatives. "
+            "- vs. F-GRPO (EXP-018): F-GRPO scales GRPO advantage by task difficulty "
+            "  (focal loss-inspired) but KEEPS the explicit negative terms. POPO "
+            "  eliminates explicit negative terms entirely. "
+            "- vs. Unlearnability filter (EXP-039): EXP-039 pre-filters tasks with 0/8 "
+            "  high-temp rollouts passing any test (static pre-training filter). POPO "
+            "  is dynamic: at each training step, the current sampling distribution "
+            "  determines which tasks have positive rollouts; as training improves, more "
+            "  tasks become POPO-active. No pre-exploration phase needed. "
+            "- vs. RLOO (EXP-021): RLOO uses leave-one-out baseline on ALL rollouts "
+            "  (positive and negative); POPO uses only the positives with IS correction. "
+            "- vs. MT-GRPO (EXP-019): MT-GRPO upweights hard tasks in the sampling "
+            "  distribution; POPO eliminates hard tasks (all-fail groups) from gradient "
+            "  updates entirely during the current step, then revisits when they produce "
+            "  a positive rollout (dynamic inclusion). "
+            "IMPLEMENTATION: Replace standard GRPO advantage computation "
+            "(r - group_mean) / group_std with: if max(r_group) == 0: skip this group "
+            "(zero gradient); else: compute positive-rollout IS weight = r_i / "
+            "(sum_j r_j + eps) for rollout i, scale advantage = IS_weight × is_clip; "
+            "apply IS clip ([1-is_clip, 1+is_clip]) on the importance ratio. "
+            "~30 lines of change. Estimated wall-clock: ~85 minutes (200 tasks × 4 "
+            "rollouts; ~27% of steps produce non-zero gradient vs. ~27/200 mixed tasks "
+            "at start; some all-fail tasks may become active as training progresses)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "algorithm": "popo",
+            "popo_is_clip": 0.2,
+            "popo_positive_groups_only": True,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_05_31_002_vpo_gcpo_joint_diversity_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "VPO (arxiv:2605.22817, EXP-038) and GCPO (arxiv:2605.11461, EXP-036) "
+            "address exploration collapse from orthogonal angles: VPO uses per-test-case "
+            "vector advantage to maintain TEST-COVERAGE diversity (rollouts covering "
+            "different test cases are rewarded distinctly); GCPO uses AST-normalized "
+            "solution uniqueness to maintain SOLUTION-STRUCTURE diversity (rollouts "
+            "using different algorithms are rewarded distinctly). The two mechanisms are "
+            "not only orthogonal — they are complementary by design: a rollout can be "
+            "AST-unique (GCPO-diverse) while passing the same tests as another (VPO-same), "
+            "or AST-identical (GCPO-duplicate) while passing different tests (VPO-diverse). "
+            "Each mechanism captures a blind spot of the other. "
+            "JOINT MECHANISM: "
+            "Step 1 (VPO): For each of G=4 rollouts, compute the T-dimensional reward "
+            "vector r_i ∈ {0,1}^T. VPO advantage per rollout: "
+            "  A_vpo_i = (1/T) * sum_t (r_i^t - mean_t(r)) / (std_t(r) + eps). "
+            "Step 2 (GCPO bonus): For each rollout, compute AST-normalized hash. "
+            "If rollout i is the FIRST unique-passer (AST hash not seen in prior rollouts "
+            "of this group that passed ≥1 test): add coverage bonus "
+            "  A_coverage_i += gcpo_alpha * (1 / n_unique_passers). "
+            "Final advantage: A_i = A_vpo_i + A_coverage_i. "
+            "The GCPO bonus fires only on unique-passing rollouts, adding a diversity "
+            "incentive on top of the VPO per-test advantage, not replacing it. "
+            "gcpo_alpha=0.3 (scales the bonus to ~30% of typical VPO advantage magnitude "
+            "to avoid it dominating the VPO signal). "
+            "WHY COMPOSE BEFORE RUNNING INDIVIDUALLY: "
+            "EXP-036 (GCPO) and EXP-038 (VPO) are in the queue but A800 has been offline "
+            "for 17 days. When connectivity restores, running compositions of strong "
+            "priors is efficient: if the composition outperforms either individual "
+            "mechanism, it telescopes 3 experiments into 1 result. If the composition "
+            "underperforms either (negative interaction), the result disambiguates which "
+            "diversity signal dominates in our code-GRPO setup. Two outcomes are "
+            "informative either way, making the composition a high-information experiment. "
+            "EXPECTED FAILURE MODES TO DISTINGUISH: "
+            "(a) If VPO+GCPO > max(VPO, GCPO): mechanisms are additively compatible "
+            "    → combine all future diversity experiments. "
+            "(b) If VPO+GCPO ≈ max(VPO, GCPO): one mechanism is bottleneck-constrained "
+            "    and the other adds redundant signal at the same bottleneck. "
+            "(c) If VPO+GCPO < min(VPO, GCPO): the two bonus signals conflict, "
+            "    over-concentrating gradient mass on the rare AST-unique + test-diverse "
+            "    rollouts, destabilising training. gcpo_alpha should then be reduced. "
+            "DISTINCT FROM ALL 43 QUEUED EXPERIMENTS: "
+            "- No prior experiment combines VPO vector advantage AND GCPO AST-uniqueness. "
+            "- EXP-036 alone: GCPO with standard scalar binary reward (not VPO). "
+            "- EXP-038 alone: VPO vector advantage without GCPO coverage bonus. "
+            "- No prior experiment stacks two diversity mechanisms simultaneously. "
+            "IMPLEMENTATION: ~50 lines combining EXP-036 (ast.parse + sha256 + coverage "
+            "score) and EXP-038 (per-test reward vector + VPO advantage). The VPO "
+            "advantage tensor is computed first; the GCPO coverage bonus is added as an "
+            "additive scalar to the rollout advantage for unique-passer rollouts. "
+            "Estimated wall-clock: ~92 minutes (identical compute to standard GRPO; "
+            "AST hashing adds ~0.4ms per rollout, negligible vs. ~4000ms forward pass)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "vector_pertestcase",
+            "reward_aggregation": "vpo",
+            "algorithm": "gcpo",
+            "gcpo_uniqueness": "ast_normalized",
+            "gcpo_alpha": 0.3,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
         },
         "gpu": "auto",
     },
