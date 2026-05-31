@@ -1,0 +1,1 @@
+[2026-05-31T00:06:41Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. sshpass installed OK; openssh-client installed OK; network path appears blocked from this remote execution environment. No state read, no actions taken.
