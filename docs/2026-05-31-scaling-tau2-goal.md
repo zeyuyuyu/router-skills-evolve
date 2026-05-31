@@ -380,3 +380,7 @@ Implementation note: the watchdog saves the intended proxy URL as
 `WATCH_API_BASE` before sourcing `.env`, then rewrites all OpenAI/CommonStack
 base URL variables after sourcing. This is necessary because the GPU `.env`
 contains direct CommonStack base URL values.
+
+Also fixed watchdog process matching to avoid `pgrep -f` matching its own
+search pattern. Without this, the watchdog could report `running=yes` even
+when only the watchdog itself was alive.

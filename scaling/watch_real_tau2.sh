@@ -110,12 +110,12 @@ append_skip_task() {
 }
 
 is_running() {
-  pgrep -af "run_full_pipeline.sh --n-tasks $N_TASKS --n-cycles $N_CYCLES --skip-llm|collect_traces.py --bench tau2_bench --n-tasks $N_TASKS" >/dev/null 2>&1
+  pgrep -af "[r]un_full_pipeline.sh --n-tasks $N_TASKS --n-cycles $N_CYCLES --skip-llm|[c]ollect_traces.py --bench tau2_bench --n-tasks $N_TASKS" >/dev/null 2>&1
 }
 
 stop_running() {
-  pkill -f "collect_traces.py --bench tau2_bench --n-tasks $N_TASKS" >/dev/null 2>&1 || true
-  pkill -f "run_full_pipeline.sh --n-tasks $N_TASKS --n-cycles $N_CYCLES --skip-llm" >/dev/null 2>&1 || true
+  pkill -f "[c]ollect_traces.py --bench tau2_bench --n-tasks $N_TASKS" >/dev/null 2>&1 || true
+  pkill -f "[r]un_full_pipeline.sh --n-tasks $N_TASKS --n-cycles $N_CYCLES --skip-llm" >/dev/null 2>&1 || true
 }
 
 if [[ -f "$BUNDLE_ENV" ]]; then
