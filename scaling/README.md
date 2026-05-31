@@ -211,6 +211,11 @@ Phase 1 stops before starting another task once accumulated `total_cost`
 reaches the cap. Already-written `traces.jsonl` rows are preserved and skipped
 on resume.
 
+If the GPU cannot reach CommonStack directly, run
+`python scaling/commonstack_proxy.py --port 18082` on a networked host and
+expose it with `ssh -N -R 18082:127.0.0.1:18082 <gpu-host>`, then set
+`OPENAI_API_BASE=http://127.0.0.1:18082/v1` on the GPU.
+
 跑完看 `results/$EXPERIMENT_NAME/MANIFEST.json`，里面有每个 phase 的耗时、artifact 路径、success/failure。
 
 ---
