@@ -1,0 +1,48 @@
+run_id: 04_qwen3_5_4b_200
+model:
+  name: Qwen/Qwen3.5-4B
+  revision: 851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a
+  is_moe: false
+data:
+  n_train_runs: 200
+training:
+  output_dir: train_outputs/04_qwen3_5_4b_200
+  num_train_epochs: 5
+  learning_rate: 2.0e-5
+  warmup_steps: 0.05    # float<1 = ratio (TRL/transformers 5.x)
+  lr_scheduler_type: cosine
+  cosine_min_lr_ratio: 0.10
+  weight_decay: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  max_grad_norm: 1.0
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 4
+  per_device_eval_batch_size: 2
+  bf16: true
+  gradient_checkpointing: true
+  torch_compile: false
+  max_seq_length: 32768
+  packing: true
+  packing_strategy: bfd
+  padding_free: true
+  attn_implementation: flash_attention_2
+  completion_only_loss: true
+  assistant_only_loss: false
+  use_liger_kernel: false
+  loss_type: chunked_nll
+  dataloader_num_workers: 4
+  eval_strategy: epoch
+  save_strategy: best
+  save_total_limit: 2
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss
+  greater_is_better: false
+  early_stopping_patience: 2
+  logging_steps: 10
+  seed: 1234
+  data_seed: 42
+distributed:
+  strategy: ddp
+  accelerate_config: configs/accelerate_ddp.yaml
+moe: null

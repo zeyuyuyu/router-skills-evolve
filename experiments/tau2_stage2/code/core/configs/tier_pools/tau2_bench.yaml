@@ -1,0 +1,68 @@
+# Tier pool for τ²-bench — CommonStack-gatewayed models ONLY.
+# PROJECT_CHARTER.md §3.11 — fixed_tier_prices live in pricing.yaml.
+#
+# Baseline reframing (2026-04-24): we no longer use a SOTA baseline
+# (claude-opus-4-6). The mid-high tier (qwen/qwen3.5-397b-a17b) IS the
+# baseline. Probes escalate low → mid only; steps that no tier can replace
+# remain at mid-high (keep_implicit).
+tiers:
+  mid-high:
+    - qwen/qwen3.5-397b-a17b          # also the baseline
+  mid:
+    - minimax/minimax-m2.7
+    - qwen/qwen3-coder-480b-a35b-instruct
+  low:
+    - deepseek/deepseek-v3.2
+    - zai-org/glm-4.5-air
+
+search_tiers: [low, mid]
+
+baseline_model: qwen/qwen3.5-397b-a17b
+baseline_tier: mid-high
+analyzer_model: qwen/qwen3.5-397b-a17b     # unused under probe-all; kept for schema
+
+# Pinned τ² user simulator. The endpoint (base_url + api_key) is selected
+# by the runner's --provider flag via cs_args, not from this config.
+simulator:
+  model: openai/gpt-5.2
+
+# Pinned τ² repo. T0.1 resolved 2026-04-21:
+#   - Upstream v0.2.1 (plan's original pin) does not exist.
+#   - Pinned upstream v1.0.0 → SHA 17e07b1d.
+#   - Forked to tonyyunyang/tau2-bench-evol-llm so reproducibility is not
+#     load-bearing on sierra-research keeping the tag. Bootstrap script
+#     verifies the SHA after clone so a moved tag fails loudly.
+benchmark_repo:
+  url: git@github.com:tonyyunyang/tau2-bench-evol-llm.git
+  upstream: git@github.com:sierra-research/tau2-bench.git   # informational
+  tag: v1.0.0
+  sha: 17e07b1da2bbc0cadfddeea36412686e0604127b
+  # Flip to amazon-agi/tau2-bench-verified (main @ 864350a) if the verified
+  # fork's policy/DB fixes matter for the final paper.
+
+# Per-provider overrides. The pin choices come from
+# docs/superpowers/specs/2026-05-01-openrouter-provider-design.md
+# (OpenRouter endpoint catalog queried 2026-05-01). Each entry maps the
+# canonical CS model id to the OpenRouter id + the pinned provider tag
+# for extra_body.provider.order. allow_fallbacks is set to false in code
+# (pipeline/runner.py::_resolve_model) — pinning is the whole point.
+provider_overrides:
+  openrouter:
+    qwen/qwen3.5-397b-a17b:
+      id: qwen/qwen3.5-397b-a17b
+      provider: alibaba              # model creator's own infra; non-quantized
+    minimax/minimax-m2.7:
+      id: minimax/minimax-m2.7
+      provider: fireworks            # likely the same backend CS uses
+    qwen/qwen3-coder-480b-a35b-instruct:
+      id: qwen/qwen3-coder           # OR uses the shorter slug for the same MoE
+      provider: wandb/bf16           # only explicit bf16 endpoint for this model
+    deepseek/deepseek-v3.2:
+      id: deepseek/deepseek-v3.2
+      provider: novita/fp8           # OR price matches CS to the cent → same backend
+    zai-org/glm-4.5-air:
+      id: z-ai/glm-4.5-air           # different namespace prefix on OR
+      provider: novita/bf16          # OR price matches CS exactly + bf16
+    openai/gpt-5.2:
+      id: openai/gpt-5.2
+      provider: openai               # direct from OpenAI; only Azure alternative

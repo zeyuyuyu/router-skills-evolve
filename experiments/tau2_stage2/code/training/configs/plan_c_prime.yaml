@@ -1,0 +1,44 @@
+name: plan_c_prime
+data:
+  source_jsonl: data_processed/stage2_v1/train.jsonl
+  val_jsonl:    data_processed/stage2_v1/val.jsonl
+  domain_assets: data_processed/stage2_v1/domain_assets
+  heldout_n_per_domain: 5
+  heldout_seed: 42
+  domain_temperature: 0.5
+  tool_shuffle: true
+  min_target_tokens: 5
+
+partition:
+  source: data_processed/stage2_v1/partition.json
+  subsample_seed: 42
+
+eval:
+  eval_tasks_jsonl: data_processed/stage2_v1/eval_tasks.jsonl
+  diag_tasks_jsonl: data_processed/stage2_v1/diag_tasks.jsonl
+  default_seed: 300
+  winner_reeval_seed: 301
+
+runs:
+  - id: 01_qwen3_5_2b_273
+    config: configs/runs/01_qwen3_5_2b_273.yaml
+  - id: 02_qwen3_5_4b_50
+    config: configs/runs/02_qwen3_5_4b_50.yaml
+  - id: 03_qwen3_5_4b_100
+    config: configs/runs/03_qwen3_5_4b_100.yaml
+  - id: 04_qwen3_5_4b_200
+    config: configs/runs/04_qwen3_5_4b_200.yaml
+  - id: 05_qwen3_5_4b_273
+    config: configs/runs/05_qwen3_5_4b_273.yaml
+  - id: 06_qwen3_5_9b_50
+    config: configs/runs/06_qwen3_5_9b_50.yaml
+  - id: 07_qwen3_5_9b_273
+    config: configs/runs/07_qwen3_5_9b_273.yaml
+  - id: 08_qwen3_6_35b_a3b_273
+    config: configs/runs/08_qwen3_6_35b_a3b_273.yaml
+  - id: 09_qwen3_5_4b_273_lr1e5
+    config: configs/runs/09_qwen3_5_4b_273_lr1e5.yaml
+    skip_eval: true
+  - id: 10_qwen3_5_4b_273_lr3e5
+    config: configs/runs/10_qwen3_5_4b_273_lr3e5.yaml
+    skip_eval: true

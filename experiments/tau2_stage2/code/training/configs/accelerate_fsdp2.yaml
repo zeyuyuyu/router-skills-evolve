@@ -1,0 +1,34 @@
+compute_environment: LOCAL_MACHINE
+distributed_type: FSDP
+mixed_precision: bf16
+num_machines: 1
+num_processes: 8       # 8x H200
+machine_rank: 0
+main_training_function: main
+fsdp_config:
+  fsdp_version: 2
+  # FULL_STATE_DICT makes trainer.save_model() produce a normal HF checkpoint
+  # usable by vLLM/eval. FSDP run YAMLs set save_only_model=true so periodic
+  # checkpoints do not also dump optimizer state.
+  fsdp_state_dict_type: FULL_STATE_DICT
+  fsdp_auto_wrap_policy: TRANSFORMER_BASED_WRAP
+  # Backward-compatible dense default. New per-run YAMLs use the explicit
+  # family configs:
+  # - configs/accelerate_fsdp2_dense.yaml for Qwen3.5 dense checkpoints
+  # - configs/accelerate_fsdp2_moe.yaml for Qwen3.6-35B-A3B
+  #
+  # Do not mix dense and MoE classes here: Accelerate FSDP2 validates that
+  # every listed class exists in the current model.
+  fsdp_transformer_layer_cls_to_wrap: Qwen3_5DecoderLayer
+  fsdp_cpu_ram_efficient_loading: true
+  fsdp_offload_params: false
+  fsdp_reshard_after_forward: false       # required with chunked_nll
+  fsdp_activation_checkpointing: true
+  # FSDP2 deliberately drops these v1-era knobs (verified against accelerate
+  # 1.13.0 utils/dataclasses.py FullyShardedDataParallelPlugin.__post_init__):
+  # - fsdp_forward_prefetch raises ValueError under fsdp_version=2 (line 1931)
+  # - fsdp_backward_prefetch / fsdp_use_orig_params / fsdp_sync_module_states
+  #   are obsolete in FSDP2 (warned + forced to None)
+  # - fsdp_sharding_strategy is FSDP1; FSDP2 uses fsdp_reshard_after_forward
+  # dispatch_batches lives on DataLoaderConfiguration, not top-level launch
+  # config; FSDP doesn't broadcast batches across ranks anyway.

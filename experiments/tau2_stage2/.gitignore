@@ -1,0 +1,23 @@
+# Secrets / local runtime
+.env
+.venv/
+*.log
+vllm_logs/
+
+# Heavy runtime artifacts
+train_outputs/
+base_models/
+eval_baselines/
+step_budget_outputs/
+offline_artifacts/
+data_extra/
+
+# Full local training corpora are staged separately.
+data_processed/stage2_v1/train.jsonl
+data_processed/stage2_v1/val.jsonl
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
