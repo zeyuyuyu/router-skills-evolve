@@ -28,9 +28,10 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 TAU2_BUNDLE = REPO_ROOT / "experiments" / "tau2_stage2"
 DEFAULT_API_BASE = "https://api.commonstack.ai/v1"
 DEFAULT_USER_MODEL = "openai/gpt-5.2"
+DEFAULT_LOCAL_MODEL = "evol-llm-student"
 
 
-def _openai_compatible_args() -> dict[str, str]:
+def _commonstack_args() -> dict[str, str]:
     """LiteLLM args for an OpenAI-compatible gateway.
 
     The scaling entrypoint documents OPENAI_API_KEY for real runs. In practice
@@ -56,10 +57,36 @@ def _openai_compatible_args() -> dict[str, str]:
     }
 
 
+def _local_openai_args() -> dict[str, str]:
+    api_base = os.environ.get("SCALING_SMALL_API_BASE") or os.environ.get("SCALING_LOCAL_API_BASE")
+    if not api_base:
+        raise RuntimeError(
+            "SCALING_SMALL_API_BASE or SCALING_LOCAL_API_BASE must be set for local small-model eval"
+        )
+    return {
+        "api_base": api_base,
+        "api_key": os.environ.get("SCALING_SMALL_API_KEY") or os.environ.get("SCALING_LOCAL_API_KEY") or "EMPTY",
+        "custom_llm_provider": "openai",
+    }
+
+
+def _uses_local_endpoint(model: str) -> bool:
+    if not (os.environ.get("SCALING_SMALL_API_BASE") or os.environ.get("SCALING_LOCAL_API_BASE")):
+        return False
+    local_model = os.environ.get("SCALING_SMALL_MODEL_NAME") or os.environ.get("SCALING_LOCAL_MODEL_NAME") or DEFAULT_LOCAL_MODEL
+    return model == local_model or model.startswith("local/")
+
+
+def _args_for_model(model: str) -> dict[str, str]:
+    return _local_openai_args() if _uses_local_endpoint(model) else _commonstack_args()
+
+
 def _litellm_openai_model(model: str) -> str:
     """Route a gateway wire model through LiteLLM's OpenAI-compatible provider."""
     if model.startswith("openai/openai/"):
         return model
+    if model.startswith("local/"):
+        model = model.split("/", 1)[1]
     return f"openai/{model}"
 
 
@@ -209,7 +236,8 @@ class Adapter:
         try:
             from core.schemas.artifacts import LLMSpec, RunTaskConfig
 
-            llm_args = _openai_compatible_args()
+            agent_args = _args_for_model(model)
+            user_args = _commonstack_args()
             user_model = os.environ.get("TAU2_USER_MODEL", DEFAULT_USER_MODEL)
             seed = int(os.environ.get("SCALING_SEED", "0"))
             max_steps = int(os.environ.get("TAU2_MAX_STEPS", "100"))
@@ -217,11 +245,11 @@ class Adapter:
             config = RunTaskConfig(
                 agent=LLMSpec(
                     model=_litellm_openai_model(model),
-                    args=dict(llm_args),
+                    args=dict(agent_args),
                 ),
                 user=LLMSpec(
                     model=_litellm_openai_model(user_model),
-                    args=dict(llm_args),
+                    args=dict(user_args),
                 ),
                 seed=seed,
                 max_steps=max_steps,
