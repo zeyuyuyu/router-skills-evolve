@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-05-31 by daily pipeline.
+Pending queue update — last updated 2026-06-01 by daily pipeline.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
 2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
 2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4),
-2026-05-30 daily (2), 2026-05-31 daily (2).
-Total pending: 45 experiments.
+2026-05-30 daily (2), 2026-05-31 daily (2), 2026-06-01 daily (2).
+Total pending: 47 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -2230,6 +2230,175 @@ NEW_EXPERIMENTS = [
             "explore_rollouts": 8,
             "explore_temperature": 0.9,
             "explore_min_partial_pass": 1,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-06-01 batch (2 experiments — queue > 20 cap, A800 day 18 offline) ──
+    {
+        "id": "exp_2026_06_01_001_unlikeliness_reward_grpo_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Rewarding the Unlikely: Lifting GRPO Beyond Distribution Sharpening "
+            "(arxiv:2506.02355, He, Fried, Welleck, CMU, June 2025) identifies a "
+            "fundamental rank bias in GRPO: with binary rewards and group-relative "
+            "advantage normalisation, every passing rollout in a group receives the same "
+            "positive advantage regardless of how rare or novel its token sequence is under "
+            "the base model. High-base-probability trajectories (the model's 'default' "
+            "correct solution) are reinforced just as strongly as rare-but-correct "
+            "trajectories, causing the policy to collapse toward the single dominant "
+            "solution mode the base model already prefers. Distribution sharpening rather "
+            "than genuine exploration. The paper introduces an unlikeliness bonus: "
+            "  bonus_i = unlikeliness_lambda * (1 - exp(mean_log_prob_base_i / L)) "
+            "where mean_log_prob_base_i / L is the per-token log-probability of rollout i "
+            "under the FROZEN base model. This bonus is added to the binary reward before "
+            "advantage computation: effective_reward_i = binary_reward_i + bonus_i. "
+            "A rollout that passes tests AND uses low-base-probability tokens (an unusual "
+            "but valid algorithm, an unexpected data structure choice) receives a higher "
+            "effective reward than a rollout that passes with the model's most probable "
+            "pattern. This directly breaks the rank bias: the model is incentivised to "
+            "find and retain rare-but-correct solution modes rather than only reinforcing "
+            "its dominant prior. "
+            "MECHANISTIC CASE FOR OUR PROJECT: "
+            "Our 27/100 mixed-outcome eval tasks pass on 1-3 of 4 rollouts. The passing "
+            "rollouts are very likely high-probability base-model solutions (the common "
+            "algorithmic patterns the model already knows). The unlikeliness bonus would "
+            "create incentive to also reinforce the rare passing rollouts from hard tasks "
+            "(if any appear as training proceeds), preventing the policy from converging "
+            "exclusively on the few dominant solution patterns. The paper tests in formal "
+            "theorem proving (perfect verifier available); our setup with executable tests "
+            "provides an equivalent verifier. Result: +3.1% pass@1 improvement over "
+            "standard GRPO on Lean4 miniF2F. "
+            "DISTINCT FROM ALL 45 QUEUED EXPERIMENTS: "
+            "- vs. F-GRPO (EXP-018): F-GRPO scales advantage at the TASK level by task "
+            "  success rate (focal loss of the task, not the rollout sequence probability). "
+            "  Unlikeliness bonus operates at the ROLLOUT level by base-model sequence "
+            "  probability — a rollout-level log-probability bonus, not a task-level "
+            "  success-rate weighting. The two are orthogonal: a hard task (low success "
+            "  rate → high F-GRPO weight) may have high-probability passing rollouts "
+            "  (low unlikeliness bonus), and an easy task (high success rate → low F-GRPO "
+            "  weight) may have rare passing rollouts (high unlikeliness bonus). "
+            "- vs. GCPO (EXP-036): GCPO rewards AST-structurally unique passing rollouts. "
+            "  Unlikeliness rewards low-base-probability passing rollouts. A rollout can "
+            "  be AST-unique but high-probability (unusual structure, common tokens) or "
+            "  AST-identical but low-probability (usual structure, unusual tokens/indices). "
+            "  These are genuinely orthogonal diversity signals: GCPO → structure diversity, "
+            "  unlikeliness → token-probability diversity. "
+            "- vs. POPO (EXP-044): POPO ELIMINATES negative-reward rollouts and uses IS "
+            "  weighting on positive-only groups — a training dynamics change. Unlikeliness "
+            "  adds a REWARD SIGNAL to the binary reward; negative-reward rollouts are "
+            "  still present and receive their standard advantage. POPO changes what rollouts "
+            "  contribute; unlikeliness changes how much each positive rollout is rewarded. "
+            "- vs. VPO (EXP-038): VPO decomposes the reward by test case (T-dimensional "
+            "  advantage). Unlikeliness adds a scalar bonus by base-model log-probability. "
+            "  These operate on entirely different dimensions. "
+            "IMPLEMENTATION: Requires a frozen base model forward pass on each rollout "
+            "after generation — the base model is already loaded for KL experiments "
+            "(EXP-006, EXP-007, EXP-029). Per-token mean log-prob = "
+            "sum(log p_base(token_t)) / len(rollout). bonus = unlikeliness_lambda * "
+            "(1 - exp(mean_log_prob)). Add bonus to binary_reward before group advantage "
+            "normalisation. ~25 lines. Estimated VRAM: 2 × 1.5B models ≈ 12GB (same as "
+            "EXP-035 contrastive decoding, well within 80GB). "
+            "Estimated wall-clock: ~95 minutes (200 tasks × 4 rollouts + ~5% overhead "
+            "for base model forward pass on each rollout)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "reward_bonus": "unlikeliness",
+            "unlikeliness_lambda": 0.5,
+            "unlikeliness_base_model": "base",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_06_01_002_code_quality_reward_grpo_15b",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Improving LLM-Generated Code Quality with GRPO "
+            "(arxiv:2506.02211, Robeyns and Aitchison, University of Bristol, June 2025) "
+            "demonstrates that augmenting the binary test-pass reward with a code quality "
+            "score — cyclomatic complexity, line count, pylint/flake8 signals — pushes "
+            "GRPO beyond functional correctness toward maintainable, readable, safe code. "
+            "The paper constructs a composite reward: "
+            "  effective_reward = binary_reward + alpha * quality_score "
+            "where quality_score ∈ [0, 1] is derived from static analysis (radon "
+            "cyclomatic complexity: CC=1 → quality=1.0; CC=10 → quality=0.0, linear), "
+            "line count (L≤20 → 1.0; L≥80 → 0.0, linear), and absence of flake8 "
+            "critical errors (W/E codes: 0 errors → 1.0; 1 error → 0.5; ≥2 → 0.0). "
+            "Combined quality = (cc_score + lc_score + flake8_score) / 3. "
+            "The paper shows this composite reward doesn't hurt pass@1 (functional "
+            "correctness is preserved) while improving quality metrics by 15-22% on "
+            "HumanEval and 8-12% on MBPP. Human annotators rate quality-GRPO solutions "
+            "as significantly more maintainable in blinded comparison. "
+            "WHY THIS IS VALUABLE BEYOND FUNCTIONAL CORRECTNESS FOR OUR PROJECT: "
+            "Our paper claims a 'learned routing + improved small model' system. If the "
+            "small model's code on the tasks it DOES solve (currently 49/100) is "
+            "low-quality (complex, verbose, error-prone), the router may correctly send "
+            "a task to the small model but the output is still poor. Quality-GRPO would "
+            "produce solutions that are both correct AND maintainable, strengthening the "
+            "paper's contribution beyond routing accuracy. "
+            "DISTINCT FROM ALL 45 QUEUED EXPERIMENTS: "
+            "- No prior experiment in the queue adds a code quality metric to the reward. "
+            "  All 45 use binary pass/fail or partial_test_count (functional only). "
+            "- Functional vs. quality rewards: P-GRPO (EXP-016) uses partial test pass "
+            "  count — still fully functional. This experiment is the only one using "
+            "  a non-execution-based static analysis signal as part of the reward. "
+            "- Complementary to KL reg experiments: quality reward may suppress reward "
+            "  hacking (model generating long, complex, hacky code that passes tests by "
+            "  brute force) via the complexity penalty, independently of KL regularisation. "
+            "IMPLEMENTATION: After each rollout's code is executed and test results "
+            "computed, run: (1) radon cc -s --min A <file> → extract cyclomatic complexity; "
+            "(2) len(code.split('\\n')) → line count; (3) flake8 --select=W,E <file> → "
+            "count warnings. Compute quality_score as above. Add alpha=0.1 * quality_score "
+            "to binary_reward. Runner change: add quality_reward_alpha=0.1, "
+            "quality_metrics=['cyclomatic_complexity', 'line_count', 'flake8_errors'] to "
+            "grpo_continual spec. ~50 additional lines (subprocess calls to radon/flake8 "
+            "on the generated code string). radon + flake8 run in <50ms per rollout — "
+            "negligible overhead vs. ~4000ms model forward pass. "
+            "Estimated wall-clock: ~92 minutes (200 tasks × 4 rollouts + ~2% static "
+            "analysis overhead). radon and flake8 already available on A800 Python env."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "quality_reward_alpha": 0.1,
+            "quality_metrics": ["cyclomatic_complexity", "line_count", "flake8_errors"],
+            "quality_cc_max": 10,
+            "quality_lc_max": 80,
             "eval_limit": 100,
             "max_new_tokens": 192,
         },
