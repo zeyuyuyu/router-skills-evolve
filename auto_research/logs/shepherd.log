@@ -1,0 +1,1 @@
+[2026-06-01 18:05:37 UTC] SHEPHERD RUN FAILED: Cannot reach A800 (117.74.66.181:50507). SSH connection timed out after 15 s. sshpass unavailable in remote exec environment; fell back to paramiko (pip-installed) — still timed out. No state read, no actions taken. Manual check recommended if this persists across multiple shepherd cycles.
