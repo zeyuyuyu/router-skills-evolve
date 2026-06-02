@@ -41,6 +41,28 @@ class Adapter:
         self.mock = os.environ.get("SCALING_MOCK", "0") == "1"
         self._tau2_adapter = None
         self.domain = os.environ.get("TAU2_DOMAIN", "retail")  # airline | retail | telecom
+        # User-simulator + run knobs for live tau2 (RunTaskConfig). The agent
+        # model is the one under test (passed to _run_one); the user simulator
+        # and litellm args (api_base/api_key/custom_llm_provider for a
+        # CommonStack-style gateway) come from env so live runs are operator-
+        # configurable without code edits.
+        self.user_model = os.environ.get("TAU2_USER_MODEL", "openai/openai/gpt-5.2")
+        self.seed = int(os.environ.get("TAU2_SEED", "0"))
+        self.max_steps = int(os.environ.get("TAU2_MAX_STEPS", "100"))
+        self.max_errors = int(os.environ.get("TAU2_MAX_ERRORS", "10"))
+
+    def _llm_args(self, role: str) -> dict:
+        """litellm args for agent/user from env (api_base/api_key/provider)."""
+        base = os.environ.get(f"TAU2_{role.upper()}_API_BASE") or os.environ.get("TAU2_API_BASE")
+        key = os.environ.get(f"TAU2_{role.upper()}_API_KEY") or os.environ.get("TAU2_API_KEY")
+        args: dict[str, Any] = {}
+        if base:
+            args["api_base"] = base
+        if key:
+            args["api_key"] = key
+        if base or key:
+            args["custom_llm_provider"] = os.environ.get("TAU2_LLM_PROVIDER", "openai")
+        return args
 
     # ------------------------------------------------------------------ load
     def load_tasks(self, n: int, split: str = "train") -> list[dict]:
@@ -166,34 +188,51 @@ class Adapter:
         }
 
     def _run_one(self, task: dict, model: str) -> dict:
-        """Single tau2 task run with a given model.
+        """Single tau2 task run with a given agent model.
 
-        TODO(colleague): wire `Tau2BenchAdapter.run_task` properly. Current
-        implementation invokes it via the run_task signature documented in
-        the colleague's adapter.py. If signature differs, patch here.
+        Uses the colleague's real run_task signature:
+            run_task(task, config: RunTaskConfig, *, domain=None) -> TaskRunResult
+        (review 2026-05-21: the previous `run_task(task, student_model=...)`
+        call was wrong and would fail on the live adapter.)
         """
         try:
-            res = self._tau2_adapter.run_task(task["_raw"], student_model=model)
-            # Best-effort completion extraction for SFT. The colleague's
-            # run_task result shape may differ; patch the keys here if so.
+            from core.schemas.artifacts import LLMSpec, RunTaskConfig  # type: ignore
+        except ImportError as e:  # pragma: no cover - live-only path
+            return {"success": False, "cost": 0.0, "completion": "",
+                    "error": f"could not import RunTaskConfig/LLMSpec: {e}"}
+
+        config = RunTaskConfig(
+            agent=LLMSpec(model=model, args=self._llm_args("agent")),
+            user=LLMSpec(model=self.user_model, args=self._llm_args("user")),
+            seed=self.seed,
+            max_steps=self.max_steps,
+            max_errors=self.max_errors,
+        )
+        try:
+            res = self._tau2_adapter.run_task(task["_raw"], config, domain=self.domain)
+            # TaskRunResult: passed / agent_cost_usd / user_cost_usd / messages / steps
+            cost = float(getattr(res, "agent_cost_usd", 0.0) or 0.0) + \
+                float(getattr(res, "user_cost_usd", 0.0) or 0.0)
             completion = ""
-            for k in ("completion", "final_answer", "answer", "assistant_text", "output"):
-                v = res.get(k)
-                if isinstance(v, str) and v.strip():
-                    completion = v
-                    break
+            msgs = getattr(res, "messages", None) or []
+            if isinstance(msgs, list):
+                parts = [m.get("content", "") for m in msgs
+                         if isinstance(m, dict) and m.get("role") == "assistant" and m.get("content")]
+                completion = "\n".join(parts)
             if not completion:
-                # tau2 trajectories are turn lists; join assistant turns if present.
-                traj = res.get("trajectory") or res.get("messages")
-                if isinstance(traj, list):
-                    parts = [m.get("content", "") for m in traj
-                             if isinstance(m, dict) and m.get("role") == "assistant"]
-                    completion = "\n".join(p for p in parts if p)
+                # fall back to the structured agent steps
+                steps = getattr(res, "steps", None) or []
+                parts = []
+                for s in steps:
+                    txt = getattr(s, "content", None) or (s.get("content") if isinstance(s, dict) else None)
+                    if txt:
+                        parts.append(str(txt))
+                completion = "\n".join(parts)
             return {
-                "success": bool(res.get("evaluation", {}).get("passed", False)),
-                "cost": float(res.get("cost_total", 0.0)),
+                "success": bool(getattr(res, "passed", False)),
+                "cost": cost,
                 "completion": completion,
-                "raw": res,
+                "raw": None,  # TaskRunResult holds a heavy raw_simulation; drop it
             }
         except Exception as e:  # noqa: BLE001 — surface as failed task, log
             return {"success": False, "cost": 0.0, "completion": "", "error": str(e)}

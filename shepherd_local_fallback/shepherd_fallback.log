@@ -1,5 +1,0 @@
-[2026-05-27T10:05:27Z] SHEPHERD RUN FAILED: A800 unreachable.
-  - sshpass installed OK; openssh-client installed OK after apt-get update.
-  - Connection attempt: ssh -p 50507 zeyuwang@117.74.66.181 => "Connection timed out"
-  - No state read. No actions taken.
-  - RECOMMENDATION: Verify A800 is online, port 50507 is open, and network policy allows outbound SSH from this cloud environment.

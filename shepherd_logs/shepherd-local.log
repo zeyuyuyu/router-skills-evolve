@@ -1,1 +1,0 @@
-[2026-05-30T16:05:30Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connect timeout after 10s. No state read, no actions taken. All steps skipped. Next shepherd run should retry connectivity.

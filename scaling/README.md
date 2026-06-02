@@ -13,12 +13,12 @@
 | `scaling/run_full_pipeline.sh` | ✅ Ready | Zeyu |
 | `scaling/README.md` (this file) | ✅ Ready | Zeyu |
 | `experiments/scaling/collect_traces.py` (Phase 1) | ✅ Ready | Zeyu |
-| `experiments/scaling/benches/tau2_bench/adapter.py` | 🟡 **Wrapper ready; tau2 `run_task` signature may need 1-line patch** — see §11 TODO #1 | **Teammate** |
+| `experiments/scaling/benches/tau2_bench/adapter.py` | ✅ **`run_task` wired to real signature** (`RunTaskConfig`/`LLMSpec`, agent+user LLMSpec, completion from `messages`); live api args via `TAU2_*` env | Zeyu |
 | `experiments/scaling/benches/swe_bench/adapter.py` | ❌ **Stub only** — fill in if SWE-Bench is selected | **Teammate** (2–3 days) |
 | `experiments/scaling/aggregate_cycles.py` (Phase 6) | ✅ Ready | Zeyu |
 | `experiments/scaling/train_router_simple.py` (Phase 4, bench-agnostic) | ✅ Ready | Zeyu |
 | `experiments/scaling/run_e2e_ablation_simple.py` (Phase 5, bench-agnostic) | ✅ Ready | Zeyu |
-| `experiments/scaling/tau2_train_wrapper.sh` (Phase 3) | 🟡 **`MODE=colleague_corpus` works; `MODE=scaling_traces` needs data injection wired** — see §11 TODO #3 | **Teammate** |
+| `experiments/scaling/tau2_train_wrapper.sh` (Phase 3) | ✅ **`MODE=scaling_traces` (default) wired** — augments colleague corpus with per-cycle SFT pairs via `train_all.sh` `SCALING_TRAIN_FILE_STAGE2` hook; fails loudly, no silent fallback | Zeyu |
 | `experiments/tau2_stage2/` (colleague's SFT framework) | ✅ **Merged from `codex/tau2-stage2-training-eval` into `main`**; teammate's prior work preserved | — |
 | `experiments/run_evolve.py` (HumanEval-coupled, **not** used) | n/a | — |
 | `experiments/train_learnable_router.py` (HumanEval-coupled, **not** used) | n/a | — |
@@ -26,7 +26,7 @@
 
 **Why we wrote new `*_simple.py` versions** for Phases 4 and 5: the main-branch `train_learnable_router.py` and `run_e2e_ablation.py` both hard-code `data/HumanEval.jsonl` for the prompt source (they look up prompts by `task_id` from HumanEval). On tau2-bench / SWE-Bench tasks that lookup always misses → "No supervised router examples could be built from traces". The `*_simple` versions read `prompt` from the trace row directly, so they work for any bench whose adapter follows our trace schema.
 
-**Translation**: pipeline is wired end-to-end and **smoke-tested working** (`bash scaling/run_full_pipeline.sh --smoke --mock` passes all 5 phases on a no-GPU laptop). To run on real tau2-bench data, **finish TODO #1 (verify adapter signature) and optionally #3 (scaling-trace-driven LLM training)** — listed in §11.
+**Translation**: pipeline is wired end-to-end and **smoke-tested working** (`bash scaling/run_full_pipeline.sh --smoke --mock` passes all 5 phases on a no-GPU laptop). As of 2026-05-21 the closed loop is complete: Phase 1 routes with the previous cycle's router+SkillBook (`force_both` oracle), Phase 2 distills procedural skills, Phase 3 trains the LLM on per-cycle traces (augmenting the colleague corpus), and the tau2 `run_task` call uses the real signature. For a LIVE tau2 run set `MODEL_SWEEP=05_qwen3_5_4b_273` (the `04_*` default was a typo, fixed) and the `TAU2_*` api-arg env vars; see §11.
 
 ---
 

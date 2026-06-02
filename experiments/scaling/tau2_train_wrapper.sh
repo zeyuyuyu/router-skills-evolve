@@ -2,13 +2,17 @@
 # tau2_train_wrapper.sh — wrap colleague's tau2_stage2 train_pipeline.sh for the
 # scaling pipeline. Two modes:
 #
-#   MODE=colleague_corpus   (default)  Train on colleague's stage2_v1 corpus.
-#                                       Ignores TRAINING_DATA from Phase 3.
-#                                       This is the safest first pass.
+#   MODE=scaling_traces     (default)  Augment: concatenate this cycle's SFT
+#                                       pairs (TRAINING_DATA) onto the colleague
+#                                       stage2_v1 corpus, then train via
+#                                       train_all.sh's SCALING_TRAIN_FILE_STAGE2
+#                                       hook. Fails loudly if TRAINING_DATA is
+#                                       empty — never silently uses the fixed
+#                                       corpus. (Wired 2026-05-21.)
 #
-#   MODE=scaling_traces     (TODO)     Inject TRAINING_DATA (our extracted
-#                                       slice) into stage2_v1 layout, then
-#                                       train. NOT YET WIRED — see notes below.
+#   MODE=colleague_corpus              Train ONLY on the colleague's fixed
+#                                       stage2_v1 corpus; ignores TRAINING_DATA.
+#                                       Use to reproduce the pre-evolve baseline.
 #
 # Required env vars:
 #   BUNDLE_ROOT          /path/to/experiments/tau2_stage2
@@ -17,7 +21,7 @@
 #
 # Optional:
 #   TRAINING_DATA        path to scaling traces' extract (mode=scaling_traces)
-#   MODE                 colleague_corpus | scaling_traces  (default: colleague_corpus)
+#   MODE                 scaling_traces | colleague_corpus  (default: scaling_traces)
 
 set -euo pipefail
 
@@ -39,8 +43,8 @@ case "$MODE" in
       exit 2
     fi
     # Colleague's pipeline trains ALL 10 runs in plan_c_prime.yaml by default.
-    # For the scaling pipeline we only want ONE. Filter via PLAN_RUN_FILTER.
-    PLAN_RUN_FILTER="$RUN_CONFIG" \
+    # For the scaling pipeline we only want ONE. Filter via ONLY_RUN (train_all.sh honours ONLY_RUN, not PLAN_RUN_FILTER).
+    ONLY_RUN="$RUN_CONFIG" \
       bash code/training/orchestration/train_pipeline.sh
     # Copy the result to TRAIN_OUTPUT_DIR so the rest of the scaling pipeline
     # has a stable path.
@@ -131,7 +135,7 @@ PY
     # 3. Hand off to the colleague pipeline pointed at the augmented data via the
     #    SCALING_TRAIN_FILE_STAGE2 hook in train_all.sh. (train_all.sh fails loudly
     #    if the file is empty — no silent fallback to the fixed corpus.)
-    SCALING_TRAIN_FILE_STAGE2="$COMBINED" PLAN_RUN_FILTER="$RUN_CONFIG" \
+    SCALING_TRAIN_FILE_STAGE2="$COMBINED" ONLY_RUN="$RUN_CONFIG" \
       bash "$BUNDLE_ROOT/code/training/orchestration/train_pipeline.sh"
     src="$BUNDLE_ROOT/train_outputs/$RUN_CONFIG"
     if [[ -d "$src/checkpoint-best" ]]; then
