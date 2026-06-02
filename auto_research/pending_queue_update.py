@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-06-01 by daily pipeline.
+Pending queue update — last updated 2026-06-02 by daily pipeline.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
 2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
 2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4),
-2026-05-30 daily (2), 2026-05-31 daily (2), 2026-06-01 daily (2).
-Total pending: 47 experiments.
+2026-05-30 daily (2), 2026-05-31 daily (2), 2026-06-01 daily (2), 2026-06-02 daily (2).
+Total pending: 49 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -2399,6 +2399,100 @@ NEW_EXPERIMENTS = [
             "quality_metrics": ["cyclomatic_complexity", "line_count", "flake8_errors"],
             "quality_cc_max": 10,
             "quality_lc_max": 80,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-06-02 batch (2 experiments) ───────────────────────────────────
+    {
+        "id": "exp_2026_06_02_001_critique_grpo_selfcrit_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Critique-GRPO (arxiv:2506.03106, June 2026, Qin et al.) extends standard GRPO "
+            "with a two-stage rollout: the model first generates G=4 initial responses "
+            "(binary reward), then for each failed response produces a natural-language "
+            "self-critique of the error followed by a refined response (binary reward + "
+            "shaping). A shaping function amplifies learning from correct-but-unfamiliar "
+            "refinements: eff_reward = binary + shaping_lambda * (1 - exp(mean_log_prob_base)). "
+            "Critique-GRPO shows +15–21.6% pass@1 on Qwen models and +7.3% on Llama-3.2-3B "
+            "across 8 reasoning tasks. Our 27/100 mixed-outcome MBPP training tasks have "
+            "failed rollouts that carry zero gradient under standard GRPO (rank bias); "
+            "the self-critique stage provides a structured learning signal for these failures "
+            "without requiring an external oracle. "
+            "DISTINCT FROM ALL 47 QUEUED EXPERIMENTS: "
+            "SCAF-GRPO (EXP-018) injects static problem-description hints at generation time "
+            "— no critique, no refinement, no gradient from the refinement pass. "
+            "MURPHY (EXP-029) uses an external verifier to provide structured error messages "
+            "between turns — external oracle, not the model's own NL critique. "
+            "Unlikeliness (EXP-046) re-weights the advantage of rare-but-correct initial "
+            "rollouts — single-stage, no refinement. "
+            "Critique-GRPO is the only mechanism that adds a gradient-contributing "
+            "refinement stage driven by the model's own natural-language critique of "
+            "its failed code."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "rollouts_per_task": 4,
+            "critique_grpo": True,
+            "critique_type": "self_critique",
+            "refinement_rollouts": 4,
+            "refinement_shaping_lambda": 0.3,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "eval_limit": 100,
+            "max_new_tokens": 256,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_06_02_002_grad_cosine_gate_15b",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Gradient conflict is the most plausible mechanism for our 200→400 task "
+            "degradation (47→46 pass@1 at 400 tasks vs. 47→49 at 200 tasks). "
+            "arxiv:2605.09608 (May 10, 2026, 'Learning the Mechanism of Catastrophic "
+            "Forgetting: A Perspective from Gradient Similarity') demonstrates that "
+            "new-task gradients with cosine similarity < 0.3–0.5 to the running "
+            "accumulated gradient direction cause forgetting in earlier tasks. "
+            "Gradient cosine gating: at each GRPO step, compute cosine(g_new, g_ema) "
+            "where g_ema is an exponential moving average of LoRA-parameter gradients; "
+            "skip the gradient update for this task if cosine_sim < gate_threshold. "
+            "Expected effect: automatically identifies 'conflicting' tasks among the "
+            "200 training tasks (likely the same tasks that degrade at 400-task scale) "
+            "and prevents their gradient from disrupting the beneficial signal from "
+            "non-conflicting tasks. This is orthogonal to all existing regularization "
+            "approaches in the queue: "
+            "KL-penalty (EXP-002, EXP-042) applies distributional regularization globally; "
+            "C-CHAIN (EXP-027) reduces step budget for recent tasks to reduce churn; "
+            "FRPO (EXP-018-004) uses a max-min formulation over a KL-ball of downstream "
+            "policies. Gradient cosine gating is the only parameter-space, per-task, "
+            "per-step filtering mechanism in the queue. "
+            "This experiment was deferred on 2026-05-31 pending C-CHAIN/KL results, "
+            "but since the A800 has been offline for 19 days (no results to wait for), "
+            "queuing now is justified — the gradient conflict hypothesis is the strongest "
+            "unresolved mechanistic question in the project."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/train_aug_excluding_eval20.jsonl",
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/test_eval_all.jsonl",
+            "train_task_limit": 200,
+            "rollouts_per_task": 4,
+            "grad_cosine_gate": True,
+            "grad_cosine_threshold": 0.4,
+            "grad_ema_beta": 0.95,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
             "eval_limit": 100,
             "max_new_tokens": 192,
         },
