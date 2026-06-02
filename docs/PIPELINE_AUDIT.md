@@ -182,3 +182,61 @@ instructions rather than training on the wrong data.
 - `experiments/scaling/benches/tau2_bench/adapter.py` — record completions
 - `experiments/scaling/tau2_train_wrapper.sh` — real `scaling_traces` mode, no silent fallback
 - `scaling/run_full_pipeline.sh` — Phase 3 uses traces_to_sft.py + scaling_traces default
+
+---
+
+# Scaling pipeline audit — round 3 (2026-05-21, closing the loop properly)
+
+Round-2 review caught that the round-1 "closed loop" was only a *policy
+annotation* on the trace, not a fully-closed loop:
+
+1. **The "oracle double-run" claim was false.** The tau2 adapter
+   (`run_task_pair`) skipped the large model whenever small succeeded
+   (`large_res = {success:True, cost:0, skipped:True}`); the mock set
+   `large_success=False` on small-OK rows. So if the policy routed to large on
+   a small-OK task, the billed `large_*` was a fake placeholder, not a real
+   outcome.
+
+2. **Phase 2 SkillBook still ingested `final_*`, not `policy_*`.** It read
+   `final_model` / `final_success` (the adapter's original small-first
+   decision), so the SkillBook learned from the heuristic routing, not from the
+   evolved policy's actual decisions.
+
+## Round-3 fix
+
+- **Real oracle in closed-loop collection.** `run_task_pair` gains
+  `force_both` (default False = deployment cost-control). `collect_traces.py`
+  passes `force_both=closed_loop`, so in cycle ≥ 1 BOTH models always run and
+  `large_success` / `large_cost` / `large_completion` are real. A new
+  `large_skipped` flag marks placeholder rows when force_both is off.
+
+- **Honest unknowns.** If a trace ever has `large_skipped=True` and the policy
+  routes large, `_apply_policy` sets `policy_final_success=None` /
+  `policy_total_cost=None` (decision `policy:route_large(unknown:large_skipped)`)
+  rather than fabricating an outcome.
+
+- **SkillBook ingests policy outcomes.** Phase 2 now uses
+  `policy_final_model` / `policy_final_success` when present and not None,
+  falling back to `final_*` only for cycle-0 / non-closed-loop traces or
+  unknown rows.
+
+Verified (2-cycle mock): cycle 1 has `large_skipped=False` on all rows (true
+oracle), small-OK tasks carry a real `large_completion` and a non-null
+`policy_final_success`, and Phase 2 ingests the policy outcomes.
+
+## Honest status of the loop now
+
+| Loop element | Closed? |
+| --- | --- |
+| Phase 1 routes with cycle-(k-1) router + SkillBook | ✅ |
+| Phase 1 small model = cycle-(k-1) adapter | ✅ |
+| Oracle both-model outcomes in closed-loop collection | ✅ (force_both) |
+| SkillBook learns from policy outcomes | ✅ |
+| Router trains on clean both-model labels | ✅ (oracle preserved) |
+| LLM SFT consumes per-cycle traces | ✅ data path; ⏳ teammate hook (`SCALING_TRAIN_FILE`) |
+| Richer procedural skills (review item 2) | ❌ design only — `src/skills.py` unchanged |
+
+So: the evolve loop is now genuinely closed on routing, oracle outcomes, and
+SkillBook learning. The only remaining gaps are the one-line colleague
+`SCALING_TRAIN_FILE` hook for LLM SFT, and the (separately-scoped) richer-skills
+redesign of `src/skills.py`.

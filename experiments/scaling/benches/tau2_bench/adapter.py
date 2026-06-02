@@ -69,32 +69,53 @@ class Adapter:
         small_model: str,
         large_model: str,
         cycle: int,
+        force_both: bool = False,
     ) -> dict:
+        """Run small (and large) on a task.
+
+        force_both=False (deployment / cost-control default): run small, and
+        only run large if small fails. `large_*` is then a SKIP placeholder
+        when small succeeded (large_skipped=True) — do NOT treat it as a real
+        large outcome.
+
+        force_both=True (closed-loop trace collection, review 2026-05-21): run
+        BOTH models unconditionally so `large_success`/`large_cost`/
+        `large_completion` are always REAL. Needed when a downstream policy may
+        route to large on a task where small also succeeded — otherwise the
+        policy outcome would be billed against a fake skip placeholder.
+        """
         sig = _extract_signature(task.get("prompt", ""))
         if self.mock:
-            return self._mock_run(task, small_model, large_model, sig, cycle)
+            return self._mock_run(task, small_model, large_model, sig, cycle,
+                                  force_both=force_both)
 
         small_res = self._run_one(task, small_model)
-        # only run large if small fails or signature unseen (cost-control)
-        if small_res["success"]:
-            large_res = {"success": True, "cost": 0.0, "skipped": True}
-            decision = f"probe:small→small_OK"
+        large_skipped = False
+        if small_res["success"] and not force_both:
+            large_res = {"success": True, "cost": 0.0, "skipped": True, "completion": ""}
+            large_skipped = True
+            decision = "probe:small→small_OK"
             final_model, final_success, final_cost = small_model, True, small_res["cost"]
         else:
             large_res = self._run_one(task, large_model)
-            decision = f"probe:small_fail→large_{'OK' if large_res['success'] else 'fail'}"
-            final_model, final_success, final_cost = (
-                large_model,
-                large_res["success"],
-                small_res["cost"] + large_res["cost"],
-            )
+            if small_res["success"]:
+                # force_both: small already OK, large run for oracle completeness
+                decision = "oracle:small_OK+large_run"
+                final_model, final_success, final_cost = small_model, True, small_res["cost"]
+            else:
+                decision = f"probe:small_fail→large_{'OK' if large_res['success'] else 'fail'}"
+                final_model, final_success, final_cost = (
+                    large_model,
+                    large_res["success"],
+                    small_res["cost"] + large_res["cost"],
+                )
 
         return {
             "task_id": task["task_id"],
             "signature": sig,
             "decision": decision,
-            "attempts": 1 if small_res["success"] else 2,
-            "attempts_count": 1 if small_res["success"] else 2,
+            "attempts": 1 if (small_res["success"] and not force_both) else 2,
+            "attempts_count": 1 if (small_res["success"] and not force_both) else 2,
             "final_success": final_success,
             "final_model": final_model,
             "total_cost": final_cost,
@@ -104,6 +125,7 @@ class Adapter:
             "large_success": large_res.get("success", False),
             "small_cost": small_res["cost"],
             "large_cost": large_res.get("cost", 0.0),
+            "large_skipped": large_skipped,  # True => large_* is a placeholder, not real
             "prompt": task.get("prompt", ""),
             # completion text is required by traces_to_sft.py for LLM SFT
             # (review 2026-05-21: per-cycle traces must feed LLM training).
@@ -176,21 +198,38 @@ class Adapter:
         except Exception as e:  # noqa: BLE001 — surface as failed task, log
             return {"success": False, "cost": 0.0, "completion": "", "error": str(e)}
 
-    def _mock_run(self, task: dict, small_model: str, large_model: str, sig: str, cycle: int) -> dict:
+    def _mock_run(self, task: dict, small_model: str, large_model: str, sig: str,
+                  cycle: int, force_both: bool = False) -> dict:
         """Deterministic mock for smoke tests."""
         h = int(hashlib.md5(f"{task['task_id']}|{cycle}".encode()).hexdigest(), 16)
-        small_ok = (h %10) < 6        # small succeeds ~60%!
+        small_ok = (h % 10) < 6        # small succeeds ~60%
         large_ok = (h % 10) < 9        # large succeeds ~90%
         prompt = task.get("prompt", "")
-        if small_ok:
+        large_comp = f"[mock large completion for {task['task_id']}]" if large_ok else ""
+
+        if small_ok and not force_both:
+            # cost-control path: large skipped, large_* is a placeholder
             return {
                 "task_id": task["task_id"], "signature": sig,
                 "decision": "probe:small→small_OK", "attempts": 1, "attempts_count": 1,
                 "final_success": True, "final_model": small_model, "total_cost": 0.001,
                 "round": cycle, "small_success": True, "large_success": False,
-                "small_cost": 0.001, "large_cost": 0.0, "prompt": prompt,
+                "small_cost": 0.001, "large_cost": 0.0, "large_skipped": True,
+                "prompt": prompt,
                 "small_completion": f"[mock small completion for {task['task_id']}]",
                 "large_completion": "",
+            }
+        if small_ok and force_both:
+            # oracle path: small OK but large run anyway -> real large outcome
+            return {
+                "task_id": task["task_id"], "signature": sig,
+                "decision": "oracle:small_OK+large_run", "attempts": 2, "attempts_count": 2,
+                "final_success": True, "final_model": small_model, "total_cost": 0.001,
+                "round": cycle, "small_success": True, "large_success": large_ok,
+                "small_cost": 0.001, "large_cost": 0.01, "large_skipped": False,
+                "prompt": prompt,
+                "small_completion": f"[mock small completion for {task['task_id']}]",
+                "large_completion": large_comp,
             }
         return {
             "task_id": task["task_id"], "signature": sig,
@@ -199,8 +238,8 @@ class Adapter:
             "final_success": large_ok, "final_model": large_model,
             "total_cost": 0.011, "round": cycle,
             "small_success": False, "large_success": large_ok,
-            "small_cost": 0.001, "large_cost": 0.01, "prompt": prompt,
+            "small_cost": 0.001, "large_cost": 0.01, "large_skipped": False,
+            "prompt": prompt,
             "small_completion": "",
-            "large_completion": (f"[mock large completion for {task['task_id']}]"
-                                 if large_ok else ""),
+            "large_completion": large_comp,
         }

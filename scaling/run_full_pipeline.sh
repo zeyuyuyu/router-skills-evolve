@@ -242,8 +242,16 @@ with open("$out/traces.jsonl") as fh:
         except json.JSONDecodeError:
             continue
         prompt = t.get("prompt") or t.get("signature") or t.get("task_id", "")
-        model  = t.get("final_model", "")
-        succ   = bool(t.get("final_success", False))
+        # Prefer the POLICY outcome (what the evolved router+skillbook actually
+        # routed to) over the adapter's original small-first decision. Fall back
+        # to final_* for cycle-0 / non-closed-loop traces, or when the policy
+        # outcome is unknown (large_skipped). Review round 2, 2026-05-21.
+        if t.get("policy_final_model") and t.get("policy_final_success") is not None:
+            model = t["policy_final_model"]
+            succ = bool(t["policy_final_success"])
+        else:
+            model = t.get("final_model", "")
+            succ = bool(t.get("final_success", False))
         if prompt and model:
             sb.update(prompt, model, succ, t.get("task_id", ""))
             n += 1

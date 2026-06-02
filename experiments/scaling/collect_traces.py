@@ -139,12 +139,21 @@ def _apply_policy(trace, route, router_prob, skill_verdict, small_model, large_m
     large_ok = trace.get("large_success")
     small_cost = trace.get("small_cost", 0.0) or 0.0
     large_cost = trace.get("large_cost", 0.0) or 0.0
+    large_skipped = bool(trace.get("large_skipped", False))
 
     if route == "large":
-        policy_final_model = large_model
-        policy_success = bool(large_ok)
-        policy_cost = large_cost
-        policy_decision = "policy:route_large"
+        if large_skipped:
+            # large was NOT actually run (cost-control skip): we cannot honestly
+            # bill a large outcome. Mark unknown rather than fabricate.
+            policy_final_model = large_model
+            policy_success = None
+            policy_cost = None
+            policy_decision = "policy:route_large(unknown:large_skipped)"
+        else:
+            policy_final_model = large_model
+            policy_success = bool(large_ok)
+            policy_cost = large_cost
+            policy_decision = "policy:route_large"
     else:
         # policy routes to small; on small failure it falls back to large
         if small_ok:
@@ -212,11 +221,16 @@ def main() -> int:
     with out_path.open("w") as fh:
         for i, task in enumerate(tasks, 1):
             try:
+                # closed_loop => force both models so the policy annotation has
+                # a REAL large outcome even when small also succeeded (review
+                # round 2, 2026-05-21). Without this, routing to large on a
+                # small-OK task would bill a fake skip placeholder.
                 trace = adapter.run_task_pair(
                     task,
                     small_model=args.small_model,
                     large_model=args.large_model,
                     cycle=args.cycle,
+                    force_both=closed_loop,
                 )
                 if closed_loop:
                     route, rprob, sverd = _policy_decision(
