@@ -67,13 +67,33 @@ def train(prompts, labels, seed: int = 42):
         print("[router] ERROR: scikit-learn not installed. `pip install scikit-learn`", file=sys.stderr)
         sys.exit(2)
 
-    # Edge case: all-same labels (common in mock smoke). Add one synthetic
-    # complementary row so sklearn can still fit a 2-class classifier.
+    # Edge case: all-same labels. This is a real signal (e.g. the small model
+    # failed every tau2 task), so fit a constant router instead of trying a
+    # stratified split with a synthetic one-off minority class.
     if len(set(labels)) < 2:
+        from sklearn.dummy import DummyClassifier
+        from sklearn.metrics import accuracy_score, f1_score
+
+        constant = labels[0]
         print(f"[router] WARN only one class in labels ({set(labels)}); "
-              f"adding a synthetic complementary row", file=sys.stderr)
-        prompts = list(prompts) + ["__synthetic_complementary_class__"]
-        labels = list(labels) + [1 - labels[0]]
+              f"using constant router={constant}", file=sys.stderr)
+        pipe = Pipeline([
+            ("tfidf", TfidfVectorizer(max_features=4096, ngram_range=(1, 2))),
+            ("clf", DummyClassifier(strategy="constant", constant=constant)),
+        ])
+        # Include one synthetic complementary row so predict_proba exposes both
+        # columns for downstream thresholding, while metrics stay on real rows.
+        fit_prompts = list(prompts) + ["__synthetic_complementary_class__"]
+        fit_labels = list(labels) + [1 - constant]
+        pipe.fit(fit_prompts, fit_labels)
+        y_pred = pipe.predict(prompts)
+        return pipe, {
+            "n_train": len(prompts),
+            "n_eval": len(prompts),
+            "accuracy": float(accuracy_score(labels, y_pred)),
+            "f1_large": float(f1_score(labels, y_pred, pos_label=1, zero_division=0)),
+            "constant_router": int(constant),
+        }
 
     pipe = Pipeline([
         ("tfidf", TfidfVectorizer(max_features=4096, ngram_range=(1, 2))),
