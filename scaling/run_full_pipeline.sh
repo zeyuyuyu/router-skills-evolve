@@ -183,11 +183,19 @@ phase1_collect_traces() {
   mkdir -p "$out"
   echo "  [Phase 1] Trace collection — bench=$BENCH cycle=$cycle"
 
-  # In cycles ≥1, the "small model" is the previous cycle's trained adapter.
+  # In cycles ≥1, the loop is closed with the PREVIOUS cycle's latest artifacts:
+  #   - small model  = previous cycle's trained LLM adapter
+  #   - router       = previous cycle's trained router.joblib
+  #   - skillbook    = previous cycle's carried-over skillbook.json
+  # (review 2026-05-21: phase 1 must route with the evolved router + skillbook,
+  #  not just the evolved adapter.)
   local small_arg="$SMALL_MODEL"
+  local prev_router="" prev_skillbook=""
   if (( cycle > 0 )); then
     local prev="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
     [[ -e "$prev" ]] && small_arg="$prev"
+    prev_router="$RESULTS_DIR/cycle_$((cycle-1))/router/router.joblib"
+    prev_skillbook="$RESULTS_DIR/cycle_$((cycle-1))/skillbook.json"
   fi
 
   local cmd=(
@@ -199,6 +207,8 @@ phase1_collect_traces() {
     --cycle "$cycle"
     --out "$out/traces.jsonl"
   )
+  [[ -n "$prev_router"    && -e "$prev_router"    ]] && cmd+=(--router "$prev_router")
+  [[ -n "$prev_skillbook" && -e "$prev_skillbook" ]] && cmd+=(--skillbook "$prev_skillbook")
   $MOCK && cmd+=(--mock)
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
   "${cmd[@]}" 2>&1 | tee "$out/phase1.log"
