@@ -252,14 +252,24 @@ with open("$out/traces.jsonl") as fh:
         else:
             model = t.get("final_model", "")
             succ = bool(t.get("final_success", False))
+        # Procedural skills (review item 2): store the successful completion as
+        # an exemplar so the cluster's procedure can be distilled. Prefer the
+        # large model's completion (the teacher) for hard tasks.
+        completion = t.get("large_completion") or t.get("small_completion") or ""
         if prompt and model:
-            sb.update(prompt, model, succ, t.get("task_id", ""))
+            sb.update(prompt, model, succ, t.get("task_id", ""), completion=completion)
             n += 1
+
+# Distill a reusable procedure per cluster from the accumulated exemplars.
+# Heuristic (no-API) by default; an LLM distiller can be wired here later for
+# the full "agent sub-workflow" induction (tool-use steps / domain policy).
+n_proc = sb.distill_all()
 
 out_path = Path("$out/skillbook.json")
 sb.save(out_path)
 size = len(getattr(sb, "skills", {}))
-print(f"[skills_evolve] ingested {n} traces  SkillBook size={size}  wrote {out_path}")
+print(f"[skills_evolve] ingested {n} traces  SkillBook size={size}  "
+      f"procedures_distilled={n_proc}  wrote {out_path}")
 PY
 }
 

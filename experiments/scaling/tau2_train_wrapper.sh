@@ -79,7 +79,6 @@ case "$MODE" in
     STAGE_DIR="$TRAIN_OUTPUT_DIR/scaling_sft"
     mkdir -p "$STAGE_DIR"
     STAGE2_ROWS="$STAGE_DIR/stage2_rows.jsonl"
-    TRL_OUT="$STAGE_DIR/train_prompt_completion.jsonl"
 
     # 1. {prompt, completion} -> colleague stage-2 row format
     #    ({messages, _target_index, _p, domain}). _target_index points at the
@@ -112,34 +111,27 @@ with open(src) as fh, open(dst, "w") as out:
 print(f"[scaling_traces] wrote {n} stage-2 rows -> {dst}", file=sys.stderr)
 PY
 
-    # 2. Run the colleague's converter to produce TRL prompt/completion + tools.
-    CONVERT="$BUNDLE_ROOT/code/training/data/convert_to_prompt_completion.py"
-    if [[ ! -f "$CONVERT" ]]; then
-      echo "[tau2_train_wrapper] FATAL: colleague converter not found at $CONVERT"
-      echo "  Merge codex/tau2-stage2-training-eval, or run with MODE=colleague_corpus."
-      exit 4
+    # 2. AUGMENT, don't replace: concatenate the colleague's stage2_v1 corpus
+    #    with this cycle's hard examples. Training on only ~12-100 new pairs
+    #    would be degenerate; mixing keeps the base corpus and adds the evolve
+    #    signal. train_all.sh converts + validates the combined file through the
+    #    colleague's own convert_to_prompt_completion (consistent chat-template
+    #    checks), so we hand it the stage-2 row format, not pre-converted TRL.
+    COLLEAGUE_TRAIN="$BUNDLE_ROOT/data_processed/stage2_v1/train.jsonl"
+    COMBINED="$STAGE_DIR/train_augmented_stage2.jsonl"
+    if [[ -s "$COLLEAGUE_TRAIN" ]]; then
+      cat "$COLLEAGUE_TRAIN" "$STAGE2_ROWS" > "$COMBINED"
+      n_base=$(wc -l < "$COLLEAGUE_TRAIN" | tr -d ' ')
+      echo "[tau2_train_wrapper] augmented corpus: $n_base base + $n_pairs scaling = $(wc -l < "$COMBINED" | tr -d ' ') rows"
+    else
+      echo "[tau2_train_wrapper] WARN: colleague corpus $COLLEAGUE_TRAIN absent; training on scaling rows only ($n_pairs)"
+      cp "$STAGE2_ROWS" "$COMBINED"
     fi
-    "${PYTHON:-python3}" "$CONVERT" --input "$STAGE2_ROWS" --output "$TRL_OUT" \
-      2>&1 | tee "$STAGE_DIR/convert.log" || {
-        echo "[tau2_train_wrapper] FATAL: convert_to_prompt_completion.py failed."
-        echo "  Inspect $STAGE_DIR/convert.log. The colleague converter's --input/--output"
-        echo "  flags or domain_assets path may differ; this is the teammate hook."
-        exit 4
-      }
 
-    # 3. Hand off to the colleague pipeline pointed at our data.
-    #    The pipeline must accept an external train file. If your run config does
-    #    not yet support SCALING_TRAIN_FILE, this fails loudly (no silent corpus).
-    if ! grep -rq "SCALING_TRAIN_FILE" "$BUNDLE_ROOT/code/training/orchestration/" 2>/dev/null; then
-      echo "[tau2_train_wrapper] DATA READY but pipeline data-override not wired."
-      echo "  Converted TRL data is at: $TRL_OUT  ($n_pairs pairs)"
-      echo "  TEAMMATE HOOK (1 line): make train_pipeline.sh honour"
-      echo "    SCALING_TRAIN_FILE=\$TRL_OUT  ->  data_processed/stage2_v1/train.jsonl"
-      echo "  Until then this run is intentionally NOT falling back to the fixed"
-      echo "  colleague corpus. Set TAU2_TRAIN_MODE=colleague_corpus to opt out."
-      exit 5
-    fi
-    SCALING_TRAIN_FILE="$TRL_OUT" PLAN_RUN_FILTER="$RUN_CONFIG" \
+    # 3. Hand off to the colleague pipeline pointed at the augmented data via the
+    #    SCALING_TRAIN_FILE_STAGE2 hook in train_all.sh. (train_all.sh fails loudly
+    #    if the file is empty — no silent fallback to the fixed corpus.)
+    SCALING_TRAIN_FILE_STAGE2="$COMBINED" PLAN_RUN_FILTER="$RUN_CONFIG" \
       bash "$BUNDLE_ROOT/code/training/orchestration/train_pipeline.sh"
     src="$BUNDLE_ROOT/train_outputs/$RUN_CONFIG"
     if [[ -d "$src/checkpoint-best" ]]; then

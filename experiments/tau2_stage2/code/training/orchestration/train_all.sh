@@ -55,6 +55,19 @@ if [[ -f train_outputs/_data_cache/train_prompt_completion.jsonl ]] \
    && [[ "$(cat "$CACHE_VERSION_FILE")" == "$EXPECTED_CACHE_VERSION" ]]; then
     NEED_RECONVERT=false
 fi
+# Scaling-pipeline hook (review 2026-05-21): when SCALING_TRAIN_FILE_STAGE2 is
+# set, train on the scaling pipeline's per-cycle traces (stage-2 row format)
+# instead of the fixed stage2_v1 corpus. The scaling wrapper concatenates the
+# per-cycle hard examples ONTO the stage2_v1 corpus, so this augments rather
+# than replaces. Additive: unset => byte-for-byte original behaviour. Cache is
+# keyed by version not source, so force a reconvert when the override is set.
+TRAIN_SRC="$BUNDLE_ROOT/data_processed/stage2_v1/train.jsonl"
+if [[ -n "${SCALING_TRAIN_FILE_STAGE2:-}" ]]; then
+    [[ -s "$SCALING_TRAIN_FILE_STAGE2" ]] || { echo "[train_all] FATAL: SCALING_TRAIN_FILE_STAGE2=$SCALING_TRAIN_FILE_STAGE2 missing/empty"; exit 1; }
+    TRAIN_SRC="$SCALING_TRAIN_FILE_STAGE2"
+    NEED_RECONVERT=true
+    echo "=== SCALING hook: training on $TRAIN_SRC (scaling per-cycle traces) ==="
+fi
 if [[ "$NEED_RECONVERT" == "true" ]]; then
     echo "=== Converting train + val to TRL prompt/completion format ($EXPECTED_CACHE_VERSION) ==="
     rm -f train_outputs/_data_cache/train_prompt_completion.jsonl
@@ -64,7 +77,7 @@ if [[ "$NEED_RECONVERT" == "true" ]]; then
     rm -f train_outputs/_data_cache/validation_report_*.json
     cd "$BUNDLE_ROOT/code"
     "$VENV/python" -m training.data.convert_to_prompt_completion \
-        --src "$BUNDLE_ROOT/data_processed/stage2_v1/train.jsonl" \
+        --src "$TRAIN_SRC" \
         --dst "$BUNDLE_ROOT/train_outputs/_data_cache/train_prompt_completion.jsonl" \
         --domain-assets "$BUNDLE_ROOT/data_processed/stage2_v1/domain_assets" \
         --drop-log "$BUNDLE_ROOT/train_outputs/_data_cache/dropped_train.jsonl"

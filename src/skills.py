@@ -63,6 +63,63 @@ def extract_signature(prompt: str) -> str:
 
 
 # ============================================================================
+# Procedure distillation (heuristic, no-API)
+# ============================================================================
+
+import re as _re
+
+_CODE_BLOCK = _re.compile(r"```[\w+-]*\n(.*?)```", _re.DOTALL)
+_TOOL_CALL = _re.compile(r"\b([a-z_][a-z0-9_]{2,})\s*\(")
+_TAGGED_TOOL = _re.compile(r"<(?:tool|tool_call|function)>\s*([^<]+?)\s*</(?:tool|tool_call|function)>", _re.IGNORECASE)
+
+
+def _heuristic_procedure(signature: str, exemplars: List[Dict], max_chars: int = 1200) -> str:
+    """Induce a reusable scaffold from successful trajectories without any LLM.
+
+    Pulls (a) reusable code snippets from fenced blocks, (b) tool-call / function
+    names in call order, (c) a short domain hint, and assembles a compact
+    "how to solve this cluster" procedure. This is the no-API floor; pass a
+    distiller callable to Skill.distill_procedure for an LLM-quality version.
+    """
+    snippets: List[str] = []
+    tools: List[str] = []
+    for ex in exemplars:
+        c = ex.get("completion", "") or ""
+        for blk in _CODE_BLOCK.findall(c):
+            blk = blk.strip()
+            if blk and blk not in snippets:
+                snippets.append(blk)
+        for t in _TAGGED_TOOL.findall(c):
+            t = t.strip().split()[0] if t.strip() else ""
+            if t and t not in tools:
+                tools.append(t)
+        if not tools:  # fall back to bare function-call names
+            for t in _TOOL_CALL.findall(c):
+                if t not in ("if", "for", "while", "print", "return", "range") and t not in tools:
+                    tools.append(t)
+
+    lines = [f"# Procedure for cluster `{signature}`",
+             f"# distilled from {len(exemplars)} successful exemplar(s)"]
+    if tools:
+        lines.append("")
+        lines.append("Typical tool / call sequence: " + " -> ".join(tools[:12]))
+    if snippets:
+        lines.append("")
+        lines.append("Reusable snippet:")
+        lines.append("```")
+        lines.append(snippets[0][:600])
+        lines.append("```")
+    if not tools and not snippets:
+        # no code/tools: keep a trimmed exemplar completion as the scaffold
+        sample = (exemplars[0].get("completion", "") or "").strip()
+        if sample:
+            lines.append("")
+            lines.append("Reference solution shape:")
+            lines.append(sample[:600])
+    return "\n".join(lines)[:max_chars]
+
+
+# ============================================================================
 # Skill (一个 cluster 的统计)
 # ============================================================================
 
@@ -76,14 +133,26 @@ class Skill:
     - recommend_cheapest_viable_model(candidates, min_rate): 推荐最便宜可用模型
     """
 
+    MAX_EXEMPLARS = 8
+
     def __init__(self, signature: str):
         self.signature = signature
         # {model_id: [successes, total]}
         self.stats: Dict[str, List[int]] = defaultdict(lambda: [0, 0])
         self.history: List[Dict] = []  # 完整事件记录
+        # --- procedural skill fields (review item 2, 2026-05-21) ---
+        # A skill is no longer just a success-rate counter. It also accumulates
+        # successful trajectories (exemplars) and a distilled, reusable
+        # "procedure" (how to solve this cluster: tool-use steps, domain policy,
+        # reusable code snippets, agent sub-workflow). The stats above still
+        # drive routing; these fields make the skill teachable to the small
+        # model and inspectable by a human.
+        self.exemplars: List[Dict] = []   # [{task_id, prompt, completion, model}]
+        self.procedure: str = ""          # distilled reusable scaffold
+        self.procedure_source: str = ""   # "" | "heuristic" | "llm"
 
     def update(self, model_id: str, success: bool, task_id: str = ""):
-        """记录一次调用结果"""
+        """记录一次调用结果 (stats only — exemplars via add_exemplar)"""
         self.stats[model_id][1] += 1
         if success:
             self.stats[model_id][0] += 1
@@ -92,6 +161,38 @@ class Skill:
             "model": model_id,
             "success": success,
         })
+
+    def add_exemplar(self, prompt: str, completion: str, model_id: str,
+                     task_id: str = "") -> None:
+        """Store a successful trajectory for this cluster (capped, most-recent)."""
+        if not prompt or not completion:
+            return
+        self.exemplars.append({
+            "task_id": task_id,
+            "prompt": prompt,
+            "completion": completion,
+            "model": model_id,
+        })
+        if len(self.exemplars) > self.MAX_EXEMPLARS:
+            self.exemplars = self.exemplars[-self.MAX_EXEMPLARS:]
+
+    def distill_procedure(self, distiller=None) -> str:
+        """Induce a reusable procedure from the accumulated exemplars.
+
+        distiller: optional callable (signature, exemplars) -> str. When given
+        (e.g. an LLM-backed summariser, the "agent sub-workflow" path), it
+        produces the procedure. When None, a no-API heuristic extracts reusable
+        code snippets + tool-call patterns + a domain hint from the exemplars.
+        """
+        if not self.exemplars:
+            return self.procedure
+        if distiller is not None:
+            self.procedure = distiller(self.signature, self.exemplars)
+            self.procedure_source = "llm"
+        else:
+            self.procedure = _heuristic_procedure(self.signature, self.exemplars)
+            self.procedure_source = "heuristic"
+        return self.procedure
 
     def model_success_rate(
         self, model_id: str, use_laplace: bool = True
@@ -155,16 +256,22 @@ class Skill:
             "signature": self.signature,
             "stats": {mid: list(v) for mid, v in self.stats.items()},
             "history": self.history,
+            "exemplars": self.exemplars,
+            "procedure": self.procedure,
+            "procedure_source": self.procedure_source,
         }
 
     @classmethod
     def from_dict(cls, data: Dict) -> "Skill":
-        """从 JSON 反序列化"""
+        """从 JSON 反序列化 (tolerates old files without procedural fields)"""
         s = cls(data["signature"])
         s.stats = defaultdict(lambda: [0, 0])
         for mid, v in data["stats"].items():
             s.stats[mid] = list(v)
         s.history = data.get("history", [])
+        s.exemplars = data.get("exemplars", [])
+        s.procedure = data.get("procedure", "")
+        s.procedure_source = data.get("procedure_source", "")
         return s
 
 
@@ -184,11 +291,38 @@ class SkillBook:
             self.skills[signature] = Skill(signature)
         return self.skills[signature]
 
-    def update(self, prompt: str, model_id: str, success: bool, task_id: str = ""):
-        """便利方法: 从 prompt 抽 signature 再更新"""
+    def update(self, prompt: str, model_id: str, success: bool, task_id: str = "",
+               completion: str = ""):
+        """便利方法: 从 prompt 抽 signature 再更新。
+
+        completion: when the call SUCCEEDED and a completion is provided, the
+        trajectory is also stored as an exemplar (feeds procedure distillation).
+        Backward compatible — omitting it preserves the old stats-only behaviour.
+        """
         sig = extract_signature(prompt)
         skill = self.get_or_create(sig)
         skill.update(model_id, success, task_id)
+        if success and completion:
+            skill.add_exemplar(prompt, completion, model_id, task_id)
+
+    def get_procedure(self, prompt: str) -> str:
+        """Return the distilled procedure for the prompt's cluster (or '')."""
+        skill = self.skills.get(extract_signature(prompt))
+        return skill.procedure if skill else ""
+
+    def distill_all(self, distiller=None) -> int:
+        """(Re)distill procedures for every skill that has exemplars.
+
+        distiller: optional (signature, exemplars) -> str callable (e.g. an
+        LLM-backed "agent sub-workflow" summariser). None => no-API heuristic.
+        Returns the number of skills given a non-empty procedure.
+        """
+        n = 0
+        for skill in self.skills.values():
+            proc = skill.distill_procedure(distiller=distiller)
+            if proc:
+                n += 1
+        return n
 
     def recommend(
         self,

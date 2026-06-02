@@ -240,3 +240,75 @@ So: the evolve loop is now genuinely closed on routing, oracle outcomes, and
 SkillBook learning. The only remaining gaps are the one-line colleague
 `SCALING_TRAIN_FILE` hook for LLM SFT, and the (separately-scoped) richer-skills
 redesign of `src/skills.py`.
+
+---
+
+# Round 4 (2026-05-21) — remaining two items done
+
+## (a) LLM SFT now actually consumes per-cycle traces (teammate hook landed)
+
+Previously `scaling_traces` staged the data but exited because the colleague
+pipeline had no external-train-file hook. That hook is now implemented:
+
+- `train_all.sh` gains `SCALING_TRAIN_FILE_STAGE2`: when set, it converts +
+  validates THAT file (stage-2 row format) through the colleague's own
+  `convert_to_prompt_completion` instead of the fixed `stage2_v1/train.jsonl`,
+  and forces a cache reconvert. Additive — unset => byte-for-byte original.
+- `tau2_train_wrapper.sh` `scaling_traces` mode now **augments** (does not
+  replace): it concatenates the colleague `stage2_v1/train.jsonl` with this
+  cycle's hard-example rows and points `SCALING_TRAIN_FILE_STAGE2` at the
+  combined file. Training on only ~12-100 new pairs would be degenerate;
+  mixing keeps the base corpus and adds the evolve signal. Still fails loudly
+  (no silent corpus fallback).
+
+So the LLM track is now fully closed: per-cycle hard examples reach SFT,
+validated by the colleague's chat-template checks.
+
+## (b) Richer procedural skills implemented in `src/skills.py`
+
+`Skill` is no longer only a success-rate counter. Added (backward compatible —
+old skillbook.json files load fine):
+
+- `exemplars`: capped list of successful `(prompt, completion, model)` traces.
+- `procedure` + `procedure_source`: a distilled, reusable scaffold for the
+  cluster (how to solve it: tool-use sequence, reusable code snippet, reference
+  solution shape).
+- `add_exemplar(...)`, `distill_procedure(distiller=None)` and a module-level
+  no-API `_heuristic_procedure` (extracts fenced code blocks + tool-call /
+  `<tool>` sequences). Pass a `distiller` callable for the full LLM-backed
+  "agent sub-workflow" induction (tool-use steps / domain policy) — the hook is
+  in place.
+- `SkillBook.update(..., completion=...)` stores the exemplar on success;
+  `SkillBook.distill_all(distiller=None)` (re)distills every cluster;
+  `SkillBook.get_procedure(prompt)` retrieves the scaffold for serving.
+
+Phase 2 of `run_full_pipeline.sh` now feeds the large model's completion into
+the SkillBook and calls `distill_all()` each cycle, reporting
+`procedures_distilled=N`.
+
+Verified: distillation pulls code snippets + tool sequences from completions;
+save/load round-trips the procedural fields; `get_procedure` returns the
+scaffold.
+
+## Loop status — final
+
+| Loop element | Closed? |
+| --- | --- |
+| Phase 1 routes with cycle-(k-1) router + SkillBook | ✅ |
+| Phase 1 small model = cycle-(k-1) adapter | ✅ |
+| Oracle both-model outcomes (force_both) | ✅ |
+| SkillBook learns from policy outcomes | ✅ |
+| Router trains on clean labels | ✅ |
+| LLM SFT consumes per-cycle traces | ✅ (augments colleague corpus via SCALING_TRAIN_FILE_STAGE2) |
+| Richer procedural skills | ✅ (heuristic distillation; LLM distiller hook ready) |
+
+All review items from rounds 1-4 are addressed. The remaining enhancement is
+an LLM-backed `distiller` for higher-quality procedure induction (vs the no-API
+heuristic), which is a quality upgrade, not a correctness gap.
+
+## Files touched (round 4)
+
+- `experiments/tau2_stage2/code/training/orchestration/train_all.sh` — SCALING_TRAIN_FILE_STAGE2 hook
+- `experiments/scaling/tau2_train_wrapper.sh` — scaling_traces augments + uses hook
+- `src/skills.py` — procedural skills (exemplars, procedure, distillation)
+- `scaling/run_full_pipeline.sh` — Phase 2 feeds completions + distills
