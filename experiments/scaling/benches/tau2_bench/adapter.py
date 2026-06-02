@@ -105,6 +105,10 @@ class Adapter:
             "small_cost": small_res["cost"],
             "large_cost": large_res.get("cost", 0.0),
             "prompt": task.get("prompt", ""),
+            # completion text is required by traces_to_sft.py for LLM SFT
+            # (review 2026-05-21: per-cycle traces must feed LLM training).
+            "small_completion": small_res.get("completion", ""),
+            "large_completion": large_res.get("completion", ""),
         }
 
     # ----------------------------------------------------------- internals
@@ -148,26 +152,45 @@ class Adapter:
         """
         try:
             res = self._tau2_adapter.run_task(task["_raw"], student_model=model)
+            # Best-effort completion extraction for SFT. The colleague's
+            # run_task result shape may differ; patch the keys here if so.
+            completion = ""
+            for k in ("completion", "final_answer", "answer", "assistant_text", "output"):
+                v = res.get(k)
+                if isinstance(v, str) and v.strip():
+                    completion = v
+                    break
+            if not completion:
+                # tau2 trajectories are turn lists; join assistant turns if present.
+                traj = res.get("trajectory") or res.get("messages")
+                if isinstance(traj, list):
+                    parts = [m.get("content", "") for m in traj
+                             if isinstance(m, dict) and m.get("role") == "assistant"]
+                    completion = "\n".join(p for p in parts if p)
             return {
                 "success": bool(res.get("evaluation", {}).get("passed", False)),
                 "cost": float(res.get("cost_total", 0.0)),
+                "completion": completion,
                 "raw": res,
             }
         except Exception as e:  # noqa: BLE001 — surface as failed task, log
-            return {"success": False, "cost": 0.0, "error": str(e)}
+            return {"success": False, "cost": 0.0, "completion": "", "error": str(e)}
 
     def _mock_run(self, task: dict, small_model: str, large_model: str, sig: str, cycle: int) -> dict:
         """Deterministic mock for smoke tests."""
         h = int(hashlib.md5(f"{task['task_id']}|{cycle}".encode()).hexdigest(), 16)
         small_ok = (h %10) < 6        # small succeeds ~60%!
         large_ok = (h % 10) < 9        # large succeeds ~90%
+        prompt = task.get("prompt", "")
         if small_ok:
             return {
                 "task_id": task["task_id"], "signature": sig,
                 "decision": "probe:small→small_OK", "attempts": 1, "attempts_count": 1,
                 "final_success": True, "final_model": small_model, "total_cost": 0.001,
                 "round": cycle, "small_success": True, "large_success": False,
-                "small_cost": 0.001, "large_cost": 0.0, "prompt": task.get("prompt", ""),
+                "small_cost": 0.001, "large_cost": 0.0, "prompt": prompt,
+                "small_completion": f"[mock small completion for {task['task_id']}]",
+                "large_completion": "",
             }
         return {
             "task_id": task["task_id"], "signature": sig,
@@ -176,5 +199,8 @@ class Adapter:
             "final_success": large_ok, "final_model": large_model,
             "total_cost": 0.011, "round": cycle,
             "small_success": False, "large_success": large_ok,
-            "small_cost": 0.001, "large_cost": 0.01, "prompt": task.get("prompt", ""),
+            "small_cost": 0.001, "large_cost": 0.01, "prompt": prompt,
+            "small_completion": "",
+            "large_completion": (f"[mock large completion for {task['task_id']}]"
+                                 if large_ok else ""),
         }

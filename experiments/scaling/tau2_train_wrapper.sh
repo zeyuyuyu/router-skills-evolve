@@ -56,19 +56,99 @@ case "$MODE" in
     ;;
 
   scaling_traces)
-    # TODO(teammate): wire TRAINING_DATA (jsonl with prompt + completion +
-    # bench-specific tools) into colleague's data_processed/stage2_v1/ layout.
-    # Specifically:
-    #   1. Convert TRAINING_DATA jsonl rows to colleague's prompt-completion
-    #      format (see code/training/data/convert_to_prompt_completion.py).
-    #   2. Drop into data_processed/stage2_v1/train.jsonl.
-    #   3. Either: (a) modify RUN_CONFIG's data.n_train_runs to match, or
-    #      (b) regenerate _build_meta.json so the validator passes.
-    # See docs/SCALING_TRAINING_DATA_INJECTION.md (also TODO) for the precise
-    # format mapping.
-    echo "[tau2_train_wrapper] MODE=scaling_traces not yet wired — see TODO in this script."
-    echo "Falling back to colleague_corpus mode for this run."
-    MODE=colleague_corpus exec "$0" "$@"
+    # Train on THIS cycle's extracted traces (closes the evolve loop on the LLM
+    # track). Review 2026-05-21: the old stub silently fell back to
+    # colleague_corpus, so per-cycle traces never reached SFT and the bug was
+    # invisible. This mode now (a) requires non-empty TRAINING_DATA, (b) converts
+    # it through the colleague's convert_to_prompt_completion.py, and (c) FAILS
+    # LOUDLY if anything is missing — it never silently trains on the wrong data.
+    : "${TRAINING_DATA:?MODE=scaling_traces requires TRAINING_DATA (set by phase3)}"
+    if [[ ! -s "$TRAINING_DATA" ]]; then
+      echo "[tau2_train_wrapper] FATAL: TRAINING_DATA=$TRAINING_DATA is missing or empty."
+      echo "  This cycle produced no SFT pairs. Likely causes:"
+      echo "   - no hard tasks (small-fail + large-OK) this cycle, or"
+      echo "   - the bench adapter did not record 'large_completion' in traces."
+      echo "  See docs/PIPELINE_AUDIT.md. Refusing to silently fall back to the"
+      echo "  fixed colleague corpus (that is the bug we just fixed)."
+      exit 4
+    fi
+
+    n_pairs=$(wc -l < "$TRAINING_DATA" | tr -d ' ')
+    echo "[tau2_train_wrapper] MODE=scaling_traces  $n_pairs SFT pairs from $TRAINING_DATA"
+
+    STAGE_DIR="$TRAIN_OUTPUT_DIR/scaling_sft"
+    mkdir -p "$STAGE_DIR"
+    STAGE2_ROWS="$STAGE_DIR/stage2_rows.jsonl"
+    TRL_OUT="$STAGE_DIR/train_prompt_completion.jsonl"
+
+    # 1. {prompt, completion} -> colleague stage-2 row format
+    #    ({messages, _target_index, _p, domain}). _target_index points at the
+    #    assistant turn so convert_to_prompt_completion masks the user prompt.
+    "${PYTHON:-python3}" - "$TRAINING_DATA" "$STAGE2_ROWS" "${TAU2_DOMAIN:-retail}" <<'PY'
+import json, sys
+src, dst, domain = sys.argv[1], sys.argv[2], sys.argv[3]
+n = 0
+with open(src) as fh, open(dst, "w") as out:
+    for line in fh:
+        line = line.strip()
+        if not line:
+            continue
+        r = json.loads(line)
+        prompt = r.get("prompt") or r.get("instruction") or ""
+        completion = r.get("completion") or r.get("output") or ""
+        if not prompt or not completion:
+            continue
+        row = {
+            "messages": [
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": completion},
+            ],
+            "_target_index": 1,
+            "domain": domain,
+            "_p": {"source": "scaling_traces", "task_id": r.get("task_id", "")},
+        }
+        out.write(json.dumps(row, ensure_ascii=False) + "\n")
+        n += 1
+print(f"[scaling_traces] wrote {n} stage-2 rows -> {dst}", file=sys.stderr)
+PY
+
+    # 2. Run the colleague's converter to produce TRL prompt/completion + tools.
+    CONVERT="$BUNDLE_ROOT/code/training/data/convert_to_prompt_completion.py"
+    if [[ ! -f "$CONVERT" ]]; then
+      echo "[tau2_train_wrapper] FATAL: colleague converter not found at $CONVERT"
+      echo "  Merge codex/tau2-stage2-training-eval, or run with MODE=colleague_corpus."
+      exit 4
+    fi
+    "${PYTHON:-python3}" "$CONVERT" --input "$STAGE2_ROWS" --output "$TRL_OUT" \
+      2>&1 | tee "$STAGE_DIR/convert.log" || {
+        echo "[tau2_train_wrapper] FATAL: convert_to_prompt_completion.py failed."
+        echo "  Inspect $STAGE_DIR/convert.log. The colleague converter's --input/--output"
+        echo "  flags or domain_assets path may differ; this is the teammate hook."
+        exit 4
+      }
+
+    # 3. Hand off to the colleague pipeline pointed at our data.
+    #    The pipeline must accept an external train file. If your run config does
+    #    not yet support SCALING_TRAIN_FILE, this fails loudly (no silent corpus).
+    if ! grep -rq "SCALING_TRAIN_FILE" "$BUNDLE_ROOT/code/training/orchestration/" 2>/dev/null; then
+      echo "[tau2_train_wrapper] DATA READY but pipeline data-override not wired."
+      echo "  Converted TRL data is at: $TRL_OUT  ($n_pairs pairs)"
+      echo "  TEAMMATE HOOK (1 line): make train_pipeline.sh honour"
+      echo "    SCALING_TRAIN_FILE=\$TRL_OUT  ->  data_processed/stage2_v1/train.jsonl"
+      echo "  Until then this run is intentionally NOT falling back to the fixed"
+      echo "  colleague corpus. Set TAU2_TRAIN_MODE=colleague_corpus to opt out."
+      exit 5
+    fi
+    SCALING_TRAIN_FILE="$TRL_OUT" PLAN_RUN_FILTER="$RUN_CONFIG" \
+      bash "$BUNDLE_ROOT/code/training/orchestration/train_pipeline.sh"
+    src="$BUNDLE_ROOT/train_outputs/$RUN_CONFIG"
+    if [[ -d "$src/checkpoint-best" ]]; then
+      ln -sfn "$src/checkpoint-best" "$TRAIN_OUTPUT_DIR/checkpoint-best"
+      echo "[tau2_train_wrapper] scaling_traces trained; linked $src/checkpoint-best"
+    else
+      echo "[tau2_train_wrapper] FATAL: training produced no checkpoint-best at $src"
+      exit 3
+    fi
     ;;
 
   *)

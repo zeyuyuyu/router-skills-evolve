@@ -268,16 +268,25 @@ phase3_llm_train() {
 
   echo "  [Phase 3] LLM training — cycle=$cycle model=$MODEL_SWEEP"
 
-  $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/extract_training_data.py" \
+  # Convert THIS cycle's traces into SFT prompt/completion pairs.
+  # Use the bench-agnostic traces_to_sft.py (reads `prompt` + `large_completion`
+  # straight from the trace). The old experiments/extract_training_data.py is
+  # HumanEval-coupled (looks tasks up in HumanEval.jsonl and re-queries the
+  # large model) and produces nothing for tau2/SWE traces — review 2026-05-21.
+  $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/scaling/traces_to_sft.py" \
     --traces "$out/traces.jsonl" \
     --output "$out/training_data.jsonl" \
     2>&1 | tee "$out/phase3_extract.log"
 
+  # Default to scaling_traces so the per-cycle data actually trains the model.
+  # (Previously defaulted to colleague_corpus, which ignored TRAINING_DATA — the
+  #  evolve loop never reached LLM SFT. Set TAU2_TRAIN_MODE=colleague_corpus to
+  #  restore the old fixed-corpus behaviour.)
   TRAINING_DATA="$out/training_data.jsonl" \
   TRAIN_OUTPUT_DIR="$out/llm_adapter" \
   RUN_CONFIG="$MODEL_SWEEP" \
   BUNDLE_ROOT="$BUNDLE_ROOT" \
-  MODE="${TAU2_TRAIN_MODE:-colleague_corpus}" \
+  MODE="${TAU2_TRAIN_MODE:-scaling_traces}" \
     bash "$REPO_ROOT/experiments/scaling/tau2_train_wrapper.sh" \
     2>&1 | tee "$out/phase3_train.log"
 }

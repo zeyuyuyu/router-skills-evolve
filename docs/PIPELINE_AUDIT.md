@@ -108,3 +108,77 @@ next experiment cycle can scope it.
 
 - `experiments/scaling/collect_traces.py` — closed-loop routing
 - `scaling/run_full_pipeline.sh` — pass `--router` / `--skillbook` at cycle ≥ 1
+
+---
+
+# Scaling pipeline audit — round 2 (2026-05-21, LLM track)
+
+Second review finding: *"New traces feed SkillBook and router training and
+generate `training_data.jsonl`, but they never enter LLM SFT. And
+`experiments/extract_training_data.py` is HumanEval-era code — it loads
+HumanEval.jsonl, finds small-fail/large-OK hard tasks, and re-generates code
+with the large model. It is NOT a tau2-trajectory → prompt/completion
+converter. So each cycle's new traces never train the model."*
+
+## Finding (confirmed — two coupled bugs)
+
+1. **`extract_training_data.py` is HumanEval-coupled.** It calls
+   `load_humaneval_tasks()` and looks tasks up by `task_id` in
+   `data/HumanEval.jsonl`, then re-queries the large model via
+   `src.solve_task`. On tau2/SWE traces the lookup misses → it produces nothing
+   usable. It is a HumanEval regenerator, not a trace converter.
+
+2. **`tau2_train_wrapper.sh` ignored the per-cycle data.** Phase 3 invoked the
+   wrapper with `MODE=colleague_corpus` (the default), which trains on the
+   colleague's fixed `stage2_v1` corpus and **explicitly ignores
+   `TRAINING_DATA`**. The `scaling_traces` mode was a stub that *silently fell
+   back* to `colleague_corpus`. Net effect: every cycle trained the LLM on the
+   same fixed corpus; the evolve loop never reached the LLM track, and the
+   silent fallback made it invisible.
+
+## Fix
+
+- **New converter `experiments/scaling/traces_to_sft.py`** (replaces the
+  HumanEval-coupled `extract_training_data.py` for the scaling pipeline). It
+  reads the trace schema directly, keeps small-fail/large-OK rows, and emits
+  `{prompt, completion}` SFT pairs sourced from the large model's completion
+  already in the trace — no HumanEval lookup, no extra model calls, any bench.
+
+- **Adapters now record completions.** `run_task_pair` writes
+  `small_completion` / `large_completion`; the tau2 `_run_one` extracts the
+  completion best-effort from the colleague's `run_task` result (explicit
+  key list + trajectory-join fallback); the mock adapter emits synthetic
+  completions so the data flow is smoke-testable.
+
+- **Phase 3 rewired.** `run_full_pipeline.sh` Phase 3 now calls
+  `traces_to_sft.py` (not `extract_training_data.py`) and defaults to
+  `MODE=scaling_traces` (was `colleague_corpus`). Set
+  `TAU2_TRAIN_MODE=colleague_corpus` to restore the fixed-corpus behaviour.
+
+- **`scaling_traces` no longer silently falls back.** It now (a) requires
+  non-empty `TRAINING_DATA`, (b) converts `{prompt,completion}` → the
+  colleague stage-2 row format → runs the colleague's
+  `convert_to_prompt_completion.py` to TRL format, and (c) **fails loudly** with
+  the staged data path + the exact one-line teammate hook if the colleague
+  pipeline does not yet honour an external train file (`SCALING_TRAIN_FILE`).
+  Failing loudly is deliberate: silently training on the wrong corpus is the
+  bug we just removed.
+
+Verified in mock: 30 traces → 12 hard tasks → 12 SFT pairs, completions
+sourced from `large_completion`. The 2-phase smoke (phases 1,2,4,5 + closed
+loop) still passes.
+
+## Remaining teammate hook
+
+The colleague's `train_pipeline.sh` must accept an external train file
+(`SCALING_TRAIN_FILE` → `data_processed/stage2_v1/train.jsonl`, then regen the
+build-meta the chat-template validator checks). Until that one line lands,
+`scaling_traces` stages the converted TRL data and exits non-zero with
+instructions rather than training on the wrong data.
+
+## Files touched (round 2)
+
+- `experiments/scaling/traces_to_sft.py` — NEW bench-agnostic converter
+- `experiments/scaling/benches/tau2_bench/adapter.py` — record completions
+- `experiments/scaling/tau2_train_wrapper.sh` — real `scaling_traces` mode, no silent fallback
+- `scaling/run_full_pipeline.sh` — Phase 3 uses traces_to_sft.py + scaling_traces default
