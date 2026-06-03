@@ -1,0 +1,8 @@
+
+[2026-06-03 02:06:14 UTC] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) is unreachable from this remote execution environment.
+Network policy returned "Host not in allowlist" on TCP connect attempt to port 50507.
+sshpass and openssh-client are both present; the block is at the network layer.
+No state was read; no actions were taken. All checks (queue, GPU, disk, artifacts) skipped.
+Next steps: ensure shepherd is run from an environment with outbound access to 117.74.66.181:50507,
+or add A800 to the allowlist for this Claude Code web session.
