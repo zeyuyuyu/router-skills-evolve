@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-06-01 by daily pipeline.
+Pending queue update — last updated 2026-06-03 by daily pipeline.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
 2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
 2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4),
-2026-05-30 daily (2), 2026-05-31 daily (2), 2026-06-01 daily (2).
-Total pending: 47 experiments.
+2026-05-30 daily (2), 2026-05-31 daily (2), 2026-06-01 daily (2), 2026-06-03 daily (2).
+Total pending: 49 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -2399,6 +2399,189 @@ NEW_EXPERIMENTS = [
             "quality_metrics": ["cyclomatic_complexity", "line_count", "flake8_errors"],
             "quality_cc_max": 10,
             "quality_lc_max": 80,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-06-03 batch (2 experiments — queue > 20 cap, A800 day 20 offline) ──
+    {
+        "id": "exp_2026_06_03_001_dra_grpo_smi_diversity_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "DRA-GRPO: Exploring Diversity-Aware Reward Adjustment for R1-Zero-Like Training "
+            "(arxiv:2505.09655, Huang et al., May 2025) identifies a Diversity-Quality "
+            "Inconsistency in standard GRPO: scalar correctness rewards are non-injective "
+            "with respect to semantic content — distinct reasoning paths receive identical "
+            "rewards — causing policy collapse into a narrow set of dominant solution modes. "
+            "The paper proposes Diversity-aware Reward Adjustment (DRA), a plug-and-play "
+            "framework that calibrates reward signals using the SEMANTIC DENSITY of sampled "
+            "rollout groups via Submodular Mutual Information (SMI). For a group of G=4 "
+            "rollouts, DRA computes pairwise sentence-embedding cosine similarities, then "
+            "uses a monotone submodular coverage function to assign each rollout a 'marginal "
+            "coverage gain' relative to all previously counted rollouts in the group. The "
+            "adjusted reward for rollout i is: "
+            "  adjusted_reward_i = reward_i * (1 + dra_lambda * smi_marginal_gain_i / Z) "
+            "where Z normalises across the group. A rollout that is semantically unique "
+            "among its peers receives a higher effective reward than a semantically "
+            "redundant rollout with identical pass/fail status. The SMI formulation "
+            "guarantees diminishing returns: the first diverse rollout gets the largest "
+            "boost, subsequent ones get progressively less. "
+            "DRA-GRPO achieves 58.2% average accuracy on 5 math benchmarks with "
+            "DeepSeek-R1-Distill-Qwen-1.5B (7,000 samples, $55 cost), outperforming "
+            "strong baselines including vanilla GRPO and several diversity variants. "
+            "MECHANISTIC CASE FOR OUR PROJECT: "
+            "Our 27/100 mixed-outcome MBPP tasks show exactly the DRA-targeted pathology: "
+            "G=4 rollouts for a given task converge on the same algorithmic pattern "
+            "(the model's dominant prior for that problem class), so 2-3 rollouts produce "
+            "virtually identical code. DRA-SMI would upweight the rare semantically-distinct "
+            "rollout — e.g., a dict-lookup solution vs. three linear-scan solutions for the "
+            "same task — pushing the policy away from its dominant mode. "
+            "DISTINCT FROM ALL 47 QUEUED EXPERIMENTS: "
+            "- vs. GCPO (EXP-036, 2026-05-29): GCPO rewards AST-structural uniqueness via "
+            "  SHA-256 of normalised AST parse. DRA-SMI uses SENTENCE EMBEDDING cosine "
+            "  similarity. A rollout can be AST-identical to another (same structure) yet "
+            "  semantically distant (different variable names, comments, type annotations) "
+            "  or AST-distinct yet semantically near (trivial variable rename). They "
+            "  measure orthogonal diversity axes. "
+            "- vs. VPO (EXP-038, 2026-05-30): VPO decomposes reward by test-case coverage "
+            "  vector (T-dimensional). DRA-SMI uses global semantic content similarity — "
+            "  entirely different from per-test-case pass/fail decomposition. "
+            "- vs. unlikeliness reward (EXP-046, 2026-06-01): Unlikeliness uses PER-TOKEN "
+            "  log-probability under the frozen BASE MODEL. DRA-SMI uses cosine similarity "
+            "  of full-rollout SENTENCE EMBEDDINGS (no base model forward pass needed; "
+            "  uses a frozen MiniLM encoder instead). These measure different things: "
+            "  token-probability rarity vs. semantic content distinctiveness. "
+            "- vs. DRA-GRPO (EXP-018, focal advantage): Focal advantage reweights tasks "
+            "  by task-level success rate. DRA-SMI reweights rollouts within a group by "
+            "  semantic distinctiveness. These are orthogonal. "
+            "IMPLEMENTATION: After each group of G=4 rollouts is generated, encode all "
+            "G rollouts using a frozen sentence-transformers/all-MiniLM-L6-v2 encoder "
+            "(22M params, 0.2s per batch of 4 on GPU), compute pairwise cosine similarity "
+            "matrix (4×4), compute SMI marginal gain for each rollout as: "
+            "  gain_i = (G - 1 - sum_j≠i sim(i,j)) / (G - 1) "
+            "  (linear coverage: gain=1 if i is orthogonal to all others, gain=0 if "
+            "  perfectly parallel). Adjust: effective_reward_i = reward_i * (1 + 0.5 * gain_i). "
+            "Add dra_reward_adjustment=True, dra_encoder='all-MiniLM-L6-v2', dra_lambda=0.5 "
+            "to grpo_continual spec. ~35 new lines. MiniLM encoder fits in <0.5GB VRAM. "
+            "Estimated wall-clock: ~95 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "dra_reward_adjustment": True,
+            "dra_encoder": "sentence-transformers/all-MiniLM-L6-v2",
+            "dra_lambda": 0.5,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_06_03_002_reskill_skill_library_grpo_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "ReSkill: Reconciling Skill Creation with Policy Optimization in Agentic RL "
+            "(arxiv:2606.01619, He, Lin, Han et al., submitted June 1, 2026) addresses a "
+            "fundamental limitation in skill-augmented RL: existing methods decouple skill "
+            "creation from policy optimization, risking adoption of skills that conflict with "
+            "the evolving policy. ReSkill introduces an RL-in-the-loop skill creation "
+            "framework that exploits GRPO's group-wise rollout structure to jointly optimize "
+            "skills and policy. The core mechanism is an assertion-driven skill creator: "
+            "after every K gradient steps, the failing rollouts from mixed-outcome tasks are "
+            "analyzed for common assertion failure patterns (e.g., IndexError on empty list, "
+            "wrong comparison operator, off-by-one in range boundary). These patterns are "
+            "condensed into conditional, trigger-based 'skills' — concise natural-language "
+            "directives injected into the system prompt for subsequent rollout batches: "
+            "  Skill_t: 'When iterating over a list, always handle the empty-list edge case.' "
+            "  Skill_t: 'When computing min/max of a sequence, check if the sequence is empty.' "
+            "Crucially, ReSkill uses within-group rollout sampling to compare skill versions: "
+            "half the group (G=2) samples with the current skill library; the other half "
+            "samples without (or with a previous version). The policy update selects the "
+            "better-performing group and updates the skill library accordingly. This makes "
+            "skill revision a gradient-following process, not an offline heuristic. "
+            "RELEVANCE TO router-skills-evolve: Our project is literally named for the "
+            "joint evolution of router + skills. The ReSkill framework directly implements "
+            "the 'skills-evolve' component: skills are not static artifacts but co-trained "
+            "with the GRPO policy. Our MBPP setup provides an ideal testbed — we have 27 "
+            "mixed-outcome tasks where assertion failures can be meaningfully analyzed for "
+            "recurring patterns. If the 1.5B model consistently fails IndexError patterns "
+            "across multiple MBPP tasks (e.g., tasks 17, 43, 88 all involve list boundary "
+            "conditions), a single skill injected into the system prompt may unlock all "
+            "three simultaneously, producing a step-change improvement vs. the +2pp plateau. "
+            "DISTINCT FROM ALL 47 QUEUED EXPERIMENTS: "
+            "- vs. Scaf-GRPO (EXP-023, 2026-05-18): Scaf-GRPO injects TASK-SPECIFIC static "
+            "  tiered hints when a task's rolling success rate = 0 (stagnation detection). "
+            "  ReSkill builds TASK-AGNOSTIC skills that generalize across multiple tasks, "
+            "  revised dynamically by GRPO rollout analysis — not per-task stagnation logic. "
+            "  Scaf-GRPO hints are pre-defined (abstract→concrete); ReSkill skills are "
+            "  generated from live failure mode analysis each revision cycle. "
+            "- vs. MURPHY (EXP-030, 2026-05-26): MURPHY uses turn-by-turn EXECUTION FEEDBACK "
+            "  (stderr/traceback) in a multi-turn self-correction loop. ReSkill extracts "
+            "  CROSS-TASK PATTERNS from failure modes and builds a persistent skill library. "
+            "  MURPHY's feedback is task-local and ephemeral; ReSkill's skills are global "
+            "  and persistent across all tasks and training steps. "
+            "- vs. curriculum-GRPO (EXP-001, 2026-05-15): Curriculum orders tasks by "
+            "  difficulty; ReSkill does not change task ordering, it changes the system "
+            "  prompt for all tasks by injecting generalizable skills. "
+            "- No prior experiment in the queue builds a dynamic, task-agnostic skill "
+            "  library from GRPO rollout failures during training. This is the first "
+            "  experiment testing joint skill-library + policy co-training. "
+            "IMPLEMENTATION APPROXIMATION (runner.py extension): "
+            "  algorithm='reskill', skill_update_freq=15, skill_max_library_size=8, "
+            "  skill_revision_model='self' "
+            "Every skill_update_freq=15 gradient steps: "
+            "  1. Collect all failing rollouts from the last 15 steps on mixed-outcome tasks. "
+            "  2. Parse common exception types and assertion messages from execution output. "
+            "  3. Use the model itself (skill_revision_model='self') in inference mode to "
+            "     summarize the top-3 recurring failure patterns into 1-sentence skills. "
+            "  4. Replace the system prompt prefix with the skill library for the next 15 "
+            "     steps of rollout sampling (but not for policy gradient — gradient uses the "
+            "     no-skill baseline to prevent prompt-dependency). "
+            "  5. If the skill-library rollouts consistently outperform no-skill rollouts "
+            "     over 3 consecutive skill cycles, permanently add the skill to the library "
+            "     (up to skill_max_library_size=8). "
+            "The self-revision call is inference-only (no gradients), adds ~8s per 15-step "
+            "cycle (200 tasks / 15 steps ≈ 13 cycles → ~104s overhead total). "
+            "Estimated wall-clock: ~100 minutes."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "algorithm": "reskill",
+            "skill_update_freq": 15,
+            "skill_max_library_size": 8,
+            "skill_revision_model": "self",
             "eval_limit": 100,
             "max_new_tokens": 192,
         },
