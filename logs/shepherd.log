@@ -84,3 +84,9 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Actions taken: none (cannot assess state without server access).
   Steps skipped: state.json read, GPU check, queue/running analysis, disk check, artifact health, all conditional triggers.
   Next shepherd run should retry connectivity before assuming permanent failure.
+
+[2026-06-03 22:06:25 UTC] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s.
+  Actions taken: none (cannot read state, cannot write remote log, cannot trigger experiments).
+  Note: SSH client was missing from this container; installed openssh-client 9.6p1-3ubuntu13 + sshpass 1.09-1 successfully. The host itself is not responding.
+  Recommendation: Check A800 network/firewall, confirm port 50507 is open and sshd is running.
