@@ -6,3 +6,8 @@ sshpass and openssh-client are both present; the block is at the network layer.
 No state was read; no actions were taken. All checks (queue, GPU, disk, artifacts) skipped.
 Next steps: ensure shepherd is run from an environment with outbound access to 117.74.66.181:50507,
 or add A800 to the allowlist for this Claude Code web session.
+[2026-06-03 08:06:09 UTC] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP connect to port 50507 timed out (20s).
+sshpass + openssh-client confirmed present; block is at the network layer (outbound policy).
+No state read; no actions taken. All checks (queue/running, GPU, disk, artifact health) skipped.
+Recommendations: (1) Run shepherd from a machine with direct A800 access, or (2) open port 50507 in the web session network policy at https://code.claude.com/docs/en/claude-code-on-the-web.
