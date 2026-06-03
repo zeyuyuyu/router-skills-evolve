@@ -78,3 +78,9 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
 [2026-06-03T00:00:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Will retry on next 2-hour tick.
 [2026-06-03T06:06:30Z] SHEPHERD RUN FAILED — A800 unreachable. TCP connection to 117.74.66.181:50507 timed out (tested via nc and curl, timeout=10s). SSH client (openssh-client) was also unavailable in this container; paramiko was installed and attempted but also timed out. No state could be read; no actions taken. Will retry on next shepherd tick.
 [2026-06-03T14:11:44Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. All checks skipped. Will retry on next 2-hour shepherd tick.
+
+[2026-06-03T16:06:08Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP timeout after 10s.
+  Actions taken: none (cannot assess state without server access).
+  Steps skipped: state.json read, GPU check, queue/running analysis, disk check, artifact health, all conditional triggers.
+  Next shepherd run should retry connectivity before assuming permanent failure.
