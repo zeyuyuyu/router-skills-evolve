@@ -50,3 +50,14 @@ data/mbpp/
 models/
 hf_cache/
 results/
+
+# External clones / benches that pollute pytest collection
+UncommonRoute/
+uncommon_route/
+
+# Cloud-agent shepherd failure logs (operational noise)
+shepherd*.log
+shepherd_logs/
+shepherd_local_logs/
+shepherd_local_fallback/
+.shepherd/
