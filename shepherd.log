@@ -11,3 +11,11 @@ Reason: A800 (117.74.66.181:50507) unreachable — TCP connect to port 50507 tim
 sshpass + openssh-client confirmed present; block is at the network layer (outbound policy).
 No state read; no actions taken. All checks (queue/running, GPU, disk, artifact health) skipped.
 Recommendations: (1) Run shepherd from a machine with direct A800 access, or (2) open port 50507 in the web session network policy at https://code.claude.com/docs/en/claude-code-on-the-web.
+[2026-06-03 18:06:25 UTC] SHEPHERD RUN — FAILED
+Reason: A800 (117.74.66.181:50507) unreachable — TCP connect to port 50507 timed out (15s). This is the 3rd consecutive failure with the same cause.
+sshpass + openssh-client confirmed present; block is at the network layer (outbound egress policy of this Claude Code web session).
+No state read; no actions taken. All checks (queue/running/crashed, GPU, disk, artifact health) skipped.
+Action required: This shepherd CANNOT run from a Claude Code web session with the current network policy. Options:
+  (1) Run shepherd from a machine with direct A800 network access (e.g. a cron job on a bastion host).
+  (2) Configure the web session network policy to allow outbound TCP to 117.74.66.181:50507 — see https://code.claude.com/docs/en/claude-code-on-the-web.
+  (3) Set up an SSH tunnel or reverse proxy accessible from the public internet.
