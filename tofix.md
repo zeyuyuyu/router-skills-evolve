@@ -73,3 +73,37 @@ Fix direction: consider recording both oracle outcomes into stats while keeping 
 This can make the `skills` ablation variant silently degrade toward always-small.
 
 Fix direction: update `predict_skills` to parse the current `SkillBook.save()` schema.
+
+---
+
+## Resolution (2026-06-05)
+
+All five issues fixed. Verified by 2-cycle mock + `tests/test_scaling_smoke.py` (6 passing).
+
+1. **LLM training skipped after first cycle** — `train_all.sh` now force-retrains
+   (clears stale `STATUS`) whenever `SCALING_TRAIN_FILE_STAGE2` is set, so each
+   scaling cycle retrains on its fresh per-cycle data. Unset => original
+   STATUS=done idempotence preserved.
+
+2. **SkillBook stats broken by adapter-path model ids** — Phase 2 now records
+   stats under **canonical roles `small` / `large`**, not raw adapter paths.
+   `collect_traces._policy_decision` queries `can_downgrade_to_small("small")`.
+   Stats survive across cycles regardless of adapter checkpoint path.
+
+3. **Procedures distilled but unused at inference** — `traces_to_sft.py` gains
+   `--skillbook`; when given, the matched cluster's distilled procedure is
+   prepended to each SFT prompt (the small model now trains WITH the reusable
+   scaffold). Phase 3 passes the cycle's `skillbook.json`. Live-inference
+   injection remains an operator hook (`SkillBook.get_procedure`).
+
+4. **SkillBook learned policy outcome, not true capability** — Phase 2 now
+   ingests **both oracle outcomes** (`small_success` -> role `small`,
+   `large_success` -> role `large`, skipping `large_skipped` placeholders),
+   building the real per-signature capability table. Policy/deployment outcome
+   stays in the trace as metadata.
+
+5. **Ablation read the wrong SkillBook schema** — `run_e2e_ablation_simple.py`
+   `predict_skills` now parses the real `{"skills":[{signature, stats:{role:
+   [s,t]}}]}` schema (was doing `sb_data.get(sig)` on a dict whose only key is
+   `"skills"`, silently degrading the skills variant to always-small). Handles
+   canonical roles + legacy model-name keys.

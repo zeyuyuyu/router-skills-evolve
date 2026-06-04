@@ -242,22 +242,25 @@ with open("$out/traces.jsonl") as fh:
         except json.JSONDecodeError:
             continue
         prompt = t.get("prompt") or t.get("signature") or t.get("task_id", "")
-        # Prefer the POLICY outcome (what the evolved router+skillbook actually
-        # routed to) over the adapter's original small-first decision. Fall back
-        # to final_* for cycle-0 / non-closed-loop traces, or when the policy
-        # outcome is unknown (large_skipped). Review round 2, 2026-05-21.
-        if t.get("policy_final_model") and t.get("policy_final_success") is not None:
-            model = t["policy_final_model"]
-            succ = bool(t["policy_final_success"])
-        else:
-            model = t.get("final_model", "")
-            succ = bool(t.get("final_success", False))
-        # Procedural skills (review item 2): store the successful completion as
-        # an exemplar so the cluster's procedure can be distilled. Prefer the
-        # large model's completion (the teacher) for hard tasks.
-        completion = t.get("large_completion") or t.get("small_completion") or ""
-        if prompt and model:
-            sb.update(prompt, model, succ, t.get("task_id", ""), completion=completion)
+        if not prompt:
+            continue
+        tid = t.get("task_id", "")
+        # tofix.md #2 + #4: build the REAL capability table from BOTH oracle
+        # outcomes, keyed by CANONICAL ROLES ("small"/"large") rather than raw
+        # model ids / adapter paths (which change each cycle and break
+        # can_downgrade_to_small). The policy/deployment outcome stays in the
+        # trace as metadata; stats record true small-vs-large capability per
+        # signature. Exemplars attach to whichever role succeeded.
+        sm = t.get("small_success")
+        lg = t.get("large_success")
+        if isinstance(sm, bool):
+            sb.update(prompt, "small", sm, tid,
+                      completion=(t.get("small_completion", "") if sm else ""))
+        # large_skipped => large outcome is a placeholder, not real; skip it.
+        if isinstance(lg, bool) and not t.get("large_skipped", False):
+            sb.update(prompt, "large", lg, tid,
+                      completion=(t.get("large_completion", "") if lg else ""))
+        if isinstance(sm, bool) or isinstance(lg, bool):
             n += 1
 
 # Distill a reusable procedure per cluster from the accumulated exemplars.
@@ -291,9 +294,15 @@ phase3_llm_train() {
   # straight from the trace). The old experiments/extract_training_data.py is
   # HumanEval-coupled (looks tasks up in HumanEval.jsonl and re-queries the
   # large model) and produces nothing for tau2/SWE traces — review 2026-05-21.
+  # Pass this cycle's skillbook so distilled procedures get prepended to SFT
+  # prompts (tofix.md #3). skillbook.json is written by phase2 (SLR schedule
+  # runs Skills before LLM); guard in case a non-S-first schedule is used.
+  SKILLBOOK_ARG=""
+  [[ -f "$out/skillbook.json" ]] && SKILLBOOK_ARG="--skillbook $out/skillbook.json"
   $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/scaling/traces_to_sft.py" \
     --traces "$out/traces.jsonl" \
     --output "$out/training_data.jsonl" \
+    $SKILLBOOK_ARG \
     2>&1 | tee "$out/phase3_extract.log"
 
   # Default to scaling_traces so the per-cycle data actually trains the model.

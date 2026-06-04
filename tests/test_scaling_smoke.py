@@ -73,3 +73,62 @@ def test_skillbook_update_backward_compatible():
     sig = next(iter(sb.skills))
     assert sb.skills[sig].stats["small"] == [1, 1]
     assert sb.skills[sig].exemplars == []
+
+
+def test_predict_skills_reads_real_schema(tmp_path):
+    """tofix.md #5: predict_skills must parse {'skills':[...]} with stats roles."""
+    from src.skills import SkillBook
+    import importlib.util
+    sb = SkillBook()
+    # cluster where large clearly beats small -> needs_large True
+    for _ in range(5):
+        sb.update("translate this regex pattern please", "large", True)
+    sb.update("translate this regex pattern please", "small", False)
+    p = tmp_path / "skillbook.json"
+    sb.save(p)
+    # import the ablation module
+    spec = importlib.util.spec_from_file_location(
+        "rea", REPO / "experiments/scaling/run_e2e_ablation_simple.py")
+    rea = importlib.util.module_from_spec(spec); spec.loader.exec_module(rea)
+    sig = next(iter(sb.skills))
+    preds = rea.predict_skills([{"signature": sig}], p)
+    assert preds == [1], "large-dominant cluster should route large (not silently always-small)"
+
+
+def test_skillbook_canonical_roles():
+    """tofix.md #2: stats keyed by role survive across 'adapter path' changes."""
+    from src.skills import SkillBook
+    sb = SkillBook()
+    # cycle 0 + cycle 1 both record under canonical 'small'
+    sb.update("count the vowels in a string", "small", True, "t1")
+    sb.update("count the vowels in a string", "small", True, "t2")
+    sig = next(iter(sb.skills))
+    assert sb.skills[sig].can_downgrade_to_small("small", min_rate=0.8, min_samples=1) is True
+
+
+def test_traces_to_sft_injects_procedure(tmp_path):
+    """tofix.md #3: a cluster procedure is prepended to the SFT prompt."""
+    import subprocess
+    from src.skills import SkillBook
+    # build a skillbook with a procedure for the cluster of our hard task
+    sb = SkillBook()
+    sb.update("sort a list of numbers in python", "large", True, "x1",
+              completion="```python\ndef s(xs):\n    return sorted(xs)\n```")
+    sb.distill_all()
+    skb = tmp_path / "skillbook.json"; sb.save(skb)
+    # a hard task in the same cluster
+    traces = tmp_path / "traces.jsonl"
+    traces.write_text(json.dumps({
+        "task_id": "h1", "prompt": "sort a list of numbers in python",
+        "signature": next(iter(sb.skills)),
+        "small_success": False, "large_success": True,
+        "large_completion": "def s(xs): return sorted(xs)", "final_model": "large",
+    }) + "\n")
+    out = tmp_path / "sft.jsonl"
+    rc = subprocess.call([sys.executable, str(REPO / "experiments/scaling/traces_to_sft.py"),
+                          "--traces", str(traces), "--output", str(out), "--skillbook", str(skb)])
+    assert rc == 0
+    row = json.loads(out.read_text().splitlines()[0])
+    assert row["has_procedure"] is True
+    assert "Procedure for cluster" in row["prompt"]
+    assert "sort a list of numbers in python" in row["prompt"]

@@ -118,7 +118,9 @@ def _policy_decision(prompt, router_pipe, skillbook, small_model,
             sig = extract_signature(prompt)
             skill = skillbook.skills.get(sig)
             if skill is not None:
-                skill_verdict = skill.can_downgrade_to_small(small_model, min_rate, min_samples)
+                # SkillBook stats are keyed by canonical role "small" (tofix.md
+                # #2), not by the raw adapter path in `small_model`.
+                skill_verdict = skill.can_downgrade_to_small("small", min_rate, min_samples)
                 if skill_verdict is False:
                     route = "large"          # cluster historically needs large
                 elif skill_verdict is True and (router_prob is None or router_prob < 0.7):

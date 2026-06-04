@@ -95,22 +95,44 @@ def predict_skills(traces: list[dict], skillbook_path: Path | None) -> list[int]
     except Exception:  # noqa: BLE001
         return predict_base(traces)
 
-    # SkillBook.save() output schema: {signature: {model_success_rates: {...}}}
-    # We accept either flat or nested forms.
+    # tofix.md #5: SkillBook.save() writes {"skills": [{"signature", "stats":
+    # {model_or_role: [successes, total]}, ...}]}. The old code did
+    # sb_data.get(sig) on the top-level dict (which only has key "skills"), so
+    # every lookup missed and `skills` silently degraded to always-small.
+    # Build sig -> stats from the real schema. Stats are keyed by canonical role
+    # "small"/"large" (tofix.md #2); we also tolerate legacy model-name keys.
+    by_sig: dict[str, dict] = {}
+    skills_list = sb_data.get("skills") if isinstance(sb_data, dict) else None
+    if isinstance(skills_list, list):
+        for sk in skills_list:
+            if isinstance(sk, dict) and sk.get("signature"):
+                by_sig[sk["signature"]] = sk.get("stats", {}) or {}
+    elif isinstance(sb_data, dict):
+        # legacy flat {sig: {...}} fallback
+        for sig, entry in sb_data.items():
+            if isinstance(entry, dict):
+                by_sig[sig] = entry.get("stats", entry)
+
+    def _rate(stat) -> float:
+        # stat is [successes, total] or a dict with success_rate
+        if isinstance(stat, (list, tuple)) and len(stat) == 2 and stat[1]:
+            return stat[0] / stat[1]
+        if isinstance(stat, dict):
+            return float(stat.get("success_rate", 0) or 0)
+        return 0.0
+
     def needs_large(sig: str) -> bool:
-        entry = sb_data.get(sig) if isinstance(sb_data, dict) else None
-        if not isinstance(entry, dict):
+        stats = by_sig.get(sig)
+        if not isinstance(stats, dict) or not stats:
             return False
-        # Heuristic: any model named "*gpt*" with success > "*deepseek*" → needs large
-        scores = entry.get("model_success_rates", entry)
-        small_score = 0.0
-        large_score = 0.0
-        for model, info in (scores or {}).items():
-            rate = info.get("success_rate") if isinstance(info, dict) else float(info or 0)
-            if "gpt" in model.lower() or "claude" in model.lower():
-                large_score = max(large_score, rate or 0)
-            else:
-                small_score = max(small_score, rate or 0)
+        small_score = large_score = 0.0
+        for key, stat in stats.items():
+            r = _rate(stat)
+            k = key.lower()
+            if k == "small" or "deepseek" in k or "qwen" in k:
+                small_score = max(small_score, r)
+            elif k == "large" or "gpt" in k or "claude" in k:
+                large_score = max(large_score, r)
         return large_score > small_score + 0.2
 
     return [1 if needs_large(t.get("signature", "")) else 0 for t in traces]

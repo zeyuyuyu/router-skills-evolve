@@ -72,12 +72,36 @@ def _is_hard_task(trace: dict) -> bool:
     return ("small_fail" in decision) and ("large_ok" in decision or "large_OK" in decision.lower())
 
 
-def convert(traces_path: Path, out_path: Path) -> dict:
+def _load_procedures(skillbook_path):
+    """Return a callable prompt->procedure (or one that always returns '')."""
+    if not skillbook_path:
+        return lambda _p: ""
+    p = Path(skillbook_path)
+    if not p.exists():
+        return lambda _p: ""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from src.skills import SkillBook
+        sb = SkillBook()
+        sb.load(p)
+        return sb.get_procedure
+    except Exception as e:  # noqa: BLE001
+        print(f"[traces_to_sft] WARN could not load skillbook procedures ({e})", file=sys.stderr)
+        return lambda _p: ""
+
+
+def convert(traces_path: Path, out_path: Path, skillbook_path=None) -> dict:
     n_total = 0
     n_hard = 0
     n_written = 0
     n_no_completion = 0
+    n_with_procedure = 0
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    # tofix.md #3: feed distilled procedures into SFT data construction. When a
+    # skillbook is given, the matched cluster's procedure is prepended to the
+    # prompt so the small model learns WITH the reusable scaffold (tool-use
+    # steps / reference solution shape), not just the bare task.
+    get_procedure = _load_procedures(skillbook_path)
 
     with traces_path.open() as fh, out_path.open("w") as out:
         for line in fh:
@@ -97,14 +121,20 @@ def convert(traces_path: Path, out_path: Path) -> dict:
             if not prompt or not completion:
                 n_no_completion += 1
                 continue
+            sft_prompt = prompt
+            procedure = get_procedure(prompt)
+            if procedure:
+                sft_prompt = f"{procedure}\n\n---\n\n{prompt}"
+                n_with_procedure += 1
             row = {
                 "task_id": trace.get("task_id", ""),
                 "signature": trace.get("signature", ""),
-                "prompt": prompt,
+                "prompt": sft_prompt,
                 "completion": completion,
                 "source_model": trace.get("final_model") or trace.get("large_model") or "",
+                "has_procedure": bool(procedure),
                 # train_small_model.py compatibility:
-                "instruction": prompt,
+                "instruction": sft_prompt,
                 "input": "",
                 "output": completion,
             }
@@ -116,6 +146,7 @@ def convert(traces_path: Path, out_path: Path) -> dict:
         "hard_tasks": n_hard,
         "written": n_written,
         "hard_without_completion": n_no_completion,
+        "with_procedure": n_with_procedure,
     }
 
 
@@ -123,6 +154,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--traces", required=True)
     ap.add_argument("--output", required=True)
+    ap.add_argument("--skillbook", default=None,
+                    help="optional skillbook.json; prepend the matched cluster's "
+                         "distilled procedure to each SFT prompt (tofix.md #3)")
     args = ap.parse_args()
 
     traces_path = Path(args.traces)
@@ -130,10 +164,11 @@ def main() -> int:
         print(f"[traces_to_sft] ERROR: traces not found at {traces_path}", file=sys.stderr)
         return 2
 
-    stats = convert(traces_path, Path(args.output))
+    stats = convert(traces_path, Path(args.output), skillbook_path=args.skillbook)
     print(f"[traces_to_sft] {stats['traces_total']} traces -> "
           f"{stats['hard_tasks']} hard tasks -> {stats['written']} SFT pairs "
-          f"(skipped {stats['hard_without_completion']} hard tasks lacking a usable completion)  "
+          f"({stats.get('with_procedure', 0)} with procedure; "
+          f"skipped {stats['hard_without_completion']} lacking a usable completion)  "
           f"out={args.output}", file=sys.stderr)
     if stats["written"] == 0:
         print("[traces_to_sft] WARN: 0 SFT pairs written. Either no hard tasks this "

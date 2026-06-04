@@ -175,7 +175,13 @@ while IFS=' ' read -r RID CFG; do
     fi
     OUT_DIR="train_outputs/$RID"
     STATUS_FILE="$OUT_DIR/STATUS"
-    if [[ -f "$STATUS_FILE" ]] && grep -q "^done$" "$STATUS_FILE"; then
+    # tofix.md #1: in the scaling closed loop the same RUN_CONFIG is retrained
+    # every cycle on fresh per-cycle data (SCALING_TRAIN_FILE_STAGE2). The
+    # STATUS=done idempotence skip would wrongly skip cycles k>=1. When the
+    # scaling override is active, force a retrain (clear the stale STATUS).
+    if [[ -n "${SCALING_TRAIN_FILE_STAGE2:-}" ]]; then
+        [[ -f "$STATUS_FILE" ]] && { echo "  scaling: clearing stale STATUS for $RID (force retrain)"; rm -f "$STATUS_FILE"; }
+    elif [[ -f "$STATUS_FILE" ]] && grep -q "^done$" "$STATUS_FILE"; then
         echo "  SKIP (done): $RID"
         continue
     fi
