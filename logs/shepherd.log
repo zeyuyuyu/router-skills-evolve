@@ -94,3 +94,8 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
 [2026-06-04T04:05:58Z] shepherd FAILED: A800 (117.74.66.181:50507) TCP unreachable — connection timed out. No state read, no actions taken. actions=none
 [2026-06-04T10:09:57Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out on two attempts (ConnectTimeout=15s). No state could be read, no actions taken. Manual check required. Triggers NOT fired. Next shepherd run will retry.
 [2026-06-04T00:00:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out on both attempts (20s and 10s). sshpass installed (openssh-client was missing, installed during this run). No state read, no actions taken. Remote shepherd.log could not be updated. Recommend checking A800 network/firewall or whether the SSH tunnel service is running. This shepherd instance is in a remote container without persistent SSH keys; password auth via sshpass was attempted.
+[2026-06-04T18:08:27Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out at network level.
+  Diagnosis: Remote execution environment network policy blocks outbound connections to non-standard ports on arbitrary IPs.
+  Actions taken: none (cannot safely act without reading state).
+  Next step: Shepherd must run from a host with direct network access to A800 (e.g., cron on A800 itself, or a host on the same VPN/LAN).
