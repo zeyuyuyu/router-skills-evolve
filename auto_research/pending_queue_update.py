@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-06-03 by daily pipeline.
+Pending queue update — last updated 2026-06-04 by daily pipeline.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
 2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
 2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4),
-2026-05-30 daily (2), 2026-05-31 daily (2), 2026-06-01 daily (2), 2026-06-03 daily (2).
-Total pending: 49 experiments.
+2026-05-30 daily (2), 2026-05-31 daily (2), 2026-06-01 daily (2), 2026-06-03 daily (2),
+2026-06-04 daily (2).
+Total pending: 51 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -2399,6 +2400,201 @@ NEW_EXPERIMENTS = [
             "quality_metrics": ["cyclomatic_complexity", "line_count", "flake8_errors"],
             "quality_cc_max": 10,
             "quality_lc_max": 80,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-06-04 batch (2 experiments — queue > 20 cap, A800 day 21 offline) ──
+    {
+        "id": "exp_2026_06_04_001_rollout_replay_difficulty_selection_15b",
+        "priority": 8,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Improving Data Efficiency for LLM Reinforcement Fine-tuning Through "
+            "Difficulty-targeted Online Data Selection and Rollout Replay "
+            "(arxiv:2506.05316, Sun et al., June 2025 / revised Feb 2026) addresses two "
+            "orthogonal sources of compute waste in GRPO training that are both present in "
+            "our 1.5B MBPP setup: "
+            "(1) TASK WASTE — all-fail and all-pass tasks waste gradient steps. Our history: "
+            "~53/200 training tasks are consistently all-fail (zero advantage), ~20/200 are "
+            "all-pass (zero advantage). That is 73% of training steps producing zero or near-"
+            "zero advantage signal. Difficulty-targeted online data selection scores each task "
+            "by its 'mixed-outcome fraction' — the fraction of recent training steps on this "
+            "task that had at least 1 pass and at least 1 fail — and over-samples tasks with "
+            "mixed-outcome fraction closest to 0.5. Tasks at the extremes (always-fail or "
+            "always-pass) are under-sampled proportionally. Crucially, this scoring is "
+            "dynamic: as training progresses and some previously-hard tasks become solvable "
+            "(as happened in our 47→49/100 run), they enter the mixed zone and receive more "
+            "gradient attention. This contrasts with static curriculum (EXP-001, sorts once "
+            "by base-model solve rate) and MT-GRPO (EXP-019, min-max reweighting without "
+            "replay): the difficulty score is re-estimated every selection_window=10 steps. "
+            "(2) ROLLOUT WASTE — generating G=4 rollouts per task from scratch every step "
+            "is expensive when rollout quality is high-variance (the same task may produce "
+            "all-pass rollouts step T and all-fail at step T+1 due to sampling stochasticity). "
+            "Rollout replay maintains a per-task FIFO buffer of the last replay_buffer_size/200 "
+            "rollouts (≈2 past sets of 4 rollouts per task). At each training step, 50% of "
+            "the mini-batch is sampled from the replay buffer (old rollouts with fresh "
+            "importance-weighted advantage re-computation) and 50% from fresh rollout "
+            "generation. The importance weighting corrects for distribution shift: "
+            "  IS_weight = π_current(rollout) / π_old(rollout), clipped to [0.5, 2.0]. "
+            "This effectively doubles the number of gradient updates per generation call, "
+            "halving wall-clock time for the same number of effective gradient steps. "
+            "The paper shows that difficulty-targeted selection + rollout replay together "
+            "achieve the same MBPP pass@1 improvement as vanilla GRPO in 47% of the "
+            "wall-clock time (12B model, math reasoning). For our 1.5B code setup, the "
+            "computational savings are secondary (we already fit in 4h); the primary gain "
+            "is GRADIENT QUALITY: more steps on mixed-outcome tasks, with more rollout "
+            "diversity per step via replay. "
+            "DISTINCT FROM ALL 49 QUEUED EXPERIMENTS: "
+            "- vs. MT-GRPO (EXP-019): MT-GRPO updates per-task IMPORTANCE WEIGHTS and "
+            "  resamples from the full dataset with those weights. No replay buffer — "
+            "  every mini-batch consists entirely of freshly generated rollouts. EXP-050 "
+            "  maintains a rolling rollout buffer and replays past experience. "
+            "- vs. DAPO (EXP-013): DAPO DISCARDS uninformative groups and resamples new "
+            "  prompts. Rollout replay REUSES past rollouts with importance correction — "
+            "  no regeneration cost, different mechanism. "
+            "- vs. Curriculum-GRPO (EXP-001): Curriculum is a STATIC pre-training sort "
+            "  by base-model solve rate. Difficulty-targeted online selection is DYNAMIC: "
+            "  re-scored every selection_window steps, reacting to the model's current "
+            "  per-task success rate during training. "
+            "- vs. RELEX (EXP-033): RELEX extrapolates the LoRA update trajectory after "
+            "  observe_tasks steps, replacing gradient descent with SVD extrapolation. "
+            "  Rollout replay is fully gradient-based; it just changes which rollouts "
+            "  provide the gradient. Orthogonal mechanisms. "
+            "- No existing queue experiment uses a rollout replay buffer. This is the "
+            "  first experiment reusing past rollouts with importance-weighted re-evaluation. "
+            "Runner changes: add online_data_selection='difficulty_targeted', "
+            "rollout_replay=True, replay_buffer_size=400 (≈2 sets of 4 rollouts per task "
+            "for 200 tasks), replay_fraction=0.5, selection_window=10, "
+            "is_clip_lo=0.5, is_clip_hi=2.0 to grpo_continual. "
+            "Implementation: maintain a deque per task_id with max size=2; at each step "
+            "draw replay_fraction=50% of mini-batch from these deques (if non-empty), "
+            "compute log-ratio π_current/π_old on GPU (logits already available), "
+            "clip IS weight, multiply advantage by clipped IS weight. ~80 additional lines. "
+            "Estimated wall-clock: ~80 minutes (50% replay savings on rollout generation; "
+            "~200×4×0.5 = 400 fresh rollouts + 400 replayed per epoch)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "online_data_selection": "difficulty_targeted",
+            "selection_window": 10,
+            "rollout_replay": True,
+            "replay_buffer_size": 400,
+            "replay_fraction": 0.5,
+            "is_clip_lo": 0.5,
+            "is_clip_hi": 2.0,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_06_04_002_adaptive_rollout_budget_15b",
+        "priority": 7,
+        "kind": "grpo_continual",
+        "rationale": (
+            "Adaptive Rollout Allocation for Online Reinforcement Learning with Verifiable "
+            "Rewards (arxiv:2602.01601, Feb 2026) establishes that fixed G rollouts per "
+            "task is sub-optimal because rollout informativeness is heterogeneous: all-fail "
+            "tasks contribute near-zero advantage with any G (wasted compute), all-pass "
+            "tasks contribute near-zero advantage with any G (also wasted), while mixed-"
+            "outcome tasks have HIGHER variance in their advantage estimate and benefit "
+            "MOST from larger G (more rollouts reduce the advantage estimation error). "
+            "The paper derives an optimal rollout budget allocation policy: given a total "
+            "compute budget B = N_tasks × G_default, allocate rollout counts G_t per task "
+            "to minimise total advantage estimation variance. Under a Bernoulli success "
+            "model, the optimal G_t ∝ sqrt(p_t × (1 - p_t)) where p_t is the task's "
+            "estimated success probability. Tasks near p_t = 0.5 get sqrt(0.25) = maximum "
+            "allocation; tasks near p_t = 0 or p_t = 1 get sqrt(≈0) = minimum allocation. "
+            "Practically: estimate p_t from the last 8 rollouts per task (warm-up: use "
+            "base-model solve rate). Set G_min=2, G_max=8, and solve for G_t that satisfies "
+            "sum_t G_t = 800 (our default 200×4 budget). Tasks estimated p_t ∈ [0.25, 0.75] "
+            "receive G_t ∈ [5, 8]; tasks estimated p_t ∈ [0, 0.15] or [0.85, 1.0] receive "
+            "G_t = G_min = 2. A rounding step ensures sum_t G_t ≤ 800. "
+            "MECHANISTIC CASE FOR OUR PROJECT: "
+            "Our 200-task MBPP setup has ~53 all-fail (p≈0), ~20 all-pass (p≈1), "
+            "~27 mixed (p∈[0.25, 0.75]). Under fixed G=4: "
+            "  all-fail: 53 × 4 = 212 rollouts generating ~0 useful gradient "
+            "  all-pass:  20 × 4 =  80 rollouts generating ~0 useful gradient "
+            "  mixed:     27 × 4 = 108 rollouts generating all useful gradient "
+            "Under adaptive budget (G_min=2, G_max=8, total=800): "
+            "  all-fail: 53 × 2 = 106 rollouts (~53% fewer; still needed for G_t estimation) "
+            "  all-pass: 20 × 2 =  40 rollouts "
+            "  mixed:    remaining 800 - 106 - 40 = 654 rollouts / 27 tasks ≈ 24 rollouts "
+            "            per mixed task (G=24 possible only if we reduce the 173 easy/hard "
+            "            tasks to minimum — in practice we cap at G_max=8 per task so the "
+            "            surplus is distributed across the most mixed tasks up to the cap) "
+            "At G_max=8: mixed 27 tasks × 8 = 216 rollouts + 654 remaining → still more "
+            "total coverage of mixed tasks even if capped. The key point: EVERY rollout "
+            "generation call for a mixed-outcome task produces clean gradient signal, while "
+            "the saved compute from easy/hard tasks funds 2× more rollouts on the valuable "
+            "27 tasks — precisely where the advantage variance reduction matters most. "
+            "DISTINCT FROM ALL 49 QUEUED EXPERIMENTS: "
+            "- vs. Fixed G=8 (EXP-003): EXP-003 gives ALL tasks G=8, total = 200×8 = 1600 "
+            "  rollouts (2× baseline compute, ~180 min). Adaptive budget gives TOTAL=800 "
+            "  rollouts (same as baseline) but redistributed toward informative tasks. "
+            "- vs. MT-GRPO (EXP-019): MT-GRPO adjusts task SAMPLING FREQUENCY (tasks are "
+            "  over-or under-represented in the mini-batch). Adaptive rollout allocation "
+            "  adjusts G per task (how many rollouts per task per visit), not sampling "
+            "  frequency. Orthogonal axes of the same problem. "
+            "- vs. DAPO (EXP-013): DAPO regenerates groups until every group has ≥1 pass "
+            "  AND ≥1 fail (infinite budget to achieve mixed outcome). Adaptive allocation "
+            "  has a fixed budget and allocates less to clearly non-mixed tasks. "
+            "- vs. F-GRPO (EXP-018): F-GRPO scales ADVANTAGE (post-generation) by task "
+            "  success rate; adaptive allocation scales GENERATION BUDGET (pre-generation). "
+            "  These are complementary: adaptive allocation improves the quality of the "
+            "  advantage estimate (by using more rollouts where variance is highest); F-GRPO "
+            "  scales the influence of that estimate on the gradient update. "
+            "- No existing experiment varies G per task. All 49 experiments use fixed G "
+            "  (either 4 or 8) applied uniformly across all 200 training tasks. "
+            "IMPLEMENTATION: After each warm-up window (first 10 tasks: use base-model "
+            "solve rate for p_t estimate), compute optimal G_t for each task using "
+            "  G_t = round(G_default * sqrt(p_t * (1 - p_t)) / mean_sqrt), "
+            "  clip to [G_min, G_max], normalise to budget B=800 via integer knapsack "
+            "  (greedy: assign G_min to all, distribute surplus to highest-sqrt-p tasks). "
+            "Store rolling success count per task (window=8 rollouts). "
+            "~60 additional lines. Estimated wall-clock: ~90 minutes (same total compute "
+            "as baseline 200×4; ~15% overhead for allocation bookkeeping)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "rollout_budget": "adaptive",
+            "rollout_budget_min": 2,
+            "rollout_budget_max": 8,
+            "rollout_budget_total": 800,
+            "rollout_budget_warmup": 10,
+            "rollout_budget_window": 8,
             "eval_limit": 100,
             "max_new_tokens": 192,
         },
