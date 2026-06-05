@@ -46,7 +46,7 @@ Candidate commands:
 # use the existing qwen25_coder_15b GRPO/SFT scripts documented in docs/HANDOFF.md
 
 # Tau2 path, after adding a run config:
-MODEL_SWEEP=13_qwen2_5_coder_1_5b_273 N_CYCLES=1 bash scaling/run_full_pipeline.sh --mock
+MODEL_SWEEP=13_qwen2_5_coder_1_5b_273 N_CYCLES=1 bash scaling/run_full_pipeline.sh --mock --skip-llm
 MODEL_SWEEP=13_qwen2_5_coder_1_5b_273 N_CYCLES=2 bash scaling/run_full_pipeline.sh
 ```
 
@@ -136,11 +136,11 @@ Check/update:
 
 ### 3. Smoke test before full training
 
-Run a short smoke for each MoE before full cycles:
+Run a pipeline-only mock smoke for each MoE before full cycles:
 
 ```bash
-MODEL_SWEEP=11_qwen3_5_35b_a3b_273 MAX_STEPS_OVERRIDE=20 bash scaling/run_full_pipeline.sh --mock --n-cycles 1
-MODEL_SWEEP=12_qwen3_5_122b_a10b_273 MAX_STEPS_OVERRIDE=20 bash scaling/run_full_pipeline.sh --mock --n-cycles 1
+MODEL_SWEEP=11_qwen3_5_35b_a3b_273 bash scaling/run_full_pipeline.sh --mock --n-cycles 1 --skip-llm
+MODEL_SWEEP=12_qwen3_5_122b_a10b_273 bash scaling/run_full_pipeline.sh --mock --n-cycles 1 --skip-llm
 ```
 
 Then run a real 20-100 step training smoke on the server with GPUs.

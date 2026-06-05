@@ -23,7 +23,7 @@ The artifacts trained in cycle `k` affect inference in cycle `k+1`, not the alre
 
 ## Fixed
 
-All five issues fixed. Verified by 2-cycle mock + `tests/test_scaling_smoke.py` (6 passing).
+All six issues fixed. Verified by 2-cycle mock + `tests/test_scaling_smoke.py` (7 passing).
 
 1. **LLM training skipped after first cycle** — `train_all.sh` now force-retrains
    (clears stale `STATUS`) whenever `SCALING_TRAIN_FILE_STAGE2` is set, so each
@@ -53,20 +53,15 @@ All five issues fixed. Verified by 2-cycle mock + `tests/test_scaling_smoke.py` 
    `"skills"`, silently degrading the skills variant to always-small). Handles
    canonical roles + legacy model-name keys.
 
+6. **Live tau2 completion extraction could be empty** —
+   `experiments/scaling/benches/tau2_bench/adapter.py::_run_one` now extracts
+   completion from `TaskRunResult.steps[].response`, including both
+   `response["content"]` and serialized `response["tool_calls"]`. It no longer
+   depends on `TaskRunResult.messages`, which is empty on live tau2, or on a
+   nonexistent top-level `StepData.content` field.
+
 ## Open
 
-### 1. Live tau2 completion extraction may still be empty
-
-`experiments/scaling/benches/tau2_bench/adapter.py::_run_one` now calls the real
-`Tau2BenchAdapter.run_task(task, config, domain=...)` signature, but the
-best-effort completion extraction should be verified on a live tau2 run.
-
-Current risk: `TaskRunResult.messages` is empty unless the tau2 adapter populates
-it, and agent content in `TaskRunResult.steps` lives under
-`StepData.response["content"]`, not a top-level `StepData.content`.
-
-If `large_completion` is empty on hard tasks, `traces_to_sft.py` will skip them
-and Phase 3 will fail or train with no per-cycle additions.
-
-Fix direction: extract completion from `step.response["content"]` and, when the
-assistant used tools, serialize `step.response["tool_calls"]` into the SFT target.
+None currently tracked here. Live tau2 should still get a one-task end-to-end
+sanity check in the target environment to confirm `large_completion` is
+non-empty with the deployed model/API configuration.
