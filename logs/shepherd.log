@@ -99,3 +99,4 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Diagnosis: Remote execution environment network policy blocks outbound connections to non-standard ports on arbitrary IPs.
   Actions taken: none (cannot safely act without reading state).
   Next step: Shepherd must run from a host with direct network access to A800 (e.g., cron on A800 itself, or a host on the same VPN/LAN).
+[2026-06-05 00:07:18 UTC] SHEPHERD RUN - FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 30s. No state read, no actions taken. Will retry on next scheduled shepherd run.
