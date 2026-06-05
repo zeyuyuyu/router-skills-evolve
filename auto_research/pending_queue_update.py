@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Pending queue update — last updated 2026-06-04 by daily pipeline.
+Pending queue update — last updated 2026-06-05 by daily pipeline.
 Accumulates experiments from 2026-05-15 (5), 2026-05-16 (4), 2026-05-17 (4), 2026-05-18 (4),
 2026-05-19 (4), 2026-05-20 (2), 2026-05-22 (2), 2026-05-24 (2), 2026-05-25 (2), 2026-05-26 (2),
 2026-05-27 (2), 2026-05-28 (2), 2026-05-29 daily (2), 2026-05-29 paper-pipeline (4),
 2026-05-30 daily (2), 2026-05-31 daily (2), 2026-06-01 daily (2), 2026-06-03 daily (2),
-2026-06-04 daily (2).
-Total pending: 51 experiments.
+2026-06-04 daily (2), 2026-06-05 daily (2).
+Total pending: 53 experiments.
 Apply on A800 when connectivity is restored:
     python3 auto_research/pending_queue_update.py
 """
@@ -2778,6 +2778,98 @@ NEW_EXPERIMENTS = [
             "skill_update_freq": 15,
             "skill_max_library_size": 8,
             "skill_revision_model": "self",
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    # ── 2026-06-05 batch (2 experiments) ───────────────────────────────────
+    {
+        "id": "exp_2026_06_05_001_grpo_lambda_credit_assignment_15b",
+        "priority": 9,
+        "kind": "grpo_continual",
+        "rationale": (
+            "GRPO-λ (arxiv:2510.00194, 2025) replaces GRPO's uniform end-of-sequence "
+            "binary reward with an eligibility-trace (λ-return) credit assignment that "
+            "weights each token's log-probability contribution by its temporal proximity "
+            "to the final reward signal. The paper reports 3–4.5 pp gains over vanilla "
+            "GRPO on code reasoning benchmarks. Our best result is 1.5B GRPO 200×4 with "
+            "flat binary reward → +2 pp (47→49 on MBPP eval100). None of the 51 queued "
+            "experiments modifies within-sequence credit assignment; all use the same "
+            "uniform binary reward. Applying λ-return credit (lambda_decay=0.9) with the "
+            "otherwise optimal recipe (lr=5e-6, LoRA r=16, 200 tasks, qwen-chat) tests "
+            "whether gradient signal quality — not data quantity or model size — is the "
+            "current ceiling. If the paper's 3–4.5 pp uplift transfers, MBPP eval100 "
+            "should reach 51–53/100. Wall-clock is identical to baseline GRPO (~90 min) "
+            "since λ-return is computed post-hoc over already-generated rollouts."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "test_eval_all.jsonl"
+            ),
+            "train_task_limit": 200,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "credit_assignment": "lambda_return",
+            "lambda_decay": 0.9,
+            "eval_limit": 100,
+            "max_new_tokens": 192,
+        },
+        "gpu": "auto",
+    },
+    {
+        "id": "exp_2026_06_05_002_forgetting_eval_subspace_geometry_15b",
+        "priority": 7,
+        "kind": "forgetting_eval",
+        "rationale": (
+            "Subspace Geometry Governs Catastrophic Forgetting (arxiv:2603.02224, 2026) "
+            "shows that forgetting severity in LoRA fine-tuning is governed by the minimum "
+            "principal angle (MPA) between the task gradient subspaces of sequentially "
+            "trained tasks: small MPA → high interference → high forgetting. Our history "
+            "shows a clean degradation cliff: 200-task GRPO gains +2pp but 400-task GRPO "
+            "LOSES 1pp. The proposed forgetting_eval measures HumanEval pass@1 at three "
+            "checkpoints (epoch-end of tasks 1–100, 101–200, 201–400) and logs gradient "
+            "subspace angles between the task-batch Jacobians at each checkpoint. "
+            "This distinguishes two hypotheses: (H1) the 400-task failure is catastrophic "
+            "forgetting of pre-training knowledge (MPA collapses as training progresses) "
+            "vs (H2) it is reward hacking / over-fitting on MBPP (HumanEval retains but "
+            "MBPP eval saturates). The diagnostic output directly informs the next "
+            "regularisation experiment. Wall-clock: ~60 min (eval-only phases are fast; "
+            "gradient subspace angle requires one forward-backward pass per checkpoint "
+            "over a 50-example probe set)."
+        ),
+        "spec": {
+            "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+            "train_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
+            "eval_data": "/data0/home/zeyuwang/router-skills-evolve-data/humaneval/HumanEval.jsonl",
+            "train_task_limit": 400,
+            "epochs": 1,
+            "rollouts_per_prompt": 4,
+            "lr": 5e-6,
+            "lora_r": 16,
+            "prompt_style": "qwen-chat",
+            "reward": "binary",
+            "checkpoint_task_intervals": [100, 200, 400],
+            "eval_at_checkpoints": True,
+            "eval_benchmark": "humaneval",
+            "subspace_angle_probe_size": 50,
+            "subspace_angle_probe_data": (
+                "/data0/home/zeyuwang/router-skills-evolve-data/mbpp_aug/"
+                "train_aug_excluding_eval20.jsonl"
+            ),
             "eval_limit": 100,
             "max_new_tokens": 192,
         },
