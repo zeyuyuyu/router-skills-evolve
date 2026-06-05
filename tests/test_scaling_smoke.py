@@ -132,3 +132,31 @@ def test_traces_to_sft_injects_procedure(tmp_path):
     assert row["has_procedure"] is True
     assert "Procedure for cluster" in row["prompt"]
     assert "sort a list of numbers in python" in row["prompt"]
+
+
+def test_completion_from_steps_uses_stepdata_response():
+    """review 2026-06-05: SFT completion must come from steps[].response
+    (content + tool_calls), since TaskRunResult.messages is empty on live tau2."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "tau2ad", REPO / "experiments/scaling/benches/tau2_bench/adapter.py")
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+
+    class FakeStep:
+        def __init__(self, response): self.response = response
+
+    steps = [
+        FakeStep({"content": "look up the order", "tool_calls": [
+            {"function": {"name": "lookup_order", "arguments": '{"id": 42}'}}]}),
+        FakeStep({"content": "", "tool_calls": [
+            {"function": {"name": "issue_refund", "arguments": '{"order": 42}'}}]}),
+        FakeStep({"content": "done", "tool_calls": []}),
+    ]
+    out = m._completion_from_steps(steps)
+    assert "look up the order" in out
+    assert "<tool_call>lookup_order(" in out
+    assert "<tool_call>issue_refund(" in out
+    assert "done" in out
+    # JSON dict-form steps + empty input
+    assert m._completion_from_steps([{"response": {"content": "hi", "tool_calls": []}}]) == "hi"
+    assert m._completion_from_steps([]) == ""

@@ -34,6 +34,34 @@ def _extract_signature(prompt: str) -> str:
     return f"{head}::len_bucket={bucket}"
 
 
+def _completion_from_steps(steps: list) -> str:
+    """Render an SFT completion from TaskRunResult.steps.
+
+    Each StepData.response is {"content": str, "tool_calls": [...]}. We join the
+    assistant content per step and render any tool calls as compact lines, so
+    the small model learns the full agentic trajectory (content + tool use), not
+    just a final answer. (review 2026-06-05: extract from StepData.response —
+    TaskRunResult.messages is empty on live tau2.)
+    """
+    parts: list[str] = []
+    for s in steps:
+        resp = getattr(s, "response", None)
+        if resp is None and isinstance(s, dict):
+            resp = s.get("response")
+        if not isinstance(resp, dict):
+            continue
+        content = resp.get("content") or ""
+        if content:
+            parts.append(str(content))
+        for tc in resp.get("tool_calls") or []:
+            if isinstance(tc, dict):
+                fn = (tc.get("function") or {}) if isinstance(tc.get("function"), dict) else {}
+                name = fn.get("name") or tc.get("name") or "tool"
+                arguments = fn.get("arguments") or tc.get("arguments") or ""
+                parts.append(f"<tool_call>{name}({arguments})</tool_call>")
+    return "\n".join(p for p in parts if p)
+
+
 class Adapter:
     """tau2-bench adapter."""
 
@@ -210,24 +238,22 @@ class Adapter:
         )
         try:
             res = self._tau2_adapter.run_task(task["_raw"], config, domain=self.domain)
-            # TaskRunResult: passed / agent_cost_usd / user_cost_usd / messages / steps
+            # TaskRunResult: passed / agent_cost_usd / user_cost_usd / steps / messages
             cost = float(getattr(res, "agent_cost_usd", 0.0) or 0.0) + \
                 float(getattr(res, "user_cost_usd", 0.0) or 0.0)
-            completion = ""
-            msgs = getattr(res, "messages", None) or []
-            if isinstance(msgs, list):
-                parts = [m.get("content", "") for m in msgs
-                         if isinstance(m, dict) and m.get("role") == "assistant" and m.get("content")]
-                completion = "\n".join(parts)
+            # Completion for SFT: extract from steps[].response (StepData.response
+            # is {"content": str, "tool_calls": [...]}). `messages` is the flat
+            # JSON trajectory and is "Empty list when unavailable" on live tau2,
+            # so steps[] is the reliable source (review 2026-06-05). messages is
+            # only a fallback.
+            completion = _completion_from_steps(getattr(res, "steps", None) or [])
             if not completion:
-                # fall back to the structured agent steps
-                steps = getattr(res, "steps", None) or []
-                parts = []
-                for s in steps:
-                    txt = getattr(s, "content", None) or (s.get("content") if isinstance(s, dict) else None)
-                    if txt:
-                        parts.append(str(txt))
-                completion = "\n".join(parts)
+                msgs = getattr(res, "messages", None) or []
+                if isinstance(msgs, list):
+                    completion = "\n".join(
+                        m.get("content", "") for m in msgs
+                        if isinstance(m, dict) and m.get("role") == "assistant" and m.get("content")
+                    )
             return {
                 "success": bool(getattr(res, "passed", False)),
                 "cost": cost,
