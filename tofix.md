@@ -1,4 +1,4 @@
-# Scaling Pipeline TODO
+# Scaling Pipeline Fix List
 
 ## Current Flow
 
@@ -21,62 +21,7 @@ After trace collection, the default schedule is `SCHEDULE=SLR`:
 
 The artifacts trained in cycle `k` affect inference in cycle `k+1`, not the already-collected traces from cycle `k`.
 
-## Issues To Fix
-
-### 1. LLM training may be skipped after the first cycle
-
-`tau2_train_wrapper.sh` calls the tau2 training pipeline with the same `RUN_CONFIG` each cycle. The real training output still lands under:
-
-```text
-experiments/tau2_stage2/train_outputs/$RUN_CONFIG
-```
-
-`train_all.sh` skips runs whose `STATUS=done`, so later cycles may not actually retrain even when `cycle_k/training_data.jsonl` changes.
-
-Fix direction: make per-cycle tau2 training output unique, or force retraining when `SCALING_TRAIN_FILE_STAGE2` changes.
-
-### 2. SkillBook small-model stats may not survive adapter path changes
-
-SkillBook stats are keyed by exact `model_id`. Cycle 0 uses the base small model name, while later cycles use adapter paths like:
-
-```text
-cycle_0/llm_adapter/checkpoint-best
-cycle_1/llm_adapter/checkpoint-best
-```
-
-`can_downgrade_to_small(small_model)` may fail to match historical small-model stats and return insufficient data.
-
-Fix direction: normalize model ids into roles such as `small` and `large`, or canonicalize all adapter paths to a stable small-model key.
-
-### 3. Skills have procedures, but inference does not use them yet
-
-`Skill` now stores exemplars and distilled procedures, so it is not only a counter. However, `collect_traces.py` currently uses SkillBook mainly for routing override, not for injecting the procedure into model prompts.
-
-Fix direction: decide whether procedural skills should be fed into small-model inference, SFT data construction, or both.
-
-### 4. Skills update deployment outcomes, not full oracle outcomes
-
-Closed-loop traces contain both `small_success` and `large_success`, but phase2 updates SkillBook mostly from the policy/final outcome.
-
-This is useful as deployment history, but it may not fully learn the real capability table for small vs large on each signature.
-
-Fix direction: consider recording both oracle outcomes into stats while keeping policy outcome as separate deployment metadata.
-
-### 5. Skills ablation may read the wrong SkillBook schema
-
-`run_e2e_ablation_simple.py` appears to expect an older flat skillbook schema, while `SkillBook.save()` writes:
-
-```json
-{"skills": [...]}
-```
-
-This can make the `skills` ablation variant silently degrade toward always-small.
-
-Fix direction: update `predict_skills` to parse the current `SkillBook.save()` schema.
-
----
-
-## Resolution (2026-06-05)
+## Fixed
 
 All five issues fixed. Verified by 2-cycle mock + `tests/test_scaling_smoke.py` (6 passing).
 
@@ -107,3 +52,21 @@ All five issues fixed. Verified by 2-cycle mock + `tests/test_scaling_smoke.py` 
    [s,t]}}]}` schema (was doing `sb_data.get(sig)` on a dict whose only key is
    `"skills"`, silently degrading the skills variant to always-small). Handles
    canonical roles + legacy model-name keys.
+
+## Open
+
+### 1. Live tau2 completion extraction may still be empty
+
+`experiments/scaling/benches/tau2_bench/adapter.py::_run_one` now calls the real
+`Tau2BenchAdapter.run_task(task, config, domain=...)` signature, but the
+best-effort completion extraction should be verified on a live tau2 run.
+
+Current risk: `TaskRunResult.messages` is empty unless the tau2 adapter populates
+it, and agent content in `TaskRunResult.steps` lives under
+`StepData.response["content"]`, not a top-level `StepData.content`.
+
+If `large_completion` is empty on hard tasks, `traces_to_sft.py` will skip them
+and Phase 3 will fail or train with no per-cycle additions.
+
+Fix direction: extract completion from `step.response["content"]` and, when the
+assistant used tools, serialize `step.response["tool_calls"]` into the SFT target.

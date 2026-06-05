@@ -6,11 +6,77 @@ Run a larger-model / harder-benchmark version of the current scaling pipeline.
 
 Targets to add:
 
+- 1.5B baseline / rerun for continuity with the HumanEval/MBPP result
+- 4B tau2 closed-loop run as the first real scaling target
 - `Qwen/Qwen3.5-35B-A3B`
 - `Qwen/Qwen3.5-122B-A10B`
 - SWE-Bench support, starting with SWE-Bench Lite
 
 Keep `tofix.md` as the pipeline correctness / bug-fix checklist. This file tracks the next experiment expansion.
+
+## Small / Dense Baseline Runs
+
+Run these before the big MoE jobs so we have a cheap sanity curve and a
+comparison point against the earlier 1.5B MBPP/GRPO result.
+
+### 1. 1.5B continuity run
+
+Goal: rerun the best 1.5B setting on the current codebase and record whether the
+previous positive signal still holds.
+
+Suggested starting point:
+
+```text
+Qwen/Qwen2.5-Coder-1.5B-Instruct
+```
+
+TODO:
+
+- confirm whether this is a legacy HumanEval/MBPP-only run or should be wired
+  into the tau2 scaling pipeline as a new run config
+- if tau2: add a dedicated run YAML under
+  `experiments/tau2_stage2/code/training/configs/runs/`
+- run a 1-cycle smoke first, then a 2-cycle closed-loop run
+- save base vs adapter eval and note whether SFT/GRPO improves or regresses
+
+Candidate commands:
+
+```bash
+# Legacy MBPP/HumanEval continuity path, if using the old 1.5B code setup:
+# use the existing qwen25_coder_15b GRPO/SFT scripts documented in docs/HANDOFF.md
+
+# Tau2 path, after adding a run config:
+MODEL_SWEEP=13_qwen2_5_coder_1_5b_273 N_CYCLES=1 bash scaling/run_full_pipeline.sh --mock
+MODEL_SWEEP=13_qwen2_5_coder_1_5b_273 N_CYCLES=2 bash scaling/run_full_pipeline.sh
+```
+
+### 2. 4B tau2 closed-loop run
+
+Goal: make `05_qwen3_5_4b_273` the first real end-to-end tau2 run after the
+pipeline correctness fixes.
+
+Use the existing config:
+
+```text
+experiments/tau2_stage2/code/training/configs/runs/05_qwen3_5_4b_273.yaml
+```
+
+Recommended sequence:
+
+```bash
+# no API/GPU smoke
+MODEL_SWEEP=05_qwen3_5_4b_273 N_CYCLES=2 bash scaling/run_full_pipeline.sh --mock --skip-llm
+
+# short real pilot on server
+MODEL_SWEEP=05_qwen3_5_4b_273 N_CYCLES=1 MAX_STEPS_OVERRIDE=20 bash scaling/run_full_pipeline.sh
+
+# first real closed-loop run
+MODEL_SWEEP=05_qwen3_5_4b_273 N_CYCLES=2 bash scaling/run_full_pipeline.sh
+```
+
+Before treating the 4B result as valid, verify the open item in `tofix.md`:
+`large_completion` must be non-empty for hard tasks so Phase 3 actually receives
+per-cycle SFT data.
 
 ## Big MoE Runs
 
@@ -203,19 +269,16 @@ BENCH=swe_bench N_CYCLES=2 N_TASKS=50 MODEL_SWEEP=05_qwen3_5_4b_273 bash scaling
 
 ## Additional TODOs
 
-### 1. Fix correctness items in `tofix.md` first
+### 1. Verify correctness checklist status
 
-Before trusting new big runs, fix or explicitly accept the issues in:
+Before trusting new big runs, verify or explicitly accept the open item in:
 
 ```text
 tofix.md
 ```
 
-Priority:
-
-1. LLM training may skip after cycle 0 because `STATUS=done` is reused.
-2. SkillBook model ids should be normalized across adapter paths.
-3. Skills ablation should parse the current `{"skills": [...]}` schema.
+Current priority: confirm live tau2 `large_completion` extraction works for hard
+tasks. If it is empty, patch the scaling tau2 adapter before running 4B/35B/122B.
 
 ### 2. Add per-cycle provenance
 
