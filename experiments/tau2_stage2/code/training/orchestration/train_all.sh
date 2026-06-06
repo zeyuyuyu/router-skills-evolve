@@ -90,10 +90,28 @@ if [[ "$NEED_RECONVERT" == "true" ]]; then
     echo "$EXPECTED_CACHE_VERSION" > "$CACHE_VERSION_FILE"
 fi
 
-# Validate against each model's chat template.
+# Validate against the chat templates for the runs in scope. This keeps
+# offline/local runs from trying to validate unrelated Hub models.
 cd "$BUNDLE_ROOT/code"
-for TOK in Qwen/Qwen3.5-2B Qwen/Qwen3.5-4B Qwen/Qwen3.5-9B Qwen/Qwen3.6-35B-A3B; do
-    SLUG=$(echo "$TOK" | tr '/' '_' | tr '[:upper:]' '[:lower:]')
+TOKENIZERS=$("$VENV/python" - <<PY
+import yaml
+from pathlib import Path
+
+plan = yaml.safe_load(open("$BUNDLE_ROOT/$PLAN"))
+seen = set()
+for run in plan["runs"]:
+    if "${ONLY_RUN:-}" and run["id"] != "${ONLY_RUN:-}":
+        continue
+    cfg = yaml.safe_load(open(Path("$BUNDLE_ROOT/code/training") / run["config"]))
+    tok = cfg["model"]["name"]
+    if tok not in seen:
+        print(tok)
+        seen.add(tok)
+PY
+)
+while IFS= read -r TOK; do
+    [[ -z "$TOK" ]] && continue
+    SLUG=$(echo "$TOK" | tr '/:' '__' | tr '[:upper:]' '[:lower:]')
     for SPLIT in train val; do
         REPORT="$BUNDLE_ROOT/train_outputs/_data_cache/validation_report_${SLUG}_${SPLIT}.json"
         SRC="$BUNDLE_ROOT/train_outputs/_data_cache/${SPLIT}_prompt_completion.jsonl"
@@ -118,7 +136,7 @@ for TOK in Qwen/Qwen3.5-2B Qwen/Qwen3.5-4B Qwen/Qwen3.5-9B Qwen/Qwen3.6-35B-A3B;
             exit 1
         fi
     done
-done
+done <<< "$TOKENIZERS"
 cd "$BUNDLE_ROOT"
 
 # Build held-out task split + expand to eval-harness-ready descriptors.

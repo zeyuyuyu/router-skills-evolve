@@ -1,0 +1,53 @@
+run_id: 11_qwen3_30b_a3b_273
+model:
+  name: /mnt/cephfs/home/dan.qiao/models/Qwen3-30B-A3B-Base
+  revision: null
+  is_moe: true
+data:
+  n_train_runs: 273
+training:
+  output_dir: train_outputs/11_qwen3_30b_a3b_273
+  num_train_epochs: 5
+  learning_rate: 1.0e-5
+  warmup_steps: 0.05
+  lr_scheduler_type: cosine
+  cosine_min_lr_ratio: 0.10
+  weight_decay: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  max_grad_norm: 1.0
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 8
+  per_device_eval_batch_size: 1
+  bf16: true
+  gradient_checkpointing: false
+  torch_compile: false
+  max_seq_length: 16384
+  packing: true
+  packing_strategy: bfd
+  padding_free: true
+  attn_implementation: flash_attention_2
+  completion_only_loss: true
+  assistant_only_loss: false
+  use_liger_kernel: false
+  loss_type: chunked_nll
+  dataloader_num_workers: 4
+  eval_strategy: epoch
+  save_strategy: best
+  save_total_limit: 2
+  load_best_model_at_end: false
+  metric_for_best_model: eval_loss
+  greater_is_better: false
+  early_stopping_patience: 2
+  logging_steps: 10
+  seed: 1234
+  data_seed: 42
+distributed:
+  strategy: fsdp2
+  accelerate_config: configs/accelerate_fsdp2_qwen3_moe.yaml
+moe:
+  output_router_logits: true
+  router_aux_loss_coef: 0.001
+  preserve_thinking: false
+  vllm_min_version: "0.19.0"
+  vllm_tool_call_parser: qwen3_coder

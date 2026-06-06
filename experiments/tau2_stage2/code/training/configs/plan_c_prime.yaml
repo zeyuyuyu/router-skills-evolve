@@ -42,3 +42,5 @@ runs:
   - id: 10_qwen3_5_4b_273_lr3e5
     config: configs/runs/10_qwen3_5_4b_273_lr3e5.yaml
     skip_eval: true
+  - id: 11_qwen3_30b_a3b_273
+    config: configs/runs/11_qwen3_30b_a3b_273.yaml
