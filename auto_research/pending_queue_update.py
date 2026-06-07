@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pending queue update bootstrap — last updated 2026-06-06 by daily pipeline.
+Pending queue update bootstrap — last updated 2026-06-07 by daily pipeline.
 
 RECOVERY NOTE (2026-06-06): The cloud idea-gen routine could not push the full
 184K experiment list due to MCP socket size limits. The full 53-experiment version
@@ -89,9 +89,13 @@ def main():
     else:
         print(f"Older experiments already in state ({len(queue)} queued, {len(history)} history). Skipping full restore.")
 
-    # Apply today's patch (EXP-054, EXP-055)
+    # Apply 2026-06-06 patch (EXP-054, EXP-055)
     print("\nApplying 2026-06-06 patch (EXP-054, EXP-055)...")
     run_daily_patch("pending_queue_update_2026_06_06.py")
+
+    # Apply 2026-06-07 patch (EXP-056, EXP-057)
+    print("\nApplying 2026-06-07 patch (EXP-056, EXP-057)...")
+    run_daily_patch("pending_queue_update_2026_06_07.py")
     return 0
 
 
