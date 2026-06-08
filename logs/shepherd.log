@@ -131,3 +131,9 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 15s.
 No state read, no actions taken. All checks skipped.
 Actions: none (connection failure)
 ---
+[2026-06-08T14:02:34Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connect returned errno 11 (EAGAIN). 
+  The remote execution environment's network policy is blocking outbound SSH to A800.
+  No state read, no actions taken.
+  Resolution needed: either (1) configure this cloud session to allow outbound SSH to 117.74.66.181:50507,
+  or (2) run the shepherd from a machine on the same network as A800.
