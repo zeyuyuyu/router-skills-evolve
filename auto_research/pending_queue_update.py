@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pending queue update bootstrap — last updated 2026-06-07 by daily pipeline.
+Pending queue update bootstrap — last updated 2026-06-08 by daily pipeline.
 
 RECOVERY NOTE (2026-06-06): The cloud idea-gen routine could not push the full
 184K experiment list due to MCP socket size limits. The full 53-experiment version
@@ -15,10 +15,10 @@ To restore and apply all experiments on A800:
     # Step 2: run it to apply experiments 1-53
     python3 /tmp/pending_queue_update_full.py
 
-    # Step 3: apply today's new experiments (EXP-054, EXP-055)
+    # Step 3: apply 2026-06-06 patch (EXP-054, EXP-055)
     python3 auto_research/pending_queue_update_2026_06_06.py
 
-Alternatively, this script auto-detects git and does all three steps:
+Alternatively, this script auto-detects git and does all steps:
     python3 auto_research/pending_queue_update.py
 """
 import json, os, subprocess, sys, tempfile
@@ -96,6 +96,10 @@ def main():
     # Apply 2026-06-07 patch (EXP-056, EXP-057)
     print("\nApplying 2026-06-07 patch (EXP-056, EXP-057)...")
     run_daily_patch("pending_queue_update_2026_06_07.py")
+
+    # Apply 2026-06-08 patch (EXP-058, EXP-059)
+    print("\nApplying 2026-06-08 patch (EXP-058, EXP-059)...")
+    run_daily_patch("pending_queue_update_2026_06_08.py")
     return 0
 
 
