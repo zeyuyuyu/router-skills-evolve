@@ -55,6 +55,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from experiments.scaling.benches import load_adapter  # noqa: E402
 
 
+class FatalTraceCollectionError(RuntimeError):
+    """Abort collection without writing a poisoned trace row."""
+
+
+def _is_provider_cap_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    needles = (
+        "max cost limit exceeded",
+        "limit exceed",
+        "ratelimiterror",
+        "error code: 429",
+    )
+    return any(needle in text for needle in needles)
+
+
+def _validate_trace_or_abort(trace: dict, task_id: str) -> None:
+    small_completion = trace.get("small_completion") or ""
+    large_completion = trace.get("large_completion") or ""
+    if not small_completion and not large_completion:
+        raise FatalTraceCollectionError(
+            f"empty completions for task_id={task_id}; aborting to avoid poisoned traces"
+        )
+
+
 def _load_router(path: str | None):
     """Load the scaling sklearn router (joblib). Returns the pipeline or None."""
     if not path:
@@ -195,6 +219,8 @@ def main() -> int:
     ap.add_argument("--skillbook", default=None,
                     help="path to previous cycle's skillbook.json (closed-loop routing)")
     ap.add_argument("--router-threshold", type=float, default=0.5)
+    ap.add_argument("--resume", action="store_true",
+                    help="append to an existing traces.jsonl and skip task_ids already present")
     ap.add_argument("--mock", action="store_true",
                     help="generate synthetic deterministic traces (no API/GPU). Equivalent to SCALING_MOCK=1.")
     args = ap.parse_args()
@@ -219,9 +245,32 @@ def main() -> int:
     n_success = 0
     n_policy_small = 0
     n_policy_large = 0
+    existing_task_ids: set[str] = set()
+    if args.resume and out_path.exists():
+        with out_path.open() as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                task_id = str(row.get("task_id", ""))
+                if task_id:
+                    existing_task_ids.add(task_id)
+                if row.get("final_success"):
+                    n_success += 1
+                if row.get("policy_route") == "small":
+                    n_policy_small += 1
+                elif row.get("policy_route") == "large":
+                    n_policy_large += 1
+        print(f"[collect_traces] resume enabled; loaded {len(existing_task_ids)} existing task_ids",
+              file=sys.stderr)
+
+    mode = "a" if args.resume else "w"
     t0 = time.time()
-    with out_path.open("w") as fh:
+    with out_path.open(mode) as fh:
         for i, task in enumerate(tasks, 1):
+            task_id = str(task.get("task_id", f"unknown-{i}"))
+            if task_id in existing_task_ids:
+                continue
             try:
                 # closed_loop => force both models so the policy annotation has
                 # a REAL large outcome even when small also succeeded (review
@@ -234,6 +283,7 @@ def main() -> int:
                     cycle=args.cycle,
                     force_both=closed_loop,
                 )
+                _validate_trace_or_abort(trace, task_id)
                 if closed_loop:
                     route, rprob, sverd = _policy_decision(
                         trace.get("prompt", "") or task.get("prompt", ""),
@@ -255,7 +305,13 @@ def main() -> int:
                     print(f"[collect_traces] {i}/{len(tasks)}  "
                           f"success={n_success}/{i}  elapsed={elapsed:.1f}s",
                           file=sys.stderr)
+            except FatalTraceCollectionError:
+                raise
             except Exception as e:  # noqa: BLE001
+                if _is_provider_cap_error(e):
+                    raise FatalTraceCollectionError(
+                        f"provider cap/rate limit while collecting task_id={task_id}: {e}"
+                    ) from e
                 print(f"[collect_traces] task {task.get('task_id')} FAILED: {e}", file=sys.stderr)
                 # write a failure row so downstream can see it
                 fh.write(json.dumps({

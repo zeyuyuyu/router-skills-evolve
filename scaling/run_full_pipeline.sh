@@ -177,6 +177,20 @@ EOF
 # 3. Phase implementations
 # ─────────────────────────────────────────────────────────────────────────────
 
+stop_local_vllm() {
+  local ckpt="$1"
+  local pid_file="$ckpt/vllm_serve.pid"
+  [[ -f "$pid_file" ]] || return 0
+  local pid
+  pid=$(sed -n 's/.*PID=\([0-9][0-9]*\).*/\1/p' "$pid_file" | head -1)
+  if [[ -n "$pid" ]]; then
+    kill "$pid" 2>/dev/null || true
+    sleep 2
+    kill -9 "$pid" 2>/dev/null || true
+  fi
+  rm -f "$pid_file"
+}
+
 phase1_collect_traces() {
   local cycle=$1
   local out="$RESULTS_DIR/cycle_$cycle"
@@ -191,9 +205,15 @@ phase1_collect_traces() {
   #  not just the evolved adapter.)
   local small_arg="$SMALL_MODEL"
   local prev_router="" prev_skillbook=""
+  local local_student_ckpt="" local_student_port="" local_student_served=""
   if (( cycle > 0 )); then
     local prev="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
-    [[ -e "$prev" ]] && small_arg="$prev"
+    if [[ -d "$prev" ]]; then
+      local_student_ckpt="$prev"
+      local_student_port="${TAU2_LOCAL_PORT:-8050}"
+      local_student_served="${TAU2_LOCAL_SERVED_MODEL:-evol-llm-student}"
+      small_arg="openai/$local_student_served"
+    fi
     prev_router="$RESULTS_DIR/cycle_$((cycle-1))/router/router.joblib"
     prev_skillbook="$RESULTS_DIR/cycle_$((cycle-1))/skillbook.json"
   fi
@@ -209,8 +229,84 @@ phase1_collect_traces() {
   )
   [[ -n "$prev_router"    && -e "$prev_router"    ]] && cmd+=(--router "$prev_router")
   [[ -n "$prev_skillbook" && -e "$prev_skillbook" ]] && cmd+=(--skillbook "$prev_skillbook")
+  [[ "${SCALING_TRACE_RESUME:-0}" == "1" ]] && cmd+=(--resume)
   $MOCK && cmd+=(--mock)
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
+
+  if [[ "${SCALING_TRACE_RESUME:-0}" == "1" && -s "$out/traces.jsonl" ]]; then
+    if "$PYTHON" - "$REPO_ROOT" "$BENCH" "$N_TASKS" "$out/traces.jsonl" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+repo, bench, n_tasks, traces = sys.argv[1], sys.argv[2], int(sys.argv[3]), Path(sys.argv[4])
+sys.path.insert(0, repo)
+from experiments.scaling.benches import load_adapter  # noqa: E402
+
+
+def task_key(row):
+    return str(row.get("task_id") or row.get("id") or "")
+
+
+expected = {tid for tid in (task_key(t) for t in load_adapter(bench).load_tasks(n_tasks, split="train")) if tid}
+seen = set()
+with traces.open() as fh:
+    for line in fh:
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        task_id = task_key(row)
+        if task_id:
+            seen.add(task_id)
+missing = expected - seen
+if expected and not missing:
+    print(f"  [Phase 1] Trace collection already complete ({len(seen)}/{len(expected)}); skipping.")
+    raise SystemExit(0)
+print(f"  [Phase 1] Trace resume incomplete ({len(seen)}/{len(expected)}; missing={len(missing)}); continuing.")
+raise SystemExit(1)
+PY
+    then
+      return 0
+    fi
+  fi
+
+  local rc=0
+  if [[ -n "$local_student_ckpt" && "$MOCK" != "true" ]]; then
+    echo "  [Phase 1] Starting local student vLLM from $local_student_ckpt on port $local_student_port"
+    stop_local_vllm "$local_student_ckpt"
+    rm -f "$out/phase1_vllm_start.log"
+    TP_SIZE="${TAU2_LOCAL_TP_SIZE:-8}" \
+      NUM_GPUS="${NUM_GPUS:-8}" \
+      bash "$BUNDLE_ROOT/code/training/eval/vllm_serve.sh" "$local_student_ckpt" "$local_student_port" "${TAU2_LOCAL_GPU:-0}" \
+      2>&1 | tee "$out/phase1_vllm_start.log" &
+    local vllm_start_pid=$!
+    for _ in $(seq 1 120); do
+      if curl -sf "http://127.0.0.1:$local_student_port/v1/models" >/dev/null 2>&1; then
+        break
+      fi
+      if ! kill -0 "$vllm_start_pid" 2>/dev/null; then
+        wait "$vllm_start_pid" || true
+        echo "[FATAL] local student vLLM starter exited before ready; see $out/phase1_vllm_start.log" >&2
+        return 1
+      fi
+      sleep 5
+    done
+    if ! curl -sf "http://127.0.0.1:$local_student_port/v1/models" >/dev/null 2>&1; then
+      echo "[FATAL] local student vLLM failed to become ready on port $local_student_port" >&2
+      kill "$vllm_start_pid" 2>/dev/null || true
+      stop_local_vllm "$local_student_ckpt"
+      return 1
+    fi
+    TAU2_LOCAL_API_BASE="http://127.0.0.1:$local_student_port/v1" \
+      TAU2_LOCAL_API_KEY="${TAU2_LOCAL_API_KEY:-EMPTY}" \
+      TAU2_LOCAL_SERVED_MODEL="$local_student_served" \
+      "${cmd[@]}" 2>&1 | tee "$out/phase1.log" || rc=${PIPESTATUS[0]}
+    stop_local_vllm "$local_student_ckpt"
+    kill "$vllm_start_pid" 2>/dev/null || true
+    wait "$vllm_start_pid" 2>/dev/null || true
+    return "$rc"
+  fi
+
   "${cmd[@]}" 2>&1 | tee "$out/phase1.log"
 }
 

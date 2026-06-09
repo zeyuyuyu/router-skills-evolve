@@ -17,6 +17,7 @@ filtering only sees agent-side steps.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -69,11 +70,13 @@ class Tau2BenchAdapter:
             return
         from tau2 import config as tau2_config
         from tau2.evaluator import evaluator_nl_assertions as nl_mod
-        # LiteLLM strips the leading `openai/` as the provider prefix; the
-        # api_base expects `openai/gpt-5.2` on the wire, so we double-prefix
-        # here (same convention as the user simulator's model string in
-        # runner.py).
-        model = "openai/openai/gpt-5.2"
+        # LiteLLM strips the leading `openai/` as the provider prefix; CommonStack
+        # expects provider-prefixed model ids on the wire, so callers usually pass
+        # a double-prefixed model (same convention as the user simulator).
+        model = os.environ.get(
+            "TAU2_NL_JUDGE_MODEL",
+            os.environ.get("TAU2_USER_MODEL", "openai/openai/gpt-5.2"),
+        )
         # The caller passes the AGENT's args (api_base + api_key +
         # custom_llm_provider + agent's extra_body). Under --provider
         # openrouter, the agent's extra_body pins routing to "anthropic" —
@@ -170,7 +173,7 @@ class Tau2BenchAdapter:
         }
         text_cfg = TextRunConfig(**text_cfg_kwargs)
 
-        self._route_nl_judge_through(dict(config.agent.args))
+        self._route_nl_judge_through(dict(config.user.args))
         orch = build_text_orchestrator(text_cfg, task_obj, seed=config.seed)
         system_prompt, tools = _capture_agent_context(orch)
         sim = run_simulation(
@@ -263,7 +266,7 @@ class Tau2BenchAdapter:
         }
         text_cfg = TextRunConfig(**text_cfg_kwargs)
 
-        self._route_nl_judge_through(dict(config.agent.args))
+        self._route_nl_judge_through(dict(config.user.args))
         orch = build_text_orchestrator(text_cfg, resume_task, seed=config.seed)
         system_prompt, tools = _capture_agent_context(orch)
         baseline_llm = orch.agent.llm

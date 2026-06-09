@@ -2,13 +2,15 @@
 # tau2_train_wrapper.sh — wrap colleague's tau2_stage2 train_pipeline.sh for the
 # scaling pipeline. Two modes:
 #
-#   MODE=scaling_traces     (default)  Augment: concatenate this cycle's SFT
-#                                       pairs (TRAINING_DATA) onto the colleague
-#                                       stage2_v1 corpus, then train via
-#                                       train_all.sh's SCALING_TRAIN_FILE_STAGE2
-#                                       hook. Fails loudly if TRAINING_DATA is
-#                                       empty — never silently uses the fixed
-#                                       corpus. (Wired 2026-05-21.)
+#   MODE=scaling_traces     (default)  Train on this cycle's SFT pairs with a
+#                                       small deterministic replay sample from
+#                                       the colleague stage2_v1 corpus. This
+#                                       keeps the MERA hard-example update fast
+#                                       while preserving some anti-forgetting
+#                                       coverage. Fails loudly if TRAINING_DATA
+#                                       is empty — never silently uses the fixed
+#                                       corpus. (Wired 2026-05-21; replay
+#                                       bounded 2026-06-09.)
 #
 #   MODE=colleague_corpus              Train ONLY on the colleague's fixed
 #                                       stage2_v1 corpus; ignores TRAINING_DATA.
@@ -22,6 +24,14 @@
 # Optional:
 #   TRAINING_DATA        path to scaling traces' extract (mode=scaling_traces)
 #   MODE                 scaling_traces | colleague_corpus  (default: scaling_traces)
+#   SCALING_BASE_REPLAY_ROWS
+#                        number of stage2_v1 rows to replay in scaling_traces.
+#                        Default 512. Use all/full/-1 for old full-corpus mode;
+#                        use 0 for hard examples only.
+#   SCALING_BASE_REPLAY_SEED
+#                        deterministic replay sample seed (default 1234)
+#   SCALING_TRACE_REPEAT repeat each current-cycle hard example N times before
+#                        handoff to train_all.sh (default 16)
 
 set -euo pipefail
 
@@ -101,6 +111,8 @@ with open(src) as fh, open(dst, "w") as out:
         completion = r.get("completion") or r.get("output") or ""
         if not prompt or not completion:
             continue
+        task_id = str(r.get("task_id", "") or f"row{n}")
+        row_id = f"{domain}_{task_id}_scaling_traces"
         row = {
             "messages": [
                 {"role": "user", "content": prompt},
@@ -108,39 +120,161 @@ with open(src) as fh, open(dst, "w") as out:
             ],
             "_target_index": 1,
             "domain": domain,
-            "_p": {"source": "scaling_traces", "task_id": r.get("task_id", "")},
+            "_p": {
+                "row_id": row_id,
+                "split": "TRAIN",
+                "source": "scaling_traces",
+                "domain": domain,
+                "task_id": task_id,
+                "task_uniqueness_key": f"{domain}:{task_id}",
+                "seed": 0,
+                "epoch_alias": "scaling",
+                "phase": "scaling_traces",
+                "locked_source": "scaling_traces",
+                "step_1based": 1,
+                "step_depth_frac": 1.0,
+                "n_parallel_tool_calls": 0,
+                "run_dir": f"{domain}/{task_id}_scaling_traces",
+                "row_cost_usd": 0.0,
+            },
         }
         out.write(json.dumps(row, ensure_ascii=False) + "\n")
         n += 1
 print(f"[scaling_traces] wrote {n} stage-2 rows -> {dst}", file=sys.stderr)
 PY
 
-    # 2. AUGMENT, don't replace: concatenate the colleague's stage2_v1 corpus
-    #    with this cycle's hard examples. Training on only ~12-100 new pairs
-    #    would be degenerate; mixing keeps the base corpus and adds the evolve
-    #    signal. train_all.sh converts + validates the combined file through the
-    #    colleague's own convert_to_prompt_completion (consistent chat-template
-    #    checks), so we hand it the stage-2 row format, not pre-converted TRL.
+    # 2. Build the MERA hard-example update corpus.
+    #
+    # The earlier tau2 port concatenated the full 6,413-row stage2_v1 corpus
+    # every cycle. That is safe but much heavier than the paper's "selected
+    # hard examples" LLM-update track, especially for 35B/16k FSDP. Bound replay
+    # by default and upweight the current-cycle rows so a small hard-example
+    # pool is not drowned out by old data. Operators can restore the old behavior
+    # with SCALING_BASE_REPLAY_ROWS=all.
     COLLEAGUE_TRAIN="$BUNDLE_ROOT/data_processed/stage2_v1/train.jsonl"
     COMBINED="$STAGE_DIR/train_augmented_stage2.jsonl"
+    MIX_META="$STAGE_DIR/replay_mix_meta.json"
+    BASE_REPLAY_ROWS="${SCALING_BASE_REPLAY_ROWS:-512}"
+    BASE_REPLAY_SEED="${SCALING_BASE_REPLAY_SEED:-1234}"
+    TRACE_REPEAT="${SCALING_TRACE_REPEAT:-16}"
     if [[ -s "$COLLEAGUE_TRAIN" ]]; then
-      cat "$COLLEAGUE_TRAIN" "$STAGE2_ROWS" > "$COMBINED"
-      n_base=$(wc -l < "$COLLEAGUE_TRAIN" | tr -d ' ')
-      echo "[tau2_train_wrapper] augmented corpus: $n_base base + $n_pairs scaling = $(wc -l < "$COMBINED" | tr -d ' ') rows"
+      "${PYTHON:-python3}" - "$COLLEAGUE_TRAIN" "$STAGE2_ROWS" "$COMBINED" "$MIX_META" "$BASE_REPLAY_ROWS" "$BASE_REPLAY_SEED" "$TRACE_REPEAT" <<'PY'
+import json
+import random
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
+
+base_path, stage_path, out_path, meta_path = map(Path, sys.argv[1:5])
+replay_spec = sys.argv[5].strip().lower()
+seed = int(sys.argv[6])
+trace_repeat = max(1, int(sys.argv[7]))
+
+def read_jsonl(path):
+    rows = []
+    with path.open() as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+def domain(row):
+    meta = row.get("_p") or {}
+    return str(row.get("domain") or meta.get("domain") or "unknown")
+
+base_rows = read_jsonl(base_path)
+trace_rows = read_jsonl(stage_path)
+
+if replay_spec in {"all", "full", "-1"}:
+    replay_rows = list(base_rows)
+elif replay_spec in {"", "0", "none", "false"}:
+    replay_rows = []
+else:
+    target = max(0, int(replay_spec))
+    rng = random.Random(seed)
+    by_domain = defaultdict(list)
+    for row in base_rows:
+        by_domain[domain(row)].append(row)
+    for rows in by_domain.values():
+        rng.shuffle(rows)
+
+    replay_rows = []
+    domains = sorted(by_domain)
+    if target and domains:
+        quota, rem = divmod(target, len(domains))
+        leftovers = []
+        for idx, dom in enumerate(domains):
+            want = quota + (1 if idx < rem else 0)
+            take = by_domain[dom][:want]
+            replay_rows.extend(take)
+            leftovers.extend(by_domain[dom][want:])
+        if len(replay_rows) < target and leftovers:
+            rng.shuffle(leftovers)
+            replay_rows.extend(leftovers[: target - len(replay_rows)])
+        rng.shuffle(replay_rows)
+
+expanded_traces = []
+for _ in range(trace_repeat):
+    expanded_traces.extend(trace_rows)
+
+with out_path.open("w") as out:
+    for row in replay_rows:
+        out.write(json.dumps(row, ensure_ascii=False) + "\n")
+    for row in expanded_traces:
+        out.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+meta = {
+    "base_source": str(base_path),
+    "trace_source": str(stage_path),
+    "base_total_rows": len(base_rows),
+    "base_replay_spec": replay_spec,
+    "base_replay_rows": len(replay_rows),
+    "base_replay_seed": seed,
+    "trace_rows": len(trace_rows),
+    "trace_repeat": trace_repeat,
+    "trace_expanded_rows": len(expanded_traces),
+    "combined_rows": len(replay_rows) + len(expanded_traces),
+    "base_replay_domains": dict(Counter(domain(r) for r in replay_rows)),
+    "trace_domains": dict(Counter(domain(r) for r in trace_rows)),
+}
+meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n")
+print(json.dumps(meta, ensure_ascii=False), file=sys.stderr)
+PY
+      n_base_total=$(wc -l < "$COLLEAGUE_TRAIN" | tr -d ' ')
+      n_combined=$(wc -l < "$COMBINED" | tr -d ' ')
+      n_replay=$("${PYTHON:-python3}" - "$MIX_META" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1]))["base_replay_rows"])
+PY
+)
+      n_trace_expanded=$("${PYTHON:-python3}" - "$MIX_META" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1]))["trace_expanded_rows"])
+PY
+)
+      echo "[tau2_train_wrapper] replay corpus: $n_replay/$n_base_total base replay + $n_trace_expanded scaling rows ($n_pairs x $TRACE_REPEAT) = $n_combined rows"
     else
       echo "[tau2_train_wrapper] WARN: colleague corpus $COLLEAGUE_TRAIN absent; training on scaling rows only ($n_pairs)"
-      cp "$STAGE2_ROWS" "$COMBINED"
+      : > "$COMBINED"
+      for _ in $(seq 1 "$TRACE_REPEAT"); do
+        cat "$STAGE2_ROWS" >> "$COMBINED"
+      done
+      cat > "$MIX_META" <<EOF
+{"base_source":"$COLLEAGUE_TRAIN","trace_source":"$STAGE2_ROWS","base_total_rows":0,"base_replay_rows":0,"trace_rows":$n_pairs,"trace_repeat":$TRACE_REPEAT,"trace_expanded_rows":$(wc -l < "$COMBINED" | tr -d ' '),"combined_rows":$(wc -l < "$COMBINED" | tr -d ' ')}
+EOF
     fi
 
     # 3. Hand off to the colleague pipeline pointed at the augmented data via the
     #    SCALING_TRAIN_FILE_STAGE2 hook in train_all.sh. (train_all.sh fails loudly
     #    if the file is empty — no silent fallback to the fixed corpus.)
-    SCALING_TRAIN_FILE_STAGE2="$COMBINED" ONLY_RUN="$RUN_CONFIG" \
+    SCALING_TRAIN_FILE_STAGE2="$COMBINED" \
+      SCALING_OUTPUT_DIR="$TRAIN_OUTPUT_DIR" \
+      ONLY_RUN="$RUN_CONFIG" \
       bash "$BUNDLE_ROOT/code/training/orchestration/train_pipeline.sh"
-    src="$BUNDLE_ROOT/train_outputs/$RUN_CONFIG"
+    src="$TRAIN_OUTPUT_DIR"
     if [[ -d "$src/checkpoint-best" ]]; then
-      ln -sfn "$src/checkpoint-best" "$TRAIN_OUTPUT_DIR/checkpoint-best"
-      echo "[tau2_train_wrapper] scaling_traces trained; linked $src/checkpoint-best"
+      echo "[tau2_train_wrapper] scaling_traces trained at $src/checkpoint-best"
     else
       echo "[tau2_train_wrapper] FATAL: training produced no checkpoint-best at $src"
       exit 3
