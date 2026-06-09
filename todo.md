@@ -62,8 +62,8 @@ Current delivery status:
   router/full task pass `70.27%`, router/full routing acc `82.43%`,
   large F1 `77.97%`, fallback `5.41%`, cost vs always-large `48.92%`.
 - Cycle 3 has started from the Cycle 2 checkpoint. Phase 1 trace collection is
-  active; current `traces.jsonl` has `2` rows with `small_empty=0`,
-  `large_empty=0`, and `final_success=2/2`.
+  active; current `traces.jsonl` has `7` rows with `small_empty=0`,
+  `large_empty=0`, `empty_both=0`, and `final_success=5/7`.
 - The student model cost-mapping warning still appears in logs, but it is
   currently non-blocking and trace rows continue to be written.
 - Runtime environment fixes applied on the worker:
