@@ -27,6 +27,9 @@ Current delivery status:
   no longer discard `small_completion` / `large_completion`.
 - Current verification after the adapter patch: Cycle 2 was restarted cleanly
   again, and the first four trace rows all retain non-empty completions.
+- Latest watch: Cycle 2 trace collection has reached `6` rows; sampled rows
+  have no empty-both completion records, and the local 35B student service is
+  healthy.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision

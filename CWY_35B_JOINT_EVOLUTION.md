@@ -33,6 +33,8 @@
 - 修正后已再次归档旧 trace 并干净重启 Cycle 2 Phase 1。当前前四条
   trace 均保留了 35B student completion；其中 evaluator 异常任务也
   有非空 `small_completion` / `large_completion`，vLLM health OK。
+- 最新复查：Cycle 2 trace 已继续增长到 `6` 行；抽查无
+  `small_completion` / `large_completion` 同时为空的行，vLLM health OK。
 - 当前正在执行 Cycle 2 Phase 1 trace collection；之后会继续进入
   SkillBook、LLM SFT、router train、E2E ablation 和 cycle 汇总。
 
