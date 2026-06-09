@@ -91,6 +91,11 @@ fi
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-131072}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-16}"
 MOE_BACKEND="${MOE_BACKEND:-auto}"
+REASONING_PARSER="${REASONING_PARSER:-qwen3}"
+REASONING_ARGS=()
+if [[ -n "$REASONING_PARSER" ]]; then
+    REASONING_ARGS=(--reasoning-parser "$REASONING_PARSER")
+fi
 VLLM_LOG="$CKPT/vllm_serve.log"
 CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
     vllm serve "$CKPT" \
@@ -103,7 +108,7 @@ CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
     --language-model-only \
     --enable-auto-tool-choice \
     --tool-call-parser "$TOOL_PARSER" \
-    --reasoning-parser qwen3 \
+    "${REASONING_ARGS[@]}" \
     --gpu-memory-utilization "$GPU_MEM_UTIL" \
     --gdn-prefill-backend "${GDN_PREFILL_BACKEND:-triton}" \
     --moe-backend "$MOE_BACKEND" \
