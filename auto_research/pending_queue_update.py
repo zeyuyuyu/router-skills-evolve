@@ -100,6 +100,10 @@ def main():
     # Apply 2026-06-08 patch (EXP-058, EXP-059)
     print("\nApplying 2026-06-08 patch (EXP-058, EXP-059)...")
     run_daily_patch("pending_queue_update_2026_06_08.py")
+
+    # Apply 2026-06-09 patch (EXP-060, EXP-061)
+    print("\nApplying 2026-06-09 patch (EXP-060, EXP-061)...")
+    run_daily_patch("pending_queue_update_2026_06_09.py")
     return 0
 
 
