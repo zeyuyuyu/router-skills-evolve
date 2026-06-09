@@ -1,5 +1,112 @@
 # Next Experiment TODO
 
+## 2026-06-09 immediate action
+
+User-approved runtime target: finish the full 35B tau2 skills + LLM + router
+closed-loop run within about one day if possible.
+
+Code change before rerun:
+
+- `experiments/scaling/tau2_train_wrapper.sh`
+  - scaling SFT now defaults to bounded replay instead of full 6413-row replay.
+  - default `SCALING_BASE_REPLAY_ROWS=512`.
+  - default `SCALING_TRACE_REPEAT=16`.
+  - writes `scaling_sft/replay_mix_meta.json`.
+- `experiments/tau2_stage2/code/training/orchestration/train_all.sh`
+  - scaling-generated run configs accept env overrides such as
+    `SCALING_NUM_TRAIN_EPOCHS=1`.
+
+Launch policy for the corrected run:
+
+```bash
+export SCALING_BASE_REPLAY_ROWS=512
+export SCALING_TRACE_REPEAT=16
+export SCALING_BASE_REPLAY_SEED=1234
+export SCALING_NUM_TRAIN_EPOCHS=1
+export SCALING_ALLOW_MISSING_VAL=1
+export SCALING_EVAL_STRATEGY=no
+export SCALING_SAVE_STRATEGY=epoch
+export SCALING_LOAD_BEST_MODEL_AT_END=false
+export EVOL_DISABLE_AUTO_RESUME=1
+```
+
+Reason for `EVOL_DISABLE_AUTO_RESUME=1`: old `checkpoint-89` belongs to the
+previous full-replay 5-epoch recipe. The corrected recipe has far fewer steps,
+so auto-resuming Trainer optimizer/scheduler state from step 89 is incompatible.
+Keep the checkpoint in Ceph for audit/backup, but do not auto-resume it for the
+short hard-example adaptation run.
+
+Current worker:
+
+```text
+private 8-GPU worker
+8 x H200-class
+repo path: router-skills-evolve/
+experiment path: results/cwy_35b_joint_20260606_165203/
+```
+
+Before experiment launch:
+
+- commit and push code.
+- sync repo to new machine.
+- restore experiment dir from Ceph, but protect/archive old cycle_1
+  `llm_adapter` state or disable auto-resume as above.
+- if the portable bundle lacks `stage2_v1/train.jsonl`, restore the 6413 base
+  rows from the previous `train_augmented_stage2.jsonl` by excluding
+  `_p.source == scaling_traces`; for this corrected run, val can be skipped via
+  `SCALING_ALLOW_MISSING_VAL=1` with `SCALING_EVAL_STRATEGY=no`.
+- start tmux and verify logs show bounded replay and `EVOL_DISABLE_AUTO_RESUME=1`.
+
+## 当前唯一正式任务：35B Skills + LLM + Router 联合演进
+
+状态：准备正式启动。
+
+不要再把单模型 SFT / 单模型 eval 当成最终任务。当前任务必须完整跑：
+
+1. 真实 tau2 traces 收集，不用 mock。
+2. Skills evolve，生成 / 更新 `skillbook.json`。
+3. LLM train，用仓库正式 35B 配置训练 SFT checkpoint。
+4. Router train，生成 `router.joblib`。
+5. E2E ablation，报告 `base / skills / router / full` 四组。
+6. 每轮 cycle 都记录 accuracy、task pass、fallback、cost、训练产物和日志。
+
+仓库正式 35B 配置：
+
+```text
+run_id: 08_qwen3_6_35b_a3b_273
+model: Qwen/Qwen3.6-35B-A3B
+revision: 995ad96eacd98c81ed38be0c5b274b04031597b0
+config: experiments/tau2_stage2/code/training/configs/runs/08_qwen3_6_35b_a3b_273.yaml
+```
+
+注意：用户提到过 `Qwen/Qwen3.5-35B-A3B`，但当前仓库已有正式 35B 配置是
+`Qwen/Qwen3.6-35B-A3B`。本次按仓库正式配置跑，不新增、不替换成其他模型。
+
+论文 `routerevolving-2.pdf` 的报告口径：
+
+- `Router accuracy`
+- `Fallback`
+- `Cost vs always-large`
+- `LLM pass / Task pass`
+- 每轮 `Full = Skills + LLM + Router` 的 progression
+
+本次先跑论文主设置：
+
+```text
+schedule: SLR = Skills -> LLM -> Router
+n_cycles: 4
+bench: tau2_bench
+model_sweep: 08_qwen3_6_35b_a3b_273
+mock: false
+skip_llm: false
+```
+
+正式记录文档：
+
+```text
+CWY_35B_JOINT_EVOLUTION.md
+```
+
 ## Goal
 
 Run a larger-model / harder-benchmark version of the current scaling pipeline.

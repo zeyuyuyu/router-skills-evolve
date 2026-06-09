@@ -62,11 +62,16 @@ fi
 # than replaces. Additive: unset => byte-for-byte original behaviour. Cache is
 # keyed by version not source, so force a reconvert when the override is set.
 TRAIN_SRC="$BUNDLE_ROOT/data_processed/stage2_v1/train.jsonl"
+VAL_SRC="$BUNDLE_ROOT/data_processed/stage2_v1/val.jsonl"
 if [[ -n "${SCALING_TRAIN_FILE_STAGE2:-}" ]]; then
     [[ -s "$SCALING_TRAIN_FILE_STAGE2" ]] || { echo "[train_all] FATAL: SCALING_TRAIN_FILE_STAGE2=$SCALING_TRAIN_FILE_STAGE2 missing/empty"; exit 1; }
     TRAIN_SRC="$SCALING_TRAIN_FILE_STAGE2"
     NEED_RECONVERT=true
     echo "=== SCALING hook: training on $TRAIN_SRC (scaling per-cycle traces) ==="
+fi
+if [[ -n "${SCALING_VAL_FILE_STAGE2:-}" ]]; then
+    [[ -s "$SCALING_VAL_FILE_STAGE2" ]] || { echo "[train_all] FATAL: SCALING_VAL_FILE_STAGE2=$SCALING_VAL_FILE_STAGE2 missing/empty"; exit 1; }
+    VAL_SRC="$SCALING_VAL_FILE_STAGE2"
 fi
 if [[ "$NEED_RECONVERT" == "true" ]]; then
     echo "=== Converting train + val to TRL prompt/completion format ($EXPECTED_CACHE_VERSION) ==="
@@ -81,11 +86,18 @@ if [[ "$NEED_RECONVERT" == "true" ]]; then
         --dst "$BUNDLE_ROOT/train_outputs/_data_cache/train_prompt_completion.jsonl" \
         --domain-assets "$BUNDLE_ROOT/data_processed/stage2_v1/domain_assets" \
         --drop-log "$BUNDLE_ROOT/train_outputs/_data_cache/dropped_train.jsonl"
-    "$VENV/python" -m training.data.convert_to_prompt_completion \
-        --src "$BUNDLE_ROOT/data_processed/stage2_v1/val.jsonl" \
-        --dst "$BUNDLE_ROOT/train_outputs/_data_cache/val_prompt_completion.jsonl" \
-        --domain-assets "$BUNDLE_ROOT/data_processed/stage2_v1/domain_assets" \
-        --drop-log "$BUNDLE_ROOT/train_outputs/_data_cache/dropped_val.jsonl"
+    if [[ -s "$VAL_SRC" ]]; then
+        "$VENV/python" -m training.data.convert_to_prompt_completion \
+            --src "$VAL_SRC" \
+            --dst "$BUNDLE_ROOT/train_outputs/_data_cache/val_prompt_completion.jsonl" \
+            --domain-assets "$BUNDLE_ROOT/data_processed/stage2_v1/domain_assets" \
+            --drop-log "$BUNDLE_ROOT/train_outputs/_data_cache/dropped_val.jsonl"
+    elif [[ -n "${SCALING_TRAIN_FILE_STAGE2:-}" && "${SCALING_ALLOW_MISSING_VAL:-0}" == "1" ]]; then
+        echo "[train_all] WARN: VAL_SRC=$VAL_SRC missing; scaling run continues without val cache."
+    else
+        echo "[train_all] FATAL: VAL_SRC=$VAL_SRC missing/empty" >&2
+        exit 1
+    fi
     cd "$BUNDLE_ROOT"
     echo "$EXPECTED_CACHE_VERSION" > "$CACHE_VERSION_FILE"
 fi
@@ -192,7 +204,15 @@ while IFS=' ' read -r RID CFG; do
         continue
     fi
     OUT_DIR="train_outputs/$RID"
-    STATUS_FILE="$OUT_DIR/STATUS"
+    if [[ -n "${SCALING_TRAIN_FILE_STAGE2:-}" && -n "${SCALING_OUTPUT_DIR:-}" ]]; then
+        OUT_DIR="$SCALING_OUTPUT_DIR"
+    fi
+    if [[ "$OUT_DIR" = /* ]]; then
+        OUT_DIR_ABS="$OUT_DIR"
+    else
+        OUT_DIR_ABS="$BUNDLE_ROOT/$OUT_DIR"
+    fi
+    STATUS_FILE="$OUT_DIR_ABS/STATUS"
     # tofix.md #1: in the scaling closed loop the same RUN_CONFIG is retrained
     # every cycle on fresh per-cycle data (SCALING_TRAIN_FILE_STAGE2). The
     # STATUS=done idempotence skip would wrongly skip cycles k>=1. When the
@@ -203,11 +223,75 @@ while IFS=' ' read -r RID CFG; do
         echo "  SKIP (done): $RID"
         continue
     fi
-    mkdir -p "$OUT_DIR"
+    mkdir -p "$OUT_DIR_ABS"
     echo ""
     echo "=== TRAIN: $RID ==="
 
     ACCEL_CFG=$("$VENV/python" -c "import yaml; print(yaml.safe_load(open('code/training/$CFG'))['distributed']['accelerate_config'])")
+    RUN_CONFIG_ARG="training/$CFG"
+    if [[ -n "${SCALING_TRAIN_FILE_STAGE2:-}" && -n "${SCALING_OUTPUT_DIR:-}" ]]; then
+        CFG_DIR="$BUNDLE_ROOT/train_outputs/_scaling_configs"
+        mkdir -p "$CFG_DIR"
+        CFG_HASH=$(printf '%s' "$OUT_DIR_ABS" | sha1sum | awk '{print substr($1,1,12)}')
+        GENERATED_CFG="$CFG_DIR/${RID}_${CFG_HASH}.yaml"
+        "$VENV/python" - "$BUNDLE_ROOT/code/training/$CFG" "$GENERATED_CFG" "$OUT_DIR_ABS" <<'PY'
+import os
+import sys
+from pathlib import Path
+import yaml
+src, dst, out_dir = map(Path, sys.argv[1:])
+cfg = yaml.safe_load(src.read_text())
+train = cfg.setdefault("training", {})
+train["output_dir"] = str(out_dir)
+
+overrides = {
+    "SCALING_NUM_TRAIN_EPOCHS": ("num_train_epochs", float),
+    "SCALING_MAX_SEQ_LENGTH": ("max_seq_length", int),
+    "SCALING_GRADIENT_ACCUMULATION_STEPS": ("gradient_accumulation_steps", int),
+    "SCALING_PER_DEVICE_TRAIN_BATCH_SIZE": ("per_device_train_batch_size", int),
+    "SCALING_CONFIG_MAX_STEPS": ("max_steps", int),
+}
+string_overrides = {
+    "SCALING_EVAL_STRATEGY": "eval_strategy",
+    "SCALING_SAVE_STRATEGY": "save_strategy",
+}
+bool_overrides = {
+    "SCALING_LOAD_BEST_MODEL_AT_END": "load_best_model_at_end",
+}
+applied = {}
+for env_name, (cfg_key, caster) in overrides.items():
+    raw = os.environ.get(env_name, "").strip()
+    if not raw:
+        continue
+    value = caster(raw)
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    train[cfg_key] = value
+    applied[cfg_key] = value
+
+for env_name, cfg_key in string_overrides.items():
+    raw = os.environ.get(env_name, "").strip()
+    if raw:
+        train[cfg_key] = raw
+        applied[cfg_key] = raw
+
+for env_name, cfg_key in bool_overrides.items():
+    raw = os.environ.get(env_name, "").strip().lower()
+    if raw:
+        value = raw in {"1", "true", "yes", "on"}
+        train[cfg_key] = value
+        applied[cfg_key] = value
+
+if applied:
+    cfg.setdefault("scaling_overrides", {})["training"] = applied
+dst.write_text(yaml.safe_dump(cfg, sort_keys=False))
+PY
+        RUN_CONFIG_ARG="$GENERATED_CFG"
+        echo "  scaling: using per-cycle output_dir=$OUT_DIR_ABS"
+        if [[ -n "${SCALING_NUM_TRAIN_EPOCHS:-}" || -n "${SCALING_MAX_SEQ_LENGTH:-}" || -n "${SCALING_CONFIG_MAX_STEPS:-}" || -n "${SCALING_EVAL_STRATEGY:-}" || -n "${SCALING_SAVE_STRATEGY:-}" ]]; then
+            echo "  scaling: training overrides epochs=${SCALING_NUM_TRAIN_EPOCHS:-default} max_seq=${SCALING_MAX_SEQ_LENGTH:-default} max_steps=${SCALING_CONFIG_MAX_STEPS:-default} eval=${SCALING_EVAL_STRATEGY:-default} save=${SCALING_SAVE_STRATEGY:-default}"
+        fi
+    fi
 
     EXTRA_ARGS=()
     if [[ -n "${MAX_STEPS_OVERRIDE:-}" ]]; then
@@ -226,11 +310,11 @@ while IFS=' ' read -r RID CFG; do
     "$VENV/accelerate" launch \
         --config_file "training/$ACCEL_CFG" \
         -m training.train \
-        --run-config "training/$CFG" \
+        --run-config "$RUN_CONFIG_ARG" \
         --plan-config "$BUNDLE_ROOT/$PLAN" \
         --bundle-root "$BUNDLE_ROOT" \
         "${EXTRA_ARGS[@]}" \
-        2>&1 | tee "$BUNDLE_ROOT/$OUT_DIR/train_stdout.log" || true
+        2>&1 | tee "$OUT_DIR_ABS/train_stdout.log" || true
     cd "$BUNDLE_ROOT"
 
     # Accept both "done" (full run) and "smoke_done" (--smoke-test from
@@ -246,7 +330,7 @@ while IFS=' ' read -r RID CFG; do
             echo "  ✓ $RID done"
         fi
     else
-        echo "  ✗ $RID FAILED — see $OUT_DIR/train_stdout.log" >&2
+        echo "  ✗ $RID FAILED — see $OUT_DIR_ABS/train_stdout.log" >&2
         echo "failed" > "$STATUS_FILE"
     fi
 done <<< "$RUNS"
@@ -267,7 +351,11 @@ while IFS=' ' read -r RID _; do
         continue
     fi
     N_TOTAL=$((N_TOTAL + 1))
-    SF="train_outputs/$RID/STATUS"
+    if [[ -n "${SCALING_TRAIN_FILE_STAGE2:-}" && -n "${SCALING_OUTPUT_DIR:-}" ]]; then
+        SF="$SCALING_OUTPUT_DIR/STATUS"
+    else
+        SF="train_outputs/$RID/STATUS"
+    fi
     if [[ -f "$SF" ]] && grep -q "^done$" "$SF"; then
         N_DONE=$((N_DONE + 1))
     elif [[ -f "$SF" ]] && grep -q "^smoke_done$" "$SF"; then

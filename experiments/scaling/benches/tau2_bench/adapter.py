@@ -17,6 +17,7 @@ rest of the pipeline without GPUs / OpenAI key).
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import random
 import sys
@@ -78,9 +79,29 @@ class Adapter:
         self.seed = int(os.environ.get("TAU2_SEED", "0"))
         self.max_steps = int(os.environ.get("TAU2_MAX_STEPS", "100"))
         self.max_errors = int(os.environ.get("TAU2_MAX_ERRORS", "10"))
+        self._domains_root: Path | None = None
 
-    def _llm_args(self, role: str) -> dict:
+    def _is_local_student_model(self, model: str) -> bool:
+        served = os.environ.get("TAU2_LOCAL_SERVED_MODEL", "evol-llm-student")
+        aliases = {
+            served,
+            f"openai/{served}",
+            os.environ.get("TAU2_LOCAL_MODEL", ""),
+        }
+        return model in aliases
+
+    def _llm_args(self, role: str, model: str | None = None) -> dict:
         """litellm args for agent/user from env (api_base/api_key/provider)."""
+        if role == "agent" and model and self._is_local_student_model(model):
+            base = os.environ.get("TAU2_LOCAL_API_BASE")
+            key = os.environ.get("TAU2_LOCAL_API_KEY", "EMPTY")
+            args: dict[str, Any] = {}
+            if base:
+                args["api_base"] = base
+                args["api_key"] = key
+                args["custom_llm_provider"] = os.environ.get("TAU2_LOCAL_LLM_PROVIDER", "openai")
+                return args
+
         base = os.environ.get(f"TAU2_{role.upper()}_API_BASE") or os.environ.get("TAU2_API_BASE")
         key = os.environ.get(f"TAU2_{role.upper()}_API_KEY") or os.environ.get("TAU2_API_KEY")
         args: dict[str, Any] = {}
@@ -108,8 +129,8 @@ class Adapter:
 
         if self._tau2_adapter is None:
             self._lazy_import_tau2()
-        subset = "eval" if split == "eval" else "train"
-        raw = self._tau2_adapter.load_tasks(subset)
+        raw = self._tau2_adapter.load_tasks(self.domain)
+        raw = self._filter_split(raw, split)
         return [self._normalize_task(t) for t in raw[:n]]
 
     # ----------------------------------------------------------- run pair
@@ -205,12 +226,69 @@ class Adapter:
                 f"Original error: {e}"
             )
         vendor_root = code_dir / "vendor" / "tau2-bench"
+        self._domains_root = vendor_root / "data" / "tau2" / "domains"
         self._tau2_adapter = Tau2BenchAdapter(vendor_root=vendor_root, domain=self.domain)
+
+    def _filter_split(self, tasks: list[dict[str, Any]], split: str) -> list[dict[str, Any]]:
+        """Filter tau2 domain tasks by split_tasks.json when available."""
+        if self._domains_root is None:
+            return tasks
+        split_path = self._domains_root / self.domain / "split_tasks.json"
+        if not split_path.exists():
+            return tasks
+        with split_path.open() as f:
+            split_map = json.load(f)
+        split_key = "test" if split == "eval" else "train"
+        wanted = split_map.get(split_key)
+        if not wanted:
+            return tasks
+        wanted_ids = {str(x) for x in wanted}
+        filtered = [
+            t for t in tasks
+            if str(t.get("id") or t.get("task_id")) in wanted_ids
+        ]
+        return filtered or tasks
+
+    def _task_prompt(self, t: dict[str, Any]) -> str:
+        """Extract the user-visible task prompt without leaking gold criteria."""
+        for key in ("prompt", "user_message", "scenario"):
+            value = t.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+        scenario = t.get("user_scenario")
+        if isinstance(scenario, dict):
+            instructions = scenario.get("instructions")
+            if isinstance(instructions, dict):
+                parts = [
+                    instructions.get("reason_for_call"),
+                    instructions.get("known_info"),
+                    instructions.get("unknown_info"),
+                    instructions.get("task_instructions"),
+                ]
+                prompt = "\n".join(str(p).strip() for p in parts if p)
+                if prompt.strip():
+                    return prompt.strip()
+
+        description = t.get("description")
+        if isinstance(description, dict):
+            parts = [
+                description.get("purpose"),
+                description.get("relevant_policies"),
+                description.get("notes"),
+            ]
+            prompt = "\n".join(str(p).strip() for p in parts if p)
+            if prompt.strip():
+                return prompt.strip()
+        elif isinstance(description, str) and description.strip():
+            return description.strip()
+
+        return ""
 
     def _normalize_task(self, t: dict[str, Any]) -> dict:
         return {
             "task_id": str(t.get("task_id") or t.get("id") or hashlib.md5(str(t).encode()).hexdigest()[:12]),
-            "prompt": t.get("prompt") or t.get("user_message") or t.get("scenario", ""),
+            "prompt": self._task_prompt(t),
             "domain": self.domain,
             "_raw": t,
         }
@@ -230,7 +308,7 @@ class Adapter:
                     "error": f"could not import RunTaskConfig/LLMSpec: {e}"}
 
         config = RunTaskConfig(
-            agent=LLMSpec(model=model, args=self._llm_args("agent")),
+            agent=LLMSpec(model=model, args=self._llm_args("agent", model=model)),
             user=LLMSpec(model=self.user_model, args=self._llm_args("user")),
             seed=self.seed,
             max_steps=self.max_steps,
@@ -261,6 +339,7 @@ class Adapter:
                 "raw": None,  # TaskRunResult holds a heavy raw_simulation; drop it
             }
         except Exception as e:  # noqa: BLE001 — surface as failed task, log
+            print(f"[tau2_adapter] model={model} task_id={task.get('task_id')} failed: {e}", file=sys.stderr)
             return {"success": False, "cost": 0.0, "completion": "", "error": str(e)}
 
     def _mock_run(self, task: dict, small_model: str, large_model: str, sig: str,

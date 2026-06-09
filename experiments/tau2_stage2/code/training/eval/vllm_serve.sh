@@ -89,21 +89,22 @@ fi
 # one in-flight request that is comfortably more than 128K of headroom.
 # Override at the env-var level if needed: MAX_MODEL_LEN=262144 bash ...
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-131072}"
+VLLM_LOG="$CKPT/vllm_serve.log"
 CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
     vllm serve "$CKPT" \
     --port "$PORT" \
     --tensor-parallel-size "$TP_SIZE" \
     --max-model-len "$MAX_MODEL_LEN" \
     --dtype bfloat16 \
-    --enable-prefix-caching \
     --max-num-seqs 16 \
     --language-model-only \
     --enable-auto-tool-choice \
     --tool-call-parser "$TOOL_PARSER" \
     --reasoning-parser qwen3 \
     --gpu-memory-utilization "$GPU_MEM_UTIL" \
+    --gdn-prefill-backend "${GDN_PREFILL_BACKEND:-triton}" \
     --served-model-name "evol-llm-student" \
-    >> "$CKPT/vllm_serve.log" 2>&1 &
+    >> "$VLLM_LOG" 2>&1 < /dev/null &
 
 VLLM_PID=$!
 echo "vLLM PID=$VLLM_PID port=$PORT ckpt=$CKPT" > "$CKPT/vllm_serve.pid"
@@ -115,7 +116,8 @@ echo "vLLM PID=$VLLM_PID port=$PORT ckpt=$CKPT" > "$CKPT/vllm_serve.pid"
 for _ in $(seq 1 120); do
     if curl -sf "http://localhost:$PORT/v1/models" >/dev/null 2>&1; then
         echo "vLLM ready on port $PORT (PID $VLLM_PID)"
-        exit 0
+        wait "$VLLM_PID"
+        exit $?
     fi
     # Bail early if the vllm process itself died (OOM, bad arg, etc.).
     if ! kill -0 "$VLLM_PID" 2>/dev/null; then
