@@ -74,6 +74,13 @@ def _validate_trace_or_abort(trace: dict, task_id: str) -> None:
     small_completion = trace.get("small_completion") or ""
     large_completion = trace.get("large_completion") or ""
     if not small_completion and not large_completion:
+        if os.environ.get("SCALING_ALLOW_EMPTY_TRACE_FAILURES", "0") == "1":
+            print(
+                f"[collect_traces] WARN empty completions for task_id={task_id}; "
+                "recording failure row because SCALING_ALLOW_EMPTY_TRACE_FAILURES=1",
+                file=sys.stderr,
+            )
+            return
         raise FatalTraceCollectionError(
             f"empty completions for task_id={task_id}; aborting to avoid poisoned traces"
         )
