@@ -35,6 +35,9 @@
   有非空 `small_completion` / `large_completion`，vLLM health OK。
 - 最新复查：Cycle 2 trace 已继续增长到 `6` 行；抽查无
   `small_completion` / `large_completion` 同时为空的行，vLLM health OK。
+- 最新复查：Cycle 2 trace 已继续增长到 `8` 行；train split task id
+  本身会跳号，已确认不是漏写。最新行 `small_completion` 和
+  `large_completion` 均非空，empty-both completion count 仍为 `0`。
 - 当前正在执行 Cycle 2 Phase 1 trace collection；之后会继续进入
   SkillBook、LLM SFT、router train、E2E ablation 和 cycle 汇总。
 
