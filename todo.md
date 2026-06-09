@@ -41,9 +41,10 @@ Current delivery status:
   quality check remains `small_empty=0`, `empty_both=0`; the latest row keeps
   the 35B student completion even when the student fails, and the large-model
   fallback succeeds with `final_success=True`.
-- Latest watch: Cycle 2 trace collection has reached `15/74` rows. The
+- Latest watch: Cycle 2 trace collection has reached `17/74` rows. The
   full-pipeline command keeps the tau2 cap parameter, but the current train
-  split actually loaded `74` tasks, not `848` traces.
+  split actually loaded `74` tasks, not `848` traces. Current quality check
+  remains `small_empty=0`, `large_empty=0`, `empty_both=0`.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
