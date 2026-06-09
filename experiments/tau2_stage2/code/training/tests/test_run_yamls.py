@@ -86,6 +86,12 @@ def test_fsdp2_runs_use_model_family_specific_accelerate_config():
     assert moe["distributed"]["accelerate_config"].endswith("accelerate_fsdp2_moe.yaml")
 
 
+def test_fsdp2_runs_save_only_model():
+    for r in ["06_qwen3_5_9b_50", "07_qwen3_5_9b_273", "08_qwen3_6_35b_a3b_273"]:
+        d = yaml.safe_load((_RUNS_DIR / f"{r}.yaml").read_text())
+        assert d["training"]["save_only_model"] is True
+
+
 def test_lr_values_per_tier():
     # 2B → 3e-5; 4B (regular) → 2e-5; 9B/35B → 1e-5; 4B LR variants → 1e-5, 3e-5.
     cases = [

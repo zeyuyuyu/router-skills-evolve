@@ -39,6 +39,9 @@ training:
   eval_strategy: epoch
   save_strategy: best
   save_total_limit: 2
+  # FSDP2 eval handoff only needs a loadable model checkpoint; skip optimizer
+  # state to avoid large, slow post-train artifacts.
+  save_only_model: true
   # FSDP2 + FULL_STATE_DICT can save a normal HF best checkpoint, but
   # transformers' end-of-train load_best_model_at_end path tries to copy
   # regular tensors into DTensor-wrapped params and fails. train.py publishes
