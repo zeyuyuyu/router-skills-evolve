@@ -66,8 +66,8 @@
   router/full routing acc `82.43%`，large F1 `77.97%`，fallback `5.41%`，
   cost vs always-large `48.92%`。
 - Cycle 3 已启动：已用 Cycle 2 的 `checkpoint-best` 启动 student 服务，
-  Phase 1 trace collection 正在继续；当前 `traces.jsonl` 已写出 `63` 行，
-  `small_empty=0`、`large_empty=0`、`empty_both=0`，`final_success=50/63`。
+  Phase 1 trace collection 正在继续；当前 `traces.jsonl` 已写出 `65` 行，
+  `small_empty=0`、`large_empty=0`、`empty_both=0`，`final_success=51/65`。
 - 运行日志里仍会出现 student model cost mapping 未配置的提示；当前观察
   它只影响 cost 统计映射，不阻塞 tau2 trace 写入。
 - 当前正在执行 Cycle 3 Phase 1 启动/trace collection；后续继续验证
