@@ -65,13 +65,18 @@
   base/skills task pass `63.51%`，router/full task pass `70.27%`；
   router/full routing acc `82.43%`，large F1 `77.97%`，fallback `5.41%`，
   cost vs always-large `48.92%`。
-- Cycle 3 已启动：已用 Cycle 2 的 `checkpoint-best` 启动 student 服务，
-  Phase 1 trace collection 正在继续；当前 `traces.jsonl` 已写出 `69` 行，
-  `small_empty=0`、`large_empty=0`、`empty_both=0`，`final_success=54/69`。
+- Cycle 3 Phase 1 trace collection 已完成：`74/74` 行，
+  `small_empty=0`、`large_empty=0`、`empty_both=0`，`final_success=56/74`。
+- Cycle 3 Phase 2 SkillBook 已完成：`skillbook.json` 已写出，SkillBook
+  size 为 `15`。
+- Cycle 3 Phase 3 SFT 数据抽取已完成：`74` traces -> `5` hard tasks
+  -> `5` SFT pairs。
+- Cycle 3 Phase 3 35B SFT 已启动：当前训练进度已到 `3/8` steps，
+  `checkpoint-best` 尚未产生。
 - 运行日志里仍会出现 student model cost mapping 未配置的提示；当前观察
   它只影响 cost 统计映射，不阻塞 tau2 trace 写入。
-- 当前正在执行 Cycle 3 Phase 1 启动/trace collection；后续继续验证
-  SkillBook、SFT、router、E2E ablation 和最终汇总。
+- 当前正在执行 Cycle 3 Phase 3 LLM SFT；后续继续验证 router、
+  E2E ablation 和最终汇总。
 
 相对路径：
 

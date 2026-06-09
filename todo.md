@@ -61,17 +61,22 @@ Current delivery status:
 - Cycle 2 Phase 5 E2E ablation is complete: base/skills task pass `63.51%`,
   router/full task pass `70.27%`, router/full routing acc `82.43%`,
   large F1 `77.97%`, fallback `5.41%`, cost vs always-large `48.92%`.
-- Cycle 3 has started from the Cycle 2 checkpoint. Phase 1 trace collection is
-  active; current `traces.jsonl` has `69` rows with `small_empty=0`,
-  `large_empty=0`, `empty_both=0`, and `final_success=54/69`.
+- Cycle 3 Phase 1 trace collection is complete: `74/74` rows with
+  `small_empty=0`, `large_empty=0`, `empty_both=0`, and `final_success=56/74`.
+- Cycle 3 Phase 2 SkillBook is complete: `skillbook.json` exists with
+  SkillBook size `15`.
+- Cycle 3 Phase 3 SFT extraction is complete: `74` traces -> `5` hard tasks
+  -> `5` SFT pairs.
+- Cycle 3 Phase 3 35B SFT is running. Current training progress has reached
+  `3/8` steps, and `checkpoint-best` is not present yet.
 - The student model cost-mapping warning still appears in logs, but it is
   currently non-blocking and trace rows continue to be written.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
   tower and uses plain text mrope positions for text-only requests.
-- Current watch item: continue watching Cycle 3 Phase 1 trace collection, then
-  verify SkillBook, SFT, router, E2E ablation, and final summary.
+- Current watch item: let Cycle 3 Phase 3 SFT finish, then verify router,
+  E2E ablation, and final summary.
 
 Code change before rerun:
 
