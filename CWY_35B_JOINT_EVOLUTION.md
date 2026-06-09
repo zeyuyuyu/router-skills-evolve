@@ -55,12 +55,23 @@
   SkillBook size 为 `15`。
 - Cycle 2 Phase 3 SFT 数据抽取已完成：`74` traces -> `8` hard tasks
   -> `8` SFT pairs，`training_data.jsonl` 为 `8` 行。
-- Cycle 2 Phase 3 35B SFT 已启动：当前 `llm_adapter/train_stdout.log`
-  存在，训练进程仍在运行；尚未产生 `checkpoint-best`。
+- Cycle 2 Phase 3 35B SFT 已完成：`9/9` train steps，`checkpoint-best`
+  已发布。训练本身约 16 分钟，额外慢点来自 FSDP2 保存 optimizer state；
+  已补配置让后续 FSDP2 run 默认 `save_only_model: true`，避免后续 cycle
+  再写超大 optimizer artifact。
+- Cycle 2 Phase 4 router 已完成：`74` examples，`27` 个 label=large，
+  `47` 个 label=small，router train `acc=0.368`，`f1_large=0.400`。
+- Cycle 2 Phase 5 E2E ablation 已完成：
+  base/skills task pass `63.51%`，router/full task pass `70.27%`；
+  router/full routing acc `82.43%`，large F1 `77.97%`，fallback `5.41%`，
+  cost vs always-large `48.92%`。
+- Cycle 3 已启动：已用 Cycle 2 的 `checkpoint-best` 启动 student 服务，
+  Phase 1 trace collection 已开始；当前 `traces.jsonl` 已写出 `2` 行，
+  `small_empty=0`、`large_empty=0`、`final_success=2/2`。
 - 运行日志里仍会出现 student model cost mapping 未配置的提示；当前观察
   它只影响 cost 统计映射，不阻塞 tau2 trace 写入。
-- 当前正在执行 Cycle 2 Phase 3 LLM SFT；之后会继续进入 router train、
-  E2E ablation 和 cycle 汇总。
+- 当前正在执行 Cycle 3 Phase 1 启动/trace collection；后续继续验证
+  SkillBook、SFT、router、E2E ablation 和最终汇总。
 
 相对路径：
 
@@ -71,6 +82,9 @@ pipeline log: results/cwy_35b_joint_20260606_165203/cwy_corrected_bounded_replay
 cycle 1 train log: results/cwy_35b_joint_20260606_165203/cycle_1/llm_adapter/train_stdout.log
 cycle 2 traces: results/cwy_35b_joint_20260606_165203/cycle_2/traces.jsonl
 cycle 2 train log: results/cwy_35b_joint_20260606_165203/cycle_2/llm_adapter/train_stdout.log
+cycle 2 e2e summary: results/cwy_35b_joint_20260606_165203/cycle_2/e2e_ablation_summary.json
+cycle 3 vllm start log: results/cwy_35b_joint_20260606_165203/cycle_3/phase1_vllm_start.log
+cycle 3 traces: results/cwy_35b_joint_20260606_165203/cycle_3/traces.jsonl
 ```
 
 ## 2026-06-09 配方修正：bounded replay 35B 正式续跑

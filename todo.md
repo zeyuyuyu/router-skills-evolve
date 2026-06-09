@@ -50,16 +50,28 @@ Current delivery status:
   SkillBook size `15`.
 - Cycle 2 Phase 3 SFT extraction is complete: `74` traces -> `8` hard tasks
   -> `8` SFT pairs, and `training_data.jsonl` has `8` rows.
-- Cycle 2 Phase 3 35B SFT is running. `llm_adapter/train_stdout.log` exists
-  and the training process is active; `checkpoint-best` is not present yet.
+- Cycle 2 Phase 3 35B SFT is complete. The run produced `checkpoint-best`
+  after `9/9` train steps. The slow tail was FSDP2 optimizer-state saving, not
+  trace collection or model-step compute.
+- Follow-up code fix was committed and pushed: FSDP2 run YAMLs now set
+  `save_only_model: true`, with a regression test, so later cycles avoid
+  writing large optimizer artifacts during checkpoint handoff.
+- Cycle 2 Phase 4 router training is complete: `74` examples, `27` large
+  labels, `47` small labels, train `acc=0.368`, `f1_large=0.400`.
+- Cycle 2 Phase 5 E2E ablation is complete: base/skills task pass `63.51%`,
+  router/full task pass `70.27%`, router/full routing acc `82.43%`,
+  large F1 `77.97%`, fallback `5.41%`, cost vs always-large `48.92%`.
+- Cycle 3 has started from the Cycle 2 checkpoint. Phase 1 trace collection is
+  active; current `traces.jsonl` has `2` rows with `small_empty=0`,
+  `large_empty=0`, and `final_success=2/2`.
 - The student model cost-mapping warning still appears in logs, but it is
   currently non-blocking and trace rows continue to be written.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
   tower and uses plain text mrope positions for text-only requests.
-- Current watch item: let Cycle 2 Phase 3 SFT finish, then verify the router
-  training and E2E ablation stages.
+- Current watch item: continue watching Cycle 3 Phase 1 trace collection, then
+  verify SkillBook, SFT, router, E2E ablation, and final summary.
 
 Code change before rerun:
 
