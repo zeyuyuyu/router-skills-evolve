@@ -46,11 +46,12 @@
 - 最新复查：Cycle 2 trace 已继续增长到 `14` 行；`small_empty=0`，
   `empty_both=0`。最新行 35B student 失败但 completion 已保留，
   large 成功，`final_success=True`，vLLM health OK。
-- 后续复查：Cycle 2 trace 已到 `28/74` 行。虽然 full-pipeline 命令
+- 后续复查：Cycle 2 trace 已到 `29/74` 行。虽然 full-pipeline 命令
   保留 tau2 上限参数，但当前 train split 实际加载 `74` 个任务，不是
   要跑满 `848` 条 trace；当前耗时主要来自逐任务多轮 tau2 对话采集。
   最新质量检查仍为 `small_empty=0`、`large_empty=0`、`empty_both=0`。
-  当前 `final_success=23/28`，最新行 `final_success=True`。
+  当前 `final_success=24/29`，最新行是 `small_fail -> large_OK`
+  fallback 成功样本。
 - 运行日志里仍会出现 student model cost mapping 未配置的提示；当前观察
   它只影响 cost 统计映射，不阻塞 tau2 trace 写入。
 - 当前正在执行 Cycle 2 Phase 1 trace collection；之后会继续进入
