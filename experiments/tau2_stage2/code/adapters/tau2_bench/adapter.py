@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -144,7 +145,7 @@ class Tau2BenchAdapter:
         from tau2.data_model.tasks import Task
         from tau2.data_model.simulation import TextRunConfig
         from tau2.runner import build_text_orchestrator
-        from tau2.runner.simulation import run_simulation
+        from tau2.evaluator.evaluator import evaluate_simulation
 
         if isinstance(task, dict):
             task_obj = Task.model_validate(task)
@@ -176,9 +177,27 @@ class Tau2BenchAdapter:
         self._route_nl_judge_through(dict(config.user.args))
         orch = build_text_orchestrator(text_cfg, task_obj, seed=config.seed)
         system_prompt, tools = _capture_agent_context(orch)
-        sim = run_simulation(
-            orch, evaluation_type=_evaluation_type_for(task_obj)
-        )
+        sim = orch.run()
+        sim.policy = orch.environment.get_policy()
+        try:
+            sim.reward_info = evaluate_simulation(
+                simulation=sim,
+                task=task_obj,
+                evaluation_type=_evaluation_type_for(task_obj),
+                solo_mode=getattr(orch, "solo_mode", False),
+                domain=effective_domain,
+                mode=_communication_mode(),
+            )
+        except Exception as e:  # noqa: BLE001
+            # Some tau2 retail tasks have brittle evaluator/golden-action paths.
+            # Keep the completed trajectory for trace/SFT extraction instead of
+            # throwing it away and writing an empty completion row.
+            print(
+                f"[tau2_adapter] evaluation failed for task_id="
+                f"{getattr(task_obj, 'id', 'unknown')}: {e}",
+                file=sys.stderr,
+            )
+            sim.reward_info = None
 
         reward = float(sim.reward_info.reward) if sim.reward_info else 0.0
         return TaskRunResult(
