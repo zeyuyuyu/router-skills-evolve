@@ -8,15 +8,20 @@ closed-loop run within about one day if possible.
 Current delivery status:
 
 - Code fixes were committed and pushed before the corrected run.
-- The corrected run is active on a private 8-GPU worker.
-- Cycle 1 Phase 1 trace collection is complete and skipped on resume: `74/74`.
-- Cycle 1 Phase 2 regenerated `results/cwy_35b_joint_20260606_165203/cycle_1/skillbook.json`.
-- Cycle 1 Phase 3 is training with bounded replay:
+- The corrected run is active on a shared 8-GPU worker.
+- Cycle 1 is complete: trace skip, SkillBook, bounded SFT, router, and E2E ablation.
+- Cycle 1 Phase 3 trained with bounded replay:
   `512` base replay rows + `4` hard trace rows repeated `16` times.
+- Cycle 1 E2E result: base/skills task `85.14%`, router/full task `89.19%`.
+- Cycle 2 Phase 1 has been cleanly restarted after a vLLM Qwen3.5 text-only
+  compatibility fix; the new trace file has started writing:
+  `results/cwy_35b_joint_20260606_165203/cycle_2/traces.jsonl`.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
-- Current watch item: verify the first optimizer step and then let the pipeline
-  advance to router training and E2E ablation.
+- Runtime vLLM patch applied on the worker: language-model-only skips vision
+  tower and uses plain text mrope positions for text-only requests.
+- Current watch item: let Cycle 2 trace collection finish, then verify the
+  downstream SkillBook, LLM SFT, router training, and E2E ablation stages.
 
 Code change before rerun:
 
@@ -52,8 +57,7 @@ it for the short hard-example adaptation run.
 Current worker:
 
 ```text
-private 8-GPU worker
-8 x H200-class
+shared 8-GPU worker
 repo path: router-skills-evolve/
 experiment path: results/cwy_35b_joint_20260606_165203/
 ```

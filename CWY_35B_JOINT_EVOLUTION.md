@@ -9,15 +9,19 @@
 
 - 代码修复已提交并推送。
 - 文档已脱敏：只保留相对路径和泛化 worker 描述，不记录连接信息。
-- 正式 run 已在私有 8 卡 worker 上启动。
-- Cycle 1 Phase 1 已确认 trace 完整并跳过：`74/74`。
-- Cycle 1 Phase 2 已重新生成 `results/cwy_35b_joint_20260606_165203/cycle_1/skillbook.json`。
-- Cycle 1 Phase 3 使用 bounded replay：
+- 正式 run 已在 shared 8-GPU worker 上启动。
+- Cycle 1 已完成：trace skip、SkillBook、bounded SFT、router、E2E ablation。
+- Cycle 1 SFT 使用 bounded replay：
   `512` base replay rows + `4` hard trace rows repeated `16` times。
-- 训练环境已修复并验证：
-  torch `2.11.0`、flash-attn `2.8.3`、torchvision `0.26.0` 均从 run venv 加载。
-- 当前正在验证 first optimizer step；过了这一步后，主要剩余工作是等待
-  LLM checkpoint、router train、E2E ablation 和 cycle 汇总。
+- Cycle 1 E2E 结果：base/skills task `85.14%`，router/full task `89.19%`。
+- Cycle 2 已干净重启：旧的失败 trace 已归档，新的
+  `results/cwy_35b_joint_20260606_165203/cycle_2/traces.jsonl`
+  已开始写入。
+- worker 运行环境已补 vLLM Qwen3.5 text-only 兼容：
+  language-model-only 跳过视觉塔、纯文本 mrope 返回普通 position ids，
+  probe 生成请求通过且服务健康。
+- 当前正在执行 Cycle 2 Phase 1 trace collection；之后会继续进入
+  SkillBook、LLM SFT、router train、E2E ablation 和 cycle 汇总。
 
 相对路径：
 
@@ -26,6 +30,7 @@ repo: router-skills-evolve/
 run: results/cwy_35b_joint_20260606_165203/
 pipeline log: results/cwy_35b_joint_20260606_165203/cwy_corrected_bounded_replay.log
 train log: results/cwy_35b_joint_20260606_165203/cycle_1/llm_adapter/train_stdout.log
+cycle 2 traces: results/cwy_35b_joint_20260606_165203/cycle_2/traces.jsonl
 ```
 
 ## 2026-06-09 配方修正：bounded replay 35B 正式续跑
