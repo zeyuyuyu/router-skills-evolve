@@ -8,7 +8,14 @@ closed-loop run within about one day if possible.
 Current delivery status:
 
 - Code fixes were committed and pushed before the corrected run.
-- The corrected run is active on a shared 8-GPU worker.
+- The corrected run completed on a shared 8-GPU worker, and no pipeline
+  process is currently active.
+- Final aggregate artifacts exist:
+  `results/cwy_35b_joint_20260606_165203/final_ablation_table.md`,
+  `results/cwy_35b_joint_20260606_165203/curve.png`, and
+  `results/cwy_35b_joint_20260606_165203/aggregate.log`.
+- Final aggregate setting: `Cycles=4`, `Bench=tau2_bench`,
+  `Model=08_qwen3_6_35b_a3b_273`, `Schedule=SLR`.
 - Cycle 1 is complete: trace skip, SkillBook, bounded SFT, router, and E2E ablation.
 - Cycle 1 Phase 3 trained with bounded replay:
   `512` base replay rows + `4` hard trace rows repeated `16` times.
@@ -67,16 +74,24 @@ Current delivery status:
   SkillBook size `15`.
 - Cycle 3 Phase 3 SFT extraction is complete: `74` traces -> `5` hard tasks
   -> `5` SFT pairs.
-- Cycle 3 Phase 3 35B SFT is running. Current training progress has reached
-  `3/8` steps, and `checkpoint-best` is not present yet.
+- Cycle 3 Phase 3 35B SFT is complete: `8/8` train steps and
+  `checkpoint-best` exists.
+- Cycle 3 Phase 4 router training is complete, and the router artifact exists.
+- Cycle 3 Phase 5 E2E ablation is complete: base/skills task pass `68.92%`,
+  router/full task pass `72.97%`, router/full routing acc `89.19%`,
+  large F1 `81.82%`, fallback `6.76%`, cost vs always-large `35.54%`.
+- Per-cycle Full progression from the final aggregate table:
+  Cycle 0 task pass `78.38%`, Cycle 1 `89.19%`, Cycle 2 `70.27%`,
+  Cycle 3 `72.97%`.
 - The student model cost-mapping warning still appears in logs, but it is
   currently non-blocking and trace rows continue to be written.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
   tower and uses plain text mrope positions for text-only requests.
-- Current watch item: let Cycle 3 Phase 3 SFT finish, then verify router,
-  E2E ablation, and final summary.
+- Current watch item: none for the main run; the full pipeline has reached
+  final aggregation. Optional follow-up is independent adapter task-level eval
+  if we want to separate LLM-adapter gains from router-only gains.
 
 Code change before rerun:
 
@@ -131,7 +146,7 @@ Before experiment launch:
 
 ## 当前唯一正式任务：35B Skills + LLM + Router 联合演进
 
-状态：准备正式启动。
+状态：正式 4-cycle run 已完成并聚合。
 
 不要再把单模型 SFT / 单模型 eval 当成最终任务。当前任务必须完整跑：
 

@@ -9,14 +9,17 @@
 
 - 代码修复已提交并推送。
 - 文档已脱敏：只保留相对路径和泛化 worker 描述，不记录连接信息。
-- 正式 run 已在 shared 8-GPU worker 上启动。
+- 正式 run 已在 shared 8-GPU worker 上完成，pipeline 进程已退出。
+- 最终聚合已完成：`final_ablation_table.md`、`curve.png`、
+  `aggregate.log` 均已写出。
+- 本次正式设置：`Cycles=4`，`Bench=tau2_bench`，
+  `Model=08_qwen3_6_35b_a3b_273`，`Schedule=SLR`。
 - Cycle 1 已完成：trace skip、SkillBook、bounded SFT、router、E2E ablation。
 - Cycle 1 SFT 使用 bounded replay：
   `512` base replay rows + `4` hard trace rows repeated `16` times。
 - Cycle 1 E2E 结果：base/skills task `85.14%`，router/full task `89.19%`。
-- Cycle 2 已干净重启：旧的失败 trace 已归档，新的
-  `results/cwy_35b_joint_20260606_165203/cycle_2/traces.jsonl`
-  已开始写入。
+- Cycle 2 已完成：trace collection、SkillBook、bounded SFT、router、
+  E2E ablation 均已写出。
 - worker 运行环境已补 vLLM Qwen3.5 text-only 兼容：
   language-model-only 跳过视觉塔、纯文本 mrope 返回普通 position ids，
   probe 生成请求通过且服务健康。
@@ -71,12 +74,23 @@
   size 为 `15`。
 - Cycle 3 Phase 3 SFT 数据抽取已完成：`74` traces -> `5` hard tasks
   -> `5` SFT pairs。
-- Cycle 3 Phase 3 35B SFT 已启动：当前训练进度已到 `3/8` steps，
-  `checkpoint-best` 尚未产生。
+- Cycle 3 Phase 3 35B SFT 已完成：`8/8` train steps，`checkpoint-best`
+  已发布。
+- Cycle 3 Phase 4 router 已完成，router artifact 已写出。
+- Cycle 3 Phase 5 E2E ablation 已完成：
+  base/skills task pass `68.92%`，router/full task pass `72.97%`；
+  router/full routing acc `89.19%`，large F1 `81.82%`，fallback `6.76%`，
+  cost vs always-large `35.54%`。
+- Cycle 3 最终表中 Full variant 与 Router variant 相同；这反映当前
+  aggregator 的口径仍按 trace + router 产物汇总，不单独把 35B adapter
+  后验任务级 eval 写入 Full 差异。
+- Per-cycle Full progression：
+  Cycle 0 task pass `78.38%`，Cycle 1 `89.19%`，Cycle 2 `70.27%`，
+  Cycle 3 `72.97%`。
 - 运行日志里仍会出现 student model cost mapping 未配置的提示；当前观察
   它只影响 cost 统计映射，不阻塞 tau2 trace 写入。
-- 当前正在执行 Cycle 3 Phase 3 LLM SFT；后续继续验证 router、
-  E2E ablation 和最终汇总。
+- 当前全流程已完成；后续若要继续，只剩结果复盘或追加独立 adapter
+  任务级 eval。
 
 相对路径：
 
@@ -84,12 +98,17 @@
 repo: router-skills-evolve/
 run: results/cwy_35b_joint_20260606_165203/
 pipeline log: results/cwy_35b_joint_20260606_165203/cwy_corrected_bounded_replay.log
+final table: results/cwy_35b_joint_20260606_165203/final_ablation_table.md
+curve: results/cwy_35b_joint_20260606_165203/curve.png
+aggregate log: results/cwy_35b_joint_20260606_165203/aggregate.log
 cycle 1 train log: results/cwy_35b_joint_20260606_165203/cycle_1/llm_adapter/train_stdout.log
 cycle 2 traces: results/cwy_35b_joint_20260606_165203/cycle_2/traces.jsonl
 cycle 2 train log: results/cwy_35b_joint_20260606_165203/cycle_2/llm_adapter/train_stdout.log
 cycle 2 e2e summary: results/cwy_35b_joint_20260606_165203/cycle_2/e2e_ablation_summary.json
 cycle 3 vllm start log: results/cwy_35b_joint_20260606_165203/cycle_3/phase1_vllm_start.log
 cycle 3 traces: results/cwy_35b_joint_20260606_165203/cycle_3/traces.jsonl
+cycle 3 train log: results/cwy_35b_joint_20260606_165203/cycle_3/llm_adapter/train_stdout.log
+cycle 3 e2e summary: results/cwy_35b_joint_20260606_165203/cycle_3/e2e_ablation_summary.json
 ```
 
 ## 2026-06-09 配方修正：bounded replay 35B 正式续跑
@@ -133,7 +152,6 @@ SCALING_NUM_TRAIN_EPOCHS=1
 
 ```text
 worker: current private 8-GPU worker
-gpu: 8 x H200-class
 shared storage: ready
 repo path: router-skills-evolve/
 experiment path: results/cwy_35b_joint_20260606_165203/
@@ -395,20 +413,20 @@ large_cost_sum: $2.50593310
 - 本地代码：`main`
 - 本地 commit：`769b39c`
 - GPU worker：当前私有 8 卡环境
-- GPU：当前 8 张 H200-class 正在跑 35B SFT，约 `120GB+ / 卡`
+- GPU：当前 8 张 shared GPU 正在跑 35B SFT，高显存占用
 - 远端代码：已从本地同步最新代码和本文档；保留远端 `.env`、venv、vendor、数据、历史结果
 - 35B checkpoint：尚未发现已有产物，需要正式训练
-- 35B模型缓存：CPU 本机已下载完整 HF cache，已同步到 H200
-- H200 模型验证：已用 `local_files_only=True` 验证 `AutoConfig` 和 `AutoTokenizer` 可加载
+- 35B模型缓存：CPU 本机已下载完整 HF cache，已同步到 shared 8-GPU worker
+- shared 8-GPU worker 模型验证：已用 `local_files_only=True` 验证 `AutoConfig` 和 `AutoTokenizer` 可加载
 - API / HF token：`.env` 中已确认存在，不在文档里记录密钥
-- CommonStack：H200 通过 CPU 反向隧道 `<api-base-from-env>` 测试通过，HTTP 200
+- CommonStack：shared 8-GPU worker 通过 CPU 反向隧道 `<api-base-from-env>` 测试通过，HTTP 200
 
 ## 当前进度
 
 2026-06-07 00:52 CST：
 
 - 已启动修复后的正式有效运行。
-- H200 tmux session：
+- shared 8-GPU worker tmux session：
 
 ```text
 cwy35b_20260606_165203
@@ -475,12 +493,12 @@ sft_pairs: 17
 - Phase 3 wrapper 修复：
   - 补 `_p.domain`，解决 `convert_to_prompt_completion.py` 的 `KeyError: 'domain'`。
   - 补 `_p.run_dir` 和同类 provenance，解决 `training.train` 的 `KeyError: 'run_dir'`。
-  - H200 HF cache 补 `refs/main=995ad96eacd98c81ed38be0c5b274b04031597b0`，解决离线 tokenizer validation 找不到默认 revision。
+  - shared 8-GPU worker HF cache 补 `refs/main=995ad96eacd98c81ed38be0c5b274b04031597b0`，解决离线 tokenizer validation 找不到默认 revision。
 - 当前状态：35B SFT 已通过 chat-template validation，正在 tokenizing / training 准备阶段。
 
 2026-06-07 03:52 CST：
 
-- H200 tmux session 仍在运行：
+- shared 8-GPU worker tmux session 仍在运行：
 
 ```text
 cwy35b_resume3_cwy_35b_joint_20260606_165203_193736
@@ -491,7 +509,7 @@ cwy35b_resume3_cwy_35b_joint_20260606_165203_193736
 ```text
 STATUS=running
 progress: 1/445 steps
-GPU: 8 张 H200 全部接近满载，显存约 120GB+/卡
+GPU: 8-GPU worker 全部接近满载，显存高占用
 ```
 
 - 说明：
@@ -508,7 +526,7 @@ STATUS=running
 progress: 2/445 steps
 observed_step_time: about 218s/step
 rough_cycle0_sft_eta_if_speed_holds: about 26-27 hours
-GPU: 8 张 H200 高利用，显存约 124GB/卡
+GPU: 8-GPU worker 高利用，显存高占用
 ```
 
 - 日志提示当前仓库正式配置的 `loss_type=chunked_nll` + FSDP2 `reshard_after_forward=true` 会慢。
@@ -523,7 +541,7 @@ GPU: 8 张 H200 高利用，显存约 124GB/卡
 STATUS=running
 progress: 3/445 steps
 observed_step_time: about 218s/step
-GPU: 8 张 H200 高利用，显存约 124GB/卡
+GPU: 8-GPU worker 高利用，显存高占用
 ```
 
 - 当前还没有 `checkpoint-best`，因此 Phase 4 router training 和 Phase 5 E2E ablation 尚未开始。
@@ -547,7 +565,7 @@ STATUS=running
 progress: 4/445 steps
 observed_step_time: about 217.6s/step
 rough_cycle0_sft_eta_if_speed_holds: about 26-27 hours total
-GPU: 8 张 H200 基本 99-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 基本 99-100% 利用，显存高占用
 ```
 
 - 尚未生成：
@@ -567,7 +585,7 @@ cycle_0/e2e_ablation_summary.json
 STATUS=running
 progress: 5/445 steps
 observed_step_time: 216-218s/step
-GPU: 8 张 H200 仍高利用，显存约 124GB/卡
+GPU: 8-GPU worker 仍高利用，显存高占用
 ```
 
 - `checkpoint-best`、`cycle_0/llm_adapter/checkpoint-best`、`router.joblib`、`e2e_ablation_summary.json` 仍未生成。
@@ -581,7 +599,7 @@ GPU: 8 张 H200 仍高利用，显存约 124GB/卡
 STATUS=running
 progress: 6/445 steps
 observed_step_time: about 216s/step
-GPU: 8 张 H200 100% 左右利用，显存约 124GB/卡
+GPU: 8-GPU worker 100% 左右利用，显存高占用
 ```
 
 - 尚未生成 `checkpoint-best` / router / E2E 产物，仍处于 cycle 0 Phase 3。
@@ -594,7 +612,7 @@ GPU: 8 张 H200 100% 左右利用，显存约 124GB/卡
 STATUS=running
 progress: 7/445 steps
 observed_step_time: about 216-218s/step
-GPU: 8 张 H200 高利用，显存约 124GB/卡
+GPU: 8-GPU worker 高利用，显存高占用
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -608,7 +626,7 @@ GPU: 8 张 H200 高利用，显存约 124GB/卡
 STATUS=running
 progress: 8/445 steps
 observed_step_time: about 217s/step
-GPU: 8 张 H200 显存约 124GB/卡，利用率有波动但仍在训练
+GPU: 8-GPU worker 显存高占用，利用率有波动但仍在训练
 ```
 
 - 尚未生成 `checkpoint-best` / router / E2E 产物。
@@ -621,7 +639,7 @@ GPU: 8 张 H200 显存约 124GB/卡，利用率有波动但仍在训练
 STATUS=running
 progress: 9/445 steps
 observed_step_time: about 217s/step
-GPU: 8 张 H200 高利用，显存约 124GB/卡
+GPU: 8-GPU worker 高利用，显存高占用
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -640,7 +658,7 @@ grad_norm: 1.938
 learning_rate: 3.913e-06
 mean_token_accuracy: 0.9588
 epoch: 0.1125
-GPU: 8 张 H200 高利用，显存约 124GB/卡
+GPU: 8-GPU worker 高利用，显存高占用
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -655,7 +673,7 @@ progress: 11/445 steps
 observed_step_time: about 218s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 显存约 124GB/卡，利用率采样有波动但训练仍在推进
+GPU: 8-GPU worker 显存高占用，利用率采样有波动但训练仍在推进
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -670,7 +688,7 @@ progress: 12/445 steps
 observed_step_time: about 217s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 高利用，显存约 124GB/卡
+GPU: 8-GPU worker 高利用，显存高占用
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -685,7 +703,7 @@ progress: 13/445 steps
 observed_step_time: about 216-217s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 显存约 124GB/卡，利用率采样有波动但训练仍在推进
+GPU: 8-GPU worker 显存高占用，利用率采样有波动但训练仍在推进
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -700,7 +718,7 @@ progress: 14/445 steps
 observed_step_time: about 217s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 高利用，显存约 124GB/卡
+GPU: 8-GPU worker 高利用，显存高占用
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -715,7 +733,7 @@ progress: 15/445 steps
 observed_step_time: about 217s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 高利用，显存约 124GB/卡
+GPU: 8-GPU worker 高利用，显存高占用
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -730,7 +748,7 @@ progress: 16/445 steps
 observed_step_time: about 216.9s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 显存约 124GB/卡，利用率采样有波动但训练仍在推进
+GPU: 8-GPU worker 显存高占用，利用率采样有波动但训练仍在推进
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -745,7 +763,7 @@ progress: 17/445 steps
 observed_step_time: about 218s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 显存约 124GB/卡，利用率采样有波动但训练仍在推进
+GPU: 8-GPU worker 显存高占用，利用率采样有波动但训练仍在推进
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -760,7 +778,7 @@ progress: 18/445 steps
 observed_step_time: about 217s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 显存约 124GB/卡，利用率采样有波动但训练仍在推进
+GPU: 8-GPU worker 显存高占用，利用率采样有波动但训练仍在推进
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -775,7 +793,7 @@ progress: 19/445 steps
 observed_step_time: about 215-217s/step
 last_logged_train_loss: 0.1289 at step 10
 last_logged_mean_token_accuracy: 0.9588 at step 10
-GPU: 8 张 H200 显存约 124GB/卡，利用率采样有波动但训练仍在推进
+GPU: 8-GPU worker 显存高占用，利用率采样有波动但训练仍在推进
 ```
 
 - 尚未生成 `checkpoint-best` / `cycle_0/llm_adapter/checkpoint-best` / `router.joblib` / `e2e_ablation_summary.json`。
@@ -791,7 +809,7 @@ progress: 20/445 steps
 observed_step_time: about 216s/step
 latest_train_loss: 0.09616 at step 20
 latest_mean_token_accuracy: 0.9639 at step 20
-GPU: 8 张 H200 显存约 124GB/卡，训练仍在推进
+GPU: 8-GPU worker 显存高占用，训练仍在推进
 ```
 
 - 仍未生成：
@@ -822,7 +840,7 @@ latest_mean_token_accuracy: 0.9639 at step 20
 
 2026-06-07 05:05 CST：
 
-- 远端 H200 权威检查：
+- 远端 shared 8-GPU worker 权威检查：
 
 ```text
 worker: current private 8-GPU worker
@@ -831,7 +849,7 @@ remote_git: 0cce7aa
 tmux: cwy35b_resume3_cwy_35b_joint_20260606_165203_193736
 STATUS=running
 progress: 21/445 steps
-GPU: 8 张 H200 均占用约 124GB 显存
+GPU: 8-GPU worker 均高显存占用
 ```
 
 - 当前产物状态：
@@ -866,7 +884,7 @@ latest_mean_token_accuracy: 0.9639 at step 20
 
 2026-06-07 05:11 CST：
 
-- 远端 H200 再次检查：
+- 远端 shared 8-GPU worker 再次检查：
 
 ```text
 STATUS=running
@@ -874,7 +892,7 @@ progress: 23/445 steps
 elapsed_train_time: 1:23:08
 observed_step_time: about 217.1s/step
 train_log_mtime: 2026-06-07 05:10:26
-GPU: 8 张 H200 持续占用约 124GB 显存
+GPU: 8-GPU worker 持续高显存占用
 ```
 
 - 当前依然没有以下产物：
@@ -923,7 +941,7 @@ progress: 24/445 steps
 elapsed_train_time: 1:26:46
 observed_step_time: about 217.4s/step
 train_log_mtime: 2026-06-07 05:14:05
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -947,7 +965,7 @@ progress: 25/445 steps
 elapsed_train_time: 1:30:20
 observed_step_time: about 216.3s/step
 train_log_mtime: 2026-06-07 05:17:38
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -971,7 +989,7 @@ progress: 26/445 steps
 elapsed_train_time: 1:34:03
 observed_step_time: about 218.4s/step
 train_log_mtime: 2026-06-07 05:21:21
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -995,7 +1013,7 @@ progress: 27/445 steps
 elapsed_train_time: 1:37:33
 observed_step_time: about 215.9s/step
 train_log_mtime: 2026-06-07 05:24:52
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1022,7 +1040,7 @@ Full Skills+LLM+Router accuracy / cost
 每轮 cycle 的 fallback、task pass、cost_vs_large、实际 API cost
 ```
 
-- 再次检查 H200，35B SFT 正常推进：
+- 再次检查 shared 8-GPU worker，35B SFT 正常推进：
 
 ```text
 STATUS=running
@@ -1032,7 +1050,7 @@ observed_step_time: about 217.8s/step
 train_log_mtime: 2026-06-07 06:04:44
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1058,7 +1076,7 @@ observed_step_time: about 218.5s/step
 train_log_mtime: 2026-06-07 06:08:24
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 96-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 96-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1087,7 +1105,7 @@ grad_norm: 0.7969
 learning_rate: 9.968e-06
 mean_token_accuracy: 0.9765
 epoch: 0.4501
-GPU: 8 张 H200 显存约 124GB/卡，训练仍在推进
+GPU: 8-GPU worker 显存高占用，训练仍在推进
 ```
 
 - 当前仍未生成：
@@ -1113,7 +1131,7 @@ observed_step_time: about 219.7s/step
 train_log_mtime: 2026-06-07 06:15:45
 latest_train_loss: 0.06273 at step 40
 latest_mean_token_accuracy: 0.9765 at step 40
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1140,7 +1158,7 @@ observed_step_time: about 215.8s/step
 train_log_mtime: 2026-06-07 07:35:29
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 高利用，显存约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 高利用，显存高占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -1167,7 +1185,7 @@ cycle_N router accuracy / cost
 cycle_N full Skills+LLM+Router accuracy / cost
 ```
 
-- H200 状态：
+- shared 8-GPU worker 状态：
 
 ```text
 STATUS=running
@@ -1175,7 +1193,7 @@ progress: last logged 63/445 steps
 train_log_mtime: 2026-06-07 07:35:29
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 全部 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 全部 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1207,7 +1225,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.9 hours
 train_log_mtime: 2026-06-07 07:39:06
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 继续训练，显存约 124GB/卡，利用率大多 100%
+GPU: 8-GPU worker 继续训练，显存高占用，利用率大多 100%
 ```
 
 - 当前仍未生成：
@@ -1240,7 +1258,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.9 hours
 train_log_mtime: 2026-06-07 07:42:45
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 基本 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 基本 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1268,7 +1286,7 @@ curve.png
 STATUS=running
 progress: last logged 65/445 steps
 train_log_mtime: 2026-06-07 07:42:45
-GPU: 8 张 H200 仍在训练，基本 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，基本 99%-100% 利用，显存高占用
 latest_metric: loss 0.07143 / mean_token_accuracy 0.9717 at step 60
 ```
 
@@ -1295,7 +1313,7 @@ curve.png
 STATUS=running
 progress: last logged 65/445 steps
 train_log_mtime: 2026-06-07 07:42:45
-GPU: 8 张 H200 仍占用约 124GB/卡，训练 session 仍存在
+GPU: 8-GPU worker 仍高显存占用，训练 session 仍存在
 latest_metric: loss 0.07143 / mean_token_accuracy 0.9717 at step 60
 ```
 
@@ -1327,7 +1345,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 23.0 hours
 train_log_mtime: 2026-06-07 07:46:28
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 继续训练，基本 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，基本 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1358,7 +1376,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 23.0 hours
 train_log_mtime: 2026-06-07 07:50:09
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 继续训练，100% 左右利用，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，100% 左右利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1389,7 +1407,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.9 hours
 train_log_mtime: 2026-06-07 07:53:45
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 继续训练，约 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，约 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1416,7 +1434,7 @@ STATUS=running
 progress: last logged 68/445 steps
 train_log_mtime: 2026-06-07 07:53:45
 processes: tau2_train_wrapper + accelerate launch 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，利用率约 99%-100%
+GPU: 8-GPU worker 仍高显存占用，利用率约 99%-100%
 latest_metric: loss 0.07143 / mean_token_accuracy 0.9717 at step 60
 ```
 
@@ -1448,7 +1466,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.7 hours
 train_log_mtime: 2026-06-07 07:57:20
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 继续训练，约 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，约 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1475,7 +1493,7 @@ STATUS=running
 progress: last logged 69/445 steps
 train_log_mtime: 2026-06-07 07:57:20
 processes: tau2_train_wrapper + accelerate launch 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，利用率有波动但训练 session 正常
+GPU: 8-GPU worker 仍高显存占用，利用率有波动但训练 session 正常
 latest_metric: loss 0.07143 / mean_token_accuracy 0.9717 at step 60
 ```
 
@@ -1510,7 +1528,7 @@ grad_norm: 0.7109
 learning_rate: 9.739e-06
 mean_token_accuracy: 0.9764
 epoch: 0.7876
-GPU: 8 张 H200 继续训练，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1537,7 +1555,7 @@ STATUS=running
 progress: last logged 70/445 steps
 train_log_mtime: 2026-06-07 08:01:05
 processes: tau2_train_wrapper + accelerate launch 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，训练 session 正常
+GPU: 8-GPU worker 仍高显存占用，训练 session 正常
 latest_metric: loss 0.05096 / mean_token_accuracy 0.9764 at step 70
 ```
 
@@ -1569,7 +1587,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.9 hours
 train_log_mtime: 2026-06-07 08:04:47
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
-GPU: 8 张 H200 继续训练，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1600,7 +1618,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.9 hours
 train_log_mtime: 2026-06-07 08:08:30
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
-GPU: 8 张 H200 继续训练，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1627,7 +1645,7 @@ STATUS=running
 progress: last logged 72/445 steps
 train_log_mtime: 2026-06-07 08:08:30
 processes: tau2_train_wrapper + accelerate launch 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，训练 session 正常
+GPU: 8-GPU worker 仍高显存占用，训练 session 正常
 latest_metric: loss 0.05096 / mean_token_accuracy 0.9764 at step 70
 ```
 
@@ -1659,7 +1677,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.9 hours
 train_log_mtime: 2026-06-07 08:12:12
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
-GPU: 8 张 H200 继续训练，约 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，约 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1686,7 +1704,7 @@ STATUS=running
 progress: last logged 73/445 steps
 train_log_mtime: 2026-06-07 08:12:12
 processes: tau2_train_wrapper + accelerate launch 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，训练 session 正常
+GPU: 8-GPU worker 仍高显存占用，训练 session 正常
 latest_metric: loss 0.05096 / mean_token_accuracy 0.9764 at step 70
 ```
 
@@ -1718,7 +1736,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.6 hours
 train_log_mtime: 2026-06-07 08:15:45
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
-GPU: 8 张 H200 继续训练，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1754,7 +1772,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.3 hours
 train_log_mtime: 2026-06-07 08:19:17
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
-GPU: 8 张 H200 继续训练，显存约 124GB/卡，利用率约 99%-100%
+GPU: 8-GPU worker 继续训练，显存高占用，利用率约 99%-100%
 ```
 
 - 当前仍未生成：
@@ -1789,7 +1807,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.2 hours
 train_log_mtime: 2026-06-07 08:22:53
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
-GPU: 8 张 H200 继续训练，显存约 124GB/卡
+GPU: 8-GPU worker 继续训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1903,7 +1921,7 @@ progress: last logged 78/445 steps
 train_log_mtime: 2026-06-07 08:30:07
 tmux: cwy35b_resume3_cwy_35b_joint_20260606_165203_193736 仍存在
 processes: tau2_train_wrapper + accelerate launch 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
 ```
@@ -1934,7 +1952,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.0 hours
 train_log_mtime: 2026-06-07 08:33:42
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
-GPU: 8 张 H200 基本 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 基本 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -1977,7 +1995,7 @@ progress: last logged 79/445 steps
 train_log_mtime: 2026-06-07 08:33:42
 tmux: cwy35b_resume3_cwy_35b_joint_20260606_165203_193736 仍存在
 processes: tau2_train_wrapper + accelerate launch 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 latest_train_loss: 0.05096 at step 70
 latest_mean_token_accuracy: 0.9764 at step 70
 ```
@@ -2045,7 +2063,7 @@ progress: last logged 80/445 steps
 train_log_mtime: 2026-06-07 08:37:26
 tmux: cwy35b_resume3_cwy_35b_joint_20260606_165203_193736 仍存在
 processes: tau2_train_wrapper -> train_pipeline -> train_all -> accelerate 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
 ```
@@ -2079,7 +2097,7 @@ STATUS=running
 progress: last logged 80/445 steps
 train_log_mtime: 2026-06-07 08:37:26
 processes: tau2_train_wrapper -> train_pipeline -> train_all -> accelerate 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 checkpoint-best: missing
 cycle_0/llm_adapter/checkpoint-best: symlink exists, currently unresolved
 cycle_0/e2e_ablation_summary.json: missing
@@ -2100,7 +2118,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.0 hours
 train_log_mtime: 2026-06-07 08:41:00
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2134,7 +2152,7 @@ progress: last logged 81/445 steps
 train_log_mtime: 2026-06-07 08:41:00
 tmux: cwy35b_resume3_cwy_35b_joint_20260606_165203_193736 仍存在
 processes: tau2_train_wrapper -> train_pipeline -> train_all -> accelerate 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 checkpoint-best: missing
 cycle_0/llm_adapter/checkpoint-best: symlink exists, currently unresolved
 cycle_0/e2e_ablation_summary.json: missing
@@ -2145,7 +2163,7 @@ cycle_0/e2e_ablation_summary.json: missing
 2026-06-07 08:45 CST：
 
 - 按用户新要求再次确认：已经先读项目主线，再读论文 `routerevolving-2.pdf`；本文档的汇报口径固定为 `initial accuracy/cost` + 每轮 `Skills / LLM / Router / Full` 的 `accuracy / fallback / cost`。
-- H200 当前仍在正式 35B cycle 0 Phase 3 SFT：
+- shared 8-GPU worker 当前仍在正式 35B cycle 0 Phase 3 SFT：
 
 ```text
 STATUS=running
@@ -2156,7 +2174,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.0 hours
 train_log_mtime: 2026-06-07 08:44:41
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 约 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 约 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -2226,7 +2244,7 @@ progress: last logged 83/445 steps = 18.65%
 train_log_mtime: 2026-06-07 08:48:24
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2255,7 +2273,7 @@ progress: last logged 83/445 steps = 18.65%
 train_log_mtime: 2026-06-07 08:48:24
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2287,7 +2305,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 22.0 hours
 train_log_mtime: 2026-06-07 08:52:02
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 约 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 约 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -2317,7 +2335,7 @@ train_log_mtime: 2026-06-07 08:52:02
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
 processes: tau2_train_wrapper -> train_pipeline -> train_all -> accelerate -> training.train 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2346,7 +2364,7 @@ progress: last logged 84/445 steps = 18.88%
 train_log_mtime: 2026-06-07 08:52:02
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2376,7 +2394,7 @@ train_log_mtime: 2026-06-07 08:52:02
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
 processes: tau2_train_wrapper -> train_pipeline -> train_all -> accelerate -> training.train 仍存在
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2408,7 +2426,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 21.8 hours
 train_log_mtime: 2026-06-07 08:55:37
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2437,7 +2455,7 @@ progress: last logged 85/445 steps = 19.10%
 train_log_mtime: 2026-06-07 08:55:37
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，训练负载约 82%-100%
+GPU: 8-GPU worker 仍高显存占用，训练负载约 82%-100%
 ```
 
 - 当前仍未生成：
@@ -2466,7 +2484,7 @@ progress: last logged 85/445 steps = 19.10%
 train_log_mtime: 2026-06-07 08:55:37
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，训练负载约 100%
+GPU: 8-GPU worker 仍高显存占用，训练负载约 100%
 ```
 
 - 当前仍未生成：
@@ -2498,7 +2516,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 21.7 hours
 train_log_mtime: 2026-06-07 08:59:15
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 约 99%-100% 利用，显存约 124GB/卡
+GPU: 8-GPU worker 约 99%-100% 利用，显存高占用
 ```
 
 - 当前仍未生成：
@@ -2528,7 +2546,7 @@ train_log_mtime: 2026-06-07 08:59:15
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
 rough_remaining_for_cycle0_sft_if_speed_holds: about 21.7 hours
-GPU: 8 张 H200 仍占用约 124GB/卡，训练负载约 99%-100%
+GPU: 8-GPU worker 仍高显存占用，训练负载约 99%-100%
 ```
 
 - 当前仍未生成：
@@ -2557,7 +2575,7 @@ progress: last logged 86/445 steps = 19.33%
 train_log_mtime: 2026-06-07 08:59:15
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2589,7 +2607,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 21.7 hours
 train_log_mtime: 2026-06-07 09:02:54
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2618,7 +2636,7 @@ progress: last logged 87/445 steps = 19.55%
 train_log_mtime: 2026-06-07 09:02:54
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2647,7 +2665,7 @@ progress: last logged 87/445 steps = 19.55%
 train_log_mtime: 2026-06-07 09:02:54
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，训练负载仍在；单卡利用率瞬时有波动
+GPU: 8-GPU worker 仍高显存占用，训练负载仍在；单卡利用率瞬时有波动
 ```
 
 - 当前仍未生成：
@@ -2676,7 +2694,7 @@ progress: last logged 87/445 steps = 19.55%
 train_log_mtime: 2026-06-07 09:02:54
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2708,7 +2726,7 @@ rough_remaining_for_cycle0_sft_if_speed_holds: about 21.6 hours
 train_log_mtime: 2026-06-07 09:06:30
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2737,7 +2755,7 @@ progress: last logged 88/445 steps = 19.78%
 train_log_mtime: 2026-06-07 09:06:30
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，有训练负载
+GPU: 8-GPU worker 仍高显存占用，有训练负载
 ```
 
 - 当前仍未生成：
@@ -2766,7 +2784,7 @@ progress: last logged 88/445 steps = 19.78%
 train_log_mtime: 2026-06-07 09:06:30
 latest_train_loss: 0.07003 at step 80
 latest_mean_token_accuracy: 0.9726 at step 80
-GPU: 8 张 H200 仍占用约 124GB/卡，训练负载约 99%-100%
+GPU: 8-GPU worker 仍高显存占用，训练负载约 99%-100%
 ```
 
 - 当前仍未生成：
@@ -2797,7 +2815,7 @@ observed_step_time: about 215.7s/step
 train_log_mtime: 2026-06-07 07:31:53
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -2824,7 +2842,7 @@ observed_step_time: about 216.5s/step
 train_log_mtime: 2026-06-07 07:21:07
 latest_train_loss: 0.05547 at step 50
 latest_mean_token_accuracy: 0.9788 at step 50
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -2854,7 +2872,7 @@ grad_norm: 0.6953
 learning_rate: 9.839e-06
 mean_token_accuracy: 0.9717
 epoch: 0.6751
-GPU: 8 张 H200 高利用，显存约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 高利用，显存高占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -2881,7 +2899,7 @@ observed_step_time: about 215.2s/step
 train_log_mtime: 2026-06-07 07:28:16
 latest_train_loss: 0.07143 at step 60
 latest_mean_token_accuracy: 0.9717 at step 60
-GPU: 8 张 H200 高利用，显存约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 高利用，显存高占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -2908,7 +2926,7 @@ observed_step_time: about 217.0s/step
 train_log_mtime: 2026-06-07 07:17:32
 latest_train_loss: 0.05547 at step 50
 latest_mean_token_accuracy: 0.9788 at step 50
-GPU: 8 张 H200 高利用，显存约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 高利用，显存高占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -2935,7 +2953,7 @@ observed_step_time: about 218.3s/step
 train_log_mtime: 2026-06-07 07:13:58
 latest_train_loss: 0.05547 at step 50
 latest_mean_token_accuracy: 0.9788 at step 50
-GPU: 8 张 H200 高利用，显存约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 高利用，显存高占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -2962,7 +2980,7 @@ observed_step_time: about 220.1s/step
 train_log_mtime: 2026-06-07 07:10:24
 latest_train_loss: 0.05547 at step 50
 latest_mean_token_accuracy: 0.9788 at step 50
-GPU: 8 张 H200 高利用，显存约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 高利用，显存高占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -2989,7 +3007,7 @@ observed_step_time: about 218.2s/step
 train_log_mtime: 2026-06-07 07:03:00
 latest_train_loss: 0.05547 at step 50
 latest_mean_token_accuracy: 0.9788 at step 50
-GPU: 8 张 H200 高利用，显存约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 高利用，显存高占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3016,7 +3034,7 @@ observed_step_time: about 219.0s/step
 train_log_mtime: 2026-06-07 07:06:41
 latest_train_loss: 0.05547 at step 50
 latest_mean_token_accuracy: 0.9788 at step 50
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3043,7 +3061,7 @@ observed_step_time: about 219.6s/step
 train_log_mtime: 2026-06-07 06:19:25
 latest_train_loss: 0.06273 at step 40
 latest_mean_token_accuracy: 0.9765 at step 40
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3070,7 +3088,7 @@ observed_step_time: about 219.1s/step
 train_log_mtime: 2026-06-07 06:23:03
 latest_train_loss: 0.06273 at step 40
 latest_mean_token_accuracy: 0.9765 at step 40
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3097,7 +3115,7 @@ observed_step_time: about 220.4s/step
 train_log_mtime: 2026-06-07 06:30:25
 latest_train_loss: 0.06273 at step 40
 latest_mean_token_accuracy: 0.9765 at step 40
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3124,7 +3142,7 @@ observed_step_time: about 220.1s/step
 train_log_mtime: 2026-06-07 06:34:05
 latest_train_loss: 0.06273 at step 40
 latest_mean_token_accuracy: 0.9765 at step 40
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3151,7 +3169,7 @@ observed_step_time: about 219.0s/step
 train_log_mtime: 2026-06-07 06:37:41
 latest_train_loss: 0.06273 at step 40
 latest_mean_token_accuracy: 0.9765 at step 40
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3178,7 +3196,7 @@ observed_step_time: about 218.3s/step
 train_log_mtime: 2026-06-07 06:41:18
 latest_train_loss: 0.06273 at step 40
 latest_mean_token_accuracy: 0.9765 at step 40
-GPU: 8 张 H200 高利用，显存约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 高利用，显存高占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3208,7 +3226,7 @@ grad_norm: 0.5156
 learning_rate: 9.916e-06
 mean_token_accuracy: 0.9788
 epoch: 0.5626
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3235,7 +3253,7 @@ observed_step_time: about 216.7s/step
 train_log_mtime: 2026-06-07 06:55:41
 latest_train_loss: 0.05547 at step 50
 latest_mean_token_accuracy: 0.9788 at step 50
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3262,7 +3280,7 @@ observed_step_time: about 217.3s/step
 train_log_mtime: 2026-06-07 06:59:20
 latest_train_loss: 0.05547 at step 50
 latest_mean_token_accuracy: 0.9788 at step 50
-GPU: 8 张 H200 仍占用约 124GB/卡，训练继续推进
+GPU: 8-GPU worker 仍高显存占用，训练继续推进
 ```
 
 - 当前仍未生成：
@@ -3287,7 +3305,7 @@ progress: 28/445 steps
 elapsed_train_time: 1:41:10
 observed_step_time: about 216.2s/step
 train_log_mtime: 2026-06-07 05:28:28
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3311,7 +3329,7 @@ progress: 29/445 steps
 elapsed_train_time: 1:44:50
 observed_step_time: about 217.2s/step
 train_log_mtime: 2026-06-07 05:32:08
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3340,7 +3358,7 @@ grad_norm: 0.6602
 learning_rate: 9.996e-06
 mean_token_accuracy: 0.976
 epoch: 0.3376
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 注意：`mean_token_accuracy=0.976` 是训练 token 指标，不等于 tau2 task accuracy；正式 task / router / full accuracy 必须等 checkpoint 后 Phase 4/5 产物。
@@ -3367,7 +3385,7 @@ observed_step_time: about 216.6s/step
 train_log_mtime: 2026-06-07 05:39:19
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3393,7 +3411,7 @@ observed_step_time: about 217.7s/step
 train_log_mtime: 2026-06-07 05:42:59
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3419,7 +3437,7 @@ observed_step_time: about 217.5s/step
 train_log_mtime: 2026-06-07 05:46:36
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3445,7 +3463,7 @@ observed_step_time: about 217.8s/step
 train_log_mtime: 2026-06-07 05:50:15
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3471,7 +3489,7 @@ observed_step_time: about 217.8s/step
 train_log_mtime: 2026-06-07 05:53:52
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3497,7 +3515,7 @@ observed_step_time: about 216.3s/step
 train_log_mtime: 2026-06-07 05:57:25
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3523,7 +3541,7 @@ observed_step_time: about 217.3s/step
 train_log_mtime: 2026-06-07 06:01:05
 latest_train_loss: 0.06071 at step 30
 latest_mean_token_accuracy: 0.976 at step 30
-GPU: 8 张 H200 仍在训练，显存约 124GB/卡
+GPU: 8-GPU worker 仍在训练，显存高占用
 ```
 
 - 当前仍未生成：
@@ -3540,7 +3558,7 @@ cycle_0/e2e_ablation_summary.json
 2026-06-07 00:49 CST：
 
 - 已启动新的正式有效候选运行。
-- H200 tmux session：
+- shared 8-GPU worker tmux session：
 
 ```text
 cwy35b_20260606_164919
@@ -3574,12 +3592,12 @@ loaded 74 tasks
   - `load_tasks`：按 `TAU2_DOMAIN=retail` 加载真实任务，再按 `split_tasks.json` 过滤 train/eval
   - `prompt`：使用 `reason_for_call / known_info / unknown_info / task_instructions`
   - `signature`：现在从具体任务内容开头生成，不再从空字符串或泛化 persona 生成
-- H200 验证结果：前 5 个 train task 的 `prompt_len > 0`，signature 已包含具体任务描述。
+- shared 8-GPU worker 验证结果：前 5 个 train task 的 `prompt_len > 0`，signature 已包含具体任务描述。
 
 2026-06-07 00:45 CST：
 
 - 已重新启动正式 35B SLR 全流程。
-- H200 tmux session：
+- shared 8-GPU worker tmux session：
 
 ```text
 cwy35b_20260606_164508
@@ -3615,7 +3633,7 @@ LARGE_MODEL=openai/openai/gpt-5.4-2026-03-05
 - 第一次正式启动进入 Phase 1 前失败，未开始训练、未产生有效 accuracy。
 - 失败原因：scaling 层把 `split=train` 传给底层 tau2 adapter；底层 adapter 的参数实际是 domain，于是错误寻找 `domains/train/tasks.json`。
 - 已修复 `experiments/scaling/benches/tau2_bench/adapter.py`：现在先加载 `TAU2_DOMAIN=retail` 的真实 `tasks.json`，再用 `split_tasks.json` 过滤 train/eval。
-- 已在 H200 验证真实任务加载：
+- 已在 shared 8-GPU worker 验证真实任务加载：
   - train split：74 个任务
   - eval/test split：40 个任务
   - domain：retail
@@ -3626,10 +3644,10 @@ LARGE_MODEL=openai/openai/gpt-5.4-2026-03-05
 - 已读取项目主线代码、pipeline、skills、router、LLM train wrapper、E2E ablation 聚合代码。
 - 已读取论文 `routerevolving-2.pdf`。
 - 已确认正式模型是仓库里的 `Qwen/Qwen3.6-35B-A3B`。
-- 已确认 H200 空闲。
+- 已确认 shared 8-GPU worker 空闲。
 - 已完成 CPU 本机下载 `Qwen/Qwen3.6-35B-A3B` 到 HF cache。
-- 已完成 CPU 到 H200 的模型同步。
-- 已完成 H200 离线加载验证。
+- 已完成 CPU 到 shared 8-GPU worker 的模型同步。
+- 已完成 shared 8-GPU worker 离线加载验证。
 
 下载记录：
 
@@ -3638,10 +3656,10 @@ CPU download log: tmp/cwy_hf_35b_seq_download.log
 CPU cache: <hf-cache>/models--Qwen--Qwen3.6-35B-A3B
 download method: sequential hf download, max-workers=1
 worker HF cache: <hf-cache>/models--Qwen--Qwen3.6-35B-A3B
-H200 files: 40
-H200 model_type: qwen3_5_moe
-H200 architecture: Qwen3_5MoeForConditionalGeneration
-H200 vocab_size: 248077
+shared 8-GPU worker files: 40
+shared 8-GPU worker model_type: qwen3_5_moe
+shared 8-GPU worker architecture: Qwen3_5MoeForConditionalGeneration
+shared 8-GPU worker vocab_size: 248077
 ```
 
 下一步：
@@ -3665,7 +3683,7 @@ H200 vocab_size: 248077
 2026-06-07 09:13 CST：
 
 - 已按用户新增论文要求重新读取项目主线和论文，本文档前面的“论文和项目口径”是当前报告口径。
-- H200 正在跑正式 35B 联合演进，不是 30B，不是 mock。
+- shared 8-GPU worker 正在跑正式 35B 联合演进，不是 30B，不是 mock。
 - 当前仍处于 `cycle 0 / Phase 3 / 35B SFT`，Router / E2E / cycle1 还没有开始。
 
 训练状态：
@@ -3744,7 +3762,7 @@ grad_norm: 0.5859
 learning_rate: 9.468e-06
 mean_token_accuracy: 0.9579
 epoch: 1.011
-GPU: 8 张 H200 继续训练，采样时均为 100% 利用
+GPU: 8-GPU worker 继续训练，采样时均为 100% 利用
 ```
 
 当前仍未生成：
@@ -3776,7 +3794,7 @@ progress: 91/445 steps = 20.45%
 elapsed_train_time: 5:37:20
 train_log_mtime: 2026-06-07 09:24:39
 latest_logged_metric: loss 0.0647 / mean_token_accuracy 0.9579 at step 90
-GPU: 8 张 H200 继续占用，采样时均为 100% 利用
+GPU: 8-GPU worker 继续占用，采样时均为 100% 利用
 ```
 
 - 当前仍未生成：
@@ -3804,7 +3822,7 @@ progress: 92/445 steps = 20.67%
 elapsed_train_time: 5:41:07
 train_log_mtime: 2026-06-07 09:28:25
 latest_logged_metric: loss 0.0647 / mean_token_accuracy 0.9579 at step 90
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用
 ```
 
 - 当前仍未生成：
@@ -3834,7 +3852,7 @@ progress: 93/445 steps = 20.90%
 elapsed_train_time: 5:44:42
 train_log_mtime: 2026-06-07 09:32:01
 latest_logged_metric: loss 0.0647 / mean_token_accuracy 0.9579 at step 90
-GPU: 8 张 H200 继续训练，采样时 87%-100% 利用
+GPU: 8-GPU worker 继续训练，采样时 87%-100% 利用
 ```
 
 - 当前仍未生成：
@@ -3869,7 +3887,7 @@ progress: 94/445 steps = 21.12%
 elapsed_train_time: 5:48:18
 train_log_mtime: 2026-06-07 09:35:36
 latest_logged_metric: loss 0.0647 / mean_token_accuracy 0.9579 at step 90
-GPU: 8 张 H200 继续训练，采样时 7 张 99%-100%，1 张短时 0% 但显存仍占用约 124GB
+GPU: 8-GPU worker 继续训练，采样时 7 张 99%-100%，1 张短时 0% 但显存仍高占用
 ```
 
 当前仍未生成：
@@ -3904,7 +3922,7 @@ progress: 96/445 steps = 21.57%
 elapsed_train_time: 5:55:36
 train_log_mtime: 2026-06-07 09:42:54
 latest_logged_metric: loss 0.0647 / mean_token_accuracy 0.9579 at step 90
-GPU: 8 张 H200 继续训练，采样时 5 张 100%，2 张短时 0%，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 5 张 100%，2 张短时 0%，显存高占用
 ```
 
 当前仍未生成：
@@ -3933,7 +3951,7 @@ progress: 97/445 steps = 21.80%
 elapsed_train_time: 5:59:16
 train_log_mtime: 2026-06-07 09:46:35
 latest_logged_metric: loss 0.0647 / mean_token_accuracy 0.9579 at step 90
-GPU: 8 张 H200 继续训练，采样时 7 张 100%，1 张短时 0%，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 7 张 100%，1 张短时 0%，显存高占用
 ```
 
 当前仍未生成：
@@ -3963,7 +3981,7 @@ progress: 99/445 steps = 22.25%
 elapsed_train_time: 6:06:37
 train_log_mtime: 2026-06-07 09:53:55
 latest_logged_metric: loss 0.0647 / mean_token_accuracy 0.9579 at step 90
-GPU: 8 张 H200 继续训练，采样时 80%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 80%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -3996,7 +4014,7 @@ grad_norm: 0.9141
 learning_rate: 9.299e-06
 mean_token_accuracy: 0.9846
 epoch: 1.124
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -4024,7 +4042,7 @@ progress: 102/445 steps = 22.92%
 elapsed_train_time: 6:17:34
 train_log_mtime: 2026-06-07 10:04:53
 latest_logged_metric: loss 0.03776 / mean_token_accuracy 0.9846 at step 100
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -4053,7 +4071,7 @@ progress: 103/445 steps = 23.15%
 elapsed_train_time: 6:21:18
 train_log_mtime: 2026-06-07 10:08:36
 latest_logged_metric: loss 0.03776 / mean_token_accuracy 0.9846 at step 100
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -4082,7 +4100,7 @@ progress: 104/445 steps = 23.37%
 elapsed_train_time: 6:25:01
 train_log_mtime: 2026-06-07 10:12:20
 latest_logged_metric: loss 0.03776 / mean_token_accuracy 0.9846 at step 100
-GPU: 8 张 H200 继续训练，采样时 72%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 72%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -4117,7 +4135,7 @@ progress: 105/445 steps = 23.60%
 elapsed_train_time: 6:28:45
 train_log_mtime: 2026-06-07 10:16:03
 latest_logged_metric: loss 0.03776 / mean_token_accuracy 0.9846 at step 100
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -4147,7 +4165,7 @@ progress: 106/445 steps = 23.82%
 elapsed_train_time: 6:32:23
 train_log_mtime: 2026-06-07 10:19:41
 latest_logged_metric: loss 0.03776 / mean_token_accuracy 0.9846 at step 100
-GPU: 8 张 H200 继续训练，采样时 71%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 71%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -4182,7 +4200,7 @@ progress: 107/445 steps = 24.04%
 elapsed_train_time: 6:36:06
 train_log_mtime: 2026-06-07 10:23:24
 latest_logged_metric: loss 0.03776 / mean_token_accuracy 0.9846 at step 100
-GPU: 8 张 H200 继续训练，采样时 100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -4213,7 +4231,7 @@ progress: 190/445 steps = 42.70%
 elapsed_train_time: 11:42:48
 train_log_mtime: 2026-06-07 15:30:06
 latest_logged_metric: loss 0.02503 / mean_token_accuracy 0.99 at step 190
-GPU: 8 张 H200 继续训练，采样时 0%-99% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-99% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -4249,7 +4267,7 @@ progress: 200/445 steps = 44.94%
 elapsed_train_time: 12:20:06
 train_log_mtime: 2026-06-07 16:07:24
 latest_logged_metric: loss 0.02559 / mean_token_accuracy 0.9897 at step 200
-GPU: 8 张 H200 继续训练，采样时 17%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 17%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -4285,7 +4303,7 @@ progress: 210/445 steps = 47.19%
 elapsed_train_time: 12:57:16
 train_log_mtime: 2026-06-07 16:44:35
 latest_logged_metric: loss 0.02911 / mean_token_accuracy 0.9891 at step 210
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -4321,7 +4339,7 @@ progress: 218/445 steps = 48.99%
 elapsed_train_time: 13:26:55
 train_log_mtime: 2026-06-07 17:14:13
 latest_logged_metric: loss 0.02911 / mean_token_accuracy 0.9891 at step 210
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -4357,7 +4375,7 @@ progress: 221/445 steps = 49.66%
 elapsed_train_time: 13:37:59
 train_log_mtime: 2026-06-07 17:25:18
 latest_logged_metric: loss 0.02832 / mean_token_accuracy 0.9888 at step 221
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -4393,7 +4411,7 @@ progress: 231/445 steps = 51.91%
 elapsed_train_time: 14:15:03
 train_log_mtime: 2026-06-07 18:02:21
 latest_logged_metric: loss 0.02897 / mean_token_accuracy 0.9886 at step 231
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -4429,7 +4447,7 @@ progress: 234/445 steps = 52.58%
 elapsed_train_time: 14:26:18
 train_log_mtime: 2026-06-07 18:13:36
 latest_logged_metric: loss 0.02897 / mean_token_accuracy 0.9886 at step 231
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -4465,7 +4483,7 @@ progress: 235/445 steps = 52.81%
 elapsed_train_time: 14:29:58
 train_log_mtime: 2026-06-07 18:17:16
 latest_logged_metric: loss 0.02897 / mean_token_accuracy 0.9886 at step 231
-GPU: 8 张 H200 继续训练，采样时 100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -5690,7 +5708,7 @@ progress: 228/445 steps = 51.24%
 elapsed_train_time: 14:03:57
 train_log_mtime: 2026-06-07 17:51:15
 latest_logged_metric: loss 0.02832 / mean_token_accuracy 0.9888 at step 221
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -5726,7 +5744,7 @@ progress: 225/445 steps = 50.56%
 elapsed_train_time: 13:52:55
 train_log_mtime: 2026-06-07 17:40:13
 latest_logged_metric: loss 0.02832 / mean_token_accuracy 0.9888 at step 221
-GPU: 8 张 H200 继续训练，采样时 1%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 1%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -5762,7 +5780,7 @@ progress: 227/445 steps = 51.01%
 elapsed_train_time: 14:00:15
 train_log_mtime: 2026-06-07 17:47:33
 latest_logged_metric: loss 0.02832 / mean_token_accuracy 0.9888 at step 221
-GPU: 8 张 H200 继续训练，采样时 68%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 68%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -5798,7 +5816,7 @@ progress: 222/445 steps = 49.89%
 elapsed_train_time: 13:41:44
 train_log_mtime: 2026-06-07 17:29:02
 latest_logged_metric: loss 0.02832 / mean_token_accuracy 0.9888 at step 221
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -5834,7 +5852,7 @@ progress: 219/445 steps = 49.21%
 elapsed_train_time: 13:30:38
 train_log_mtime: 2026-06-07 17:17:56
 latest_logged_metric: loss 0.02911 / mean_token_accuracy 0.9891 at step 210
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -5870,7 +5888,7 @@ progress: 216/445 steps = 48.54%
 elapsed_train_time: 13:19:32
 train_log_mtime: 2026-06-07 17:06:51
 latest_logged_metric: loss 0.02911 / mean_token_accuracy 0.9891 at step 210
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -5906,7 +5924,7 @@ progress: 213/445 steps = 47.87%
 elapsed_train_time: 13:08:27
 train_log_mtime: 2026-06-07 16:55:45
 latest_logged_metric: loss 0.02911 / mean_token_accuracy 0.9891 at step 210
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -5942,7 +5960,7 @@ progress: 212/445 steps = 47.64%
 elapsed_train_time: 13:04:42
 train_log_mtime: 2026-06-07 16:52:00
 latest_logged_metric: loss 0.02911 / mean_token_accuracy 0.9891 at step 210
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -5978,7 +5996,7 @@ progress: 207/445 steps = 46.52%
 elapsed_train_time: 12:46:03
 train_log_mtime: 2026-06-07 16:33:21
 latest_logged_metric: loss 0.02559 / mean_token_accuracy 0.9897 at step 200
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6014,7 +6032,7 @@ progress: 204/445 steps = 45.84%
 elapsed_train_time: 12:34:58
 train_log_mtime: 2026-06-07 16:22:16
 latest_logged_metric: loss 0.02559 / mean_token_accuracy 0.9897 at step 200
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6050,7 +6068,7 @@ progress: 201/445 steps = 45.17%
 elapsed_train_time: 12:23:54
 train_log_mtime: 2026-06-07 16:11:12
 latest_logged_metric: loss 0.02559 / mean_token_accuracy 0.9897 at step 200
-GPU: 8 张 H200 继续训练，采样时 58%-86% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 58%-86% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6086,7 +6104,7 @@ progress: 197/445 steps = 44.27%
 elapsed_train_time: 12:08:55
 train_log_mtime: 2026-06-07 15:56:13
 latest_logged_metric: loss 0.02503 / mean_token_accuracy 0.99 at step 190
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6122,7 +6140,7 @@ progress: 193/445 steps = 43.37%
 elapsed_train_time: 11:53:57
 train_log_mtime: 2026-06-07 15:41:16
 latest_logged_metric: loss 0.02503 / mean_token_accuracy 0.99 at step 190
-GPU: 8 张 H200 继续训练，采样时 65%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 65%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6158,7 +6176,7 @@ progress: 189/445 steps = 42.47%
 elapsed_train_time: 11:39:09
 train_log_mtime: 2026-06-07 15:26:27
 latest_logged_metric: loss 0.04725 / mean_token_accuracy 0.9648 at step 180
-GPU: 8 张 H200 继续训练，采样时 70%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 70%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6193,7 +6211,7 @@ progress: 188/445 steps = 42.25%
 elapsed_train_time: 11:35:24
 train_log_mtime: 2026-06-07 15:22:42
 latest_logged_metric: loss 0.04725 / mean_token_accuracy 0.9648 at step 180
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6228,7 +6246,7 @@ progress: 187/445 steps = 42.02%
 elapsed_train_time: 11:31:50
 train_log_mtime: 2026-06-07 15:19:08
 latest_logged_metric: loss 0.04725 / mean_token_accuracy 0.9648 at step 180
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6263,7 +6281,7 @@ progress: 185/445 steps = 41.57%
 elapsed_train_time: 11:24:23
 train_log_mtime: 2026-06-07 15:11:41
 latest_logged_metric: loss 0.04725 / mean_token_accuracy 0.9648 at step 180
-GPU: 8 张 H200 继续训练，采样时 66%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 66%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6298,7 +6316,7 @@ progress: 184/445 steps = 41.35%
 elapsed_train_time: 11:20:40
 train_log_mtime: 2026-06-07 15:07:58
 latest_logged_metric: loss 0.04725 / mean_token_accuracy 0.9648 at step 180
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6333,7 +6351,7 @@ progress: 183/445 steps = 41.12%
 elapsed_train_time: 11:17:05
 train_log_mtime: 2026-06-07 15:04:23
 latest_logged_metric: loss 0.04725 / mean_token_accuracy 0.9648 at step 180
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6368,7 +6386,7 @@ progress: 182/445 steps = 40.90%
 elapsed_train_time: 11:13:25
 train_log_mtime: 2026-06-07 15:00:44
 latest_logged_metric: loss 0.04725 / mean_token_accuracy 0.9648 at step 180
-GPU: 8 张 H200 继续训练，采样时 87%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 87%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6407,7 +6425,7 @@ grad_norm: 0.7617
 learning_rate: 7.291e-06
 mean_token_accuracy: 0.9648
 epoch: 2.023
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6443,7 +6461,7 @@ progress: 181/445 steps = 40.67%
 elapsed_train_time: 11:09:40
 train_log_mtime: 2026-06-07 14:56:58
 latest_logged_metric: loss 0.04725 / mean_token_accuracy 0.9648 at step 180
-GPU: 8 张 H200 继续训练，采样时 84%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 84%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6478,7 +6496,7 @@ progress: 179/445 steps = 40.22%
 elapsed_train_time: 11:02:13
 train_log_mtime: 2026-06-07 14:49:31
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6513,7 +6531,7 @@ progress: 178/445 steps = 40.00%
 elapsed_train_time: 10:57:06
 train_log_mtime: 2026-06-07 14:45:36
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 91%-96% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 91%-96% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6548,7 +6566,7 @@ progress: 177/445 steps = 39.78%
 elapsed_train_time: 10:53:55
 train_log_mtime: 2026-06-07 14:41:13
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 79%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 79%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6583,7 +6601,7 @@ progress: 176/445 steps = 39.55%
 elapsed_train_time: 10:50:09
 train_log_mtime: 2026-06-07 14:37:27
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 50%-79% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 50%-79% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6618,7 +6636,7 @@ progress: 174/445 steps = 39.10%
 elapsed_train_time: 10:42:46
 train_log_mtime: 2026-06-07 14:30:04
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6654,7 +6672,7 @@ progress: 175/445 steps = 39.33%
 elapsed_train_time: 10:46:26
 train_log_mtime: 2026-06-07 14:33:44
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6689,7 +6707,7 @@ progress: 172/445 steps = 38.65%
 elapsed_train_time: 10:35:23
 train_log_mtime: 2026-06-07 14:22:41
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6725,7 +6743,7 @@ progress: 173/445 steps = 38.88%
 elapsed_train_time: 10:39:02
 train_log_mtime: 2026-06-07 14:26:21
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6764,7 +6782,7 @@ grad_norm: 0.957
 learning_rate: 7.594e-06
 mean_token_accuracy: 0.9838
 epoch: 1.911
-GPU: 8 张 H200 继续训练，采样时 68%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 68%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6800,7 +6818,7 @@ progress: 171/445 steps = 38.43%
 elapsed_train_time: 10:31:49
 train_log_mtime: 2026-06-07 14:19:07
 latest_logged_metric: loss 0.03866 / mean_token_accuracy 0.9838 at step 170
-GPU: 8 张 H200 继续训练，采样时 67%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 67%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6835,7 +6853,7 @@ progress: 169/445 steps = 37.98%
 elapsed_train_time: 10:24:25
 train_log_mtime: 2026-06-07 14:11:43
 latest_logged_metric: loss 0.03373 / mean_token_accuracy 0.9857 at step 160
-GPU: 8 张 H200 继续训练，采样时 65%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 65%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6870,7 +6888,7 @@ progress: 167/445 steps = 37.53%
 elapsed_train_time: 10:16:57
 train_log_mtime: 2026-06-07 14:04:15
 latest_logged_metric: loss 0.03373 / mean_token_accuracy 0.9857 at step 160
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6905,7 +6923,7 @@ progress: 166/445 steps = 37.30%
 elapsed_train_time: 10:13:21
 train_log_mtime: 2026-06-07 14:00:39
 latest_logged_metric: loss 0.03373 / mean_token_accuracy 0.9857 at step 160
-GPU: 8 张 H200 继续训练，采样时 67%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 67%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -6940,7 +6958,7 @@ progress: 165/445 steps = 37.08%
 elapsed_train_time: 10:09:35
 train_log_mtime: 2026-06-07 13:56:53
 latest_logged_metric: loss 0.03373 / mean_token_accuracy 0.9857 at step 160
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -6975,7 +6993,7 @@ progress: 164/445 steps = 36.85%
 elapsed_train_time: 10:05:53
 train_log_mtime: 2026-06-07 13:53:11
 latest_logged_metric: loss 0.03373 / mean_token_accuracy 0.9857 at step 160
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -7010,7 +7028,7 @@ progress: 126/445 steps = 28.31%
 elapsed_train_time: 7:46:02
 train_log_mtime: 2026-06-07 11:33:20
 latest_logged_metric: loss 0.04278 / mean_token_accuracy 0.9828 at step 120
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7049,7 +7067,7 @@ grad_norm: 0.6406
 learning_rate: 8.67e-06
 mean_token_accuracy: 0.9822
 epoch: 1.461
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7084,7 +7102,7 @@ progress: 131/445 steps = 29.44%
 elapsed_train_time: 8:04:21
 train_log_mtime: 2026-06-07 11:51:39
 latest_logged_metric: loss 0.05111 / mean_token_accuracy 0.9822 at step 130
-GPU: 8 张 H200 继续训练，采样时 15%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 15%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7118,7 +7136,7 @@ progress: 132/445 steps = 29.66%
 elapsed_train_time: 8:08:00
 train_log_mtime: 2026-06-07 11:55:18
 latest_logged_metric: loss 0.05111 / mean_token_accuracy 0.9822 at step 130
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7152,7 +7170,7 @@ progress: 134/445 steps = 30.11%
 elapsed_train_time: 8:15:25
 train_log_mtime: 2026-06-07 12:02:43
 latest_logged_metric: loss 0.05111 / mean_token_accuracy 0.9822 at step 130
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7205,7 +7223,7 @@ progress: 135/445 steps = 30.34%
 elapsed_train_time: 8:19:06
 train_log_mtime: 2026-06-07 12:06:24
 latest_logged_metric: loss 0.05111 / mean_token_accuracy 0.9822 at step 130
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7239,7 +7257,7 @@ progress: 137/445 steps = 30.79%
 elapsed_train_time: 8:26:30
 train_log_mtime: 2026-06-07 12:13:48
 latest_logged_metric: loss 0.05111 / mean_token_accuracy 0.9822 at step 130
-GPU: 8 张 H200 继续训练，采样时 1%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 1%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7273,7 +7291,7 @@ progress: 138/445 steps = 31.01%
 elapsed_train_time: 8:30:15
 train_log_mtime: 2026-06-07 12:17:33
 latest_logged_metric: loss 0.05111 / mean_token_accuracy 0.9822 at step 130
-GPU: 8 张 H200 继续训练，采样时 76%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 76%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7307,7 +7325,7 @@ progress: 139/445 steps = 31.24%
 elapsed_train_time: 8:33:53
 train_log_mtime: 2026-06-07 12:21:11
 latest_logged_metric: loss 0.05111 / mean_token_accuracy 0.9822 at step 130
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7345,7 +7363,7 @@ grad_norm: 0.6719
 learning_rate: 8.424e-06
 mean_token_accuracy: 0.983
 epoch: 1.574
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7380,7 +7398,7 @@ progress: 142/445 steps = 31.91%
 elapsed_train_time: 8:44:44
 train_log_mtime: 2026-06-07 12:32:02
 latest_logged_metric: loss 0.04297 / mean_token_accuracy 0.983 at step 140
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7414,7 +7432,7 @@ progress: 143/445 steps = 32.13%
 elapsed_train_time: 8:48:23
 train_log_mtime: 2026-06-07 12:35:41
 latest_logged_metric: loss 0.04297 / mean_token_accuracy 0.983 at step 140
-GPU: 8 张 H200 继续训练，采样时 71%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 71%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7448,7 +7466,7 @@ progress: 144/445 steps = 32.36%
 elapsed_train_time: 8:51:58
 train_log_mtime: 2026-06-07 12:39:16
 latest_logged_metric: loss 0.04297 / mean_token_accuracy 0.983 at step 140
-GPU: 8 张 H200 继续训练，采样时 64%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 64%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7482,7 +7500,7 @@ progress: 145/445 steps = 32.58%
 elapsed_train_time: 8:55:40
 train_log_mtime: 2026-06-07 12:42:58
 latest_logged_metric: loss 0.04297 / mean_token_accuracy 0.983 at step 140
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7516,7 +7534,7 @@ progress: 147/445 steps = 33.03%
 elapsed_train_time: 9:02:58
 train_log_mtime: 2026-06-07 12:50:16
 latest_logged_metric: loss 0.04297 / mean_token_accuracy 0.983 at step 140
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7550,7 +7568,7 @@ progress: 148/445 steps = 33.26%
 elapsed_train_time: 9:06:43
 train_log_mtime: 2026-06-07 12:54:01
 latest_logged_metric: loss 0.04297 / mean_token_accuracy 0.983 at step 140
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7584,7 +7602,7 @@ progress: 149/445 steps = 33.48%
 elapsed_train_time: 9:10:27
 train_log_mtime: 2026-06-07 12:57:45
 latest_logged_metric: loss 0.04297 / mean_token_accuracy 0.983 at step 140
-GPU: 8 张 H200 继续训练，采样时 59%-86% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 59%-86% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7622,7 +7640,7 @@ grad_norm: 0.6602
 learning_rate: 8.161e-06
 mean_token_accuracy: 0.98
 epoch: 1.686
-GPU: 8 张 H200 继续训练，采样时 66%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 66%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7657,7 +7675,7 @@ progress: 152/445 steps = 34.16%
 elapsed_train_time: 9:21:36
 train_log_mtime: 2026-06-07 13:08:54
 latest_logged_metric: loss 0.05193 / mean_token_accuracy 0.98 at step 150
-GPU: 8 张 H200 继续训练，采样时 68%-84% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 68%-84% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7691,7 +7709,7 @@ progress: 153/445 steps = 34.38%
 elapsed_train_time: 9:25:20
 train_log_mtime: 2026-06-07 13:12:38
 latest_logged_metric: loss 0.05193 / mean_token_accuracy 0.98 at step 150
-GPU: 8 张 H200 继续训练，采样时 65%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 65%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7725,7 +7743,7 @@ progress: 154/445 steps = 34.61%
 elapsed_train_time: 9:29:06
 train_log_mtime: 2026-06-07 13:16:24
 latest_logged_metric: loss 0.05193 / mean_token_accuracy 0.98 at step 150
-GPU: 8 张 H200 继续训练，采样时 62%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 62%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7759,7 +7777,7 @@ progress: 155/445 steps = 34.83%
 elapsed_train_time: 9:32:40
 train_log_mtime: 2026-06-07 13:19:59
 latest_logged_metric: loss 0.05193 / mean_token_accuracy 0.98 at step 150
-GPU: 8 张 H200 继续训练，采样时 89%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 89%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7793,7 +7811,7 @@ progress: 157/445 steps = 35.28%
 elapsed_train_time: 9:39:53
 train_log_mtime: 2026-06-07 13:27:11
 latest_logged_metric: loss 0.05193 / mean_token_accuracy 0.98 at step 150
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7827,7 +7845,7 @@ progress: 158/445 steps = 35.51%
 elapsed_train_time: 9:43:35
 train_log_mtime: 2026-06-07 13:30:53
 latest_logged_metric: loss 0.05193 / mean_token_accuracy 0.98 at step 150
-GPU: 8 张 H200 继续训练，采样时 3%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 3%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7865,7 +7883,7 @@ grad_norm: 0.8281
 learning_rate: 7.884e-06
 mean_token_accuracy: 0.9857
 epoch: 1.799
-GPU: 8 张 H200 继续训练，采样时 36%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 36%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7900,7 +7918,7 @@ progress: 161/445 steps = 36.18%
 elapsed_train_time: 9:54:46
 train_log_mtime: 2026-06-07 13:42:04
 latest_logged_metric: loss 0.03373 / mean_token_accuracy 0.9857 at step 160
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7934,7 +7952,7 @@ progress: 163/445 steps = 36.63%
 elapsed_train_time: 10:02:06
 train_log_mtime: 2026-06-07 13:49:24
 latest_logged_metric: loss 0.03373 / mean_token_accuracy 0.9857 at step 160
-GPU: 8 张 H200 继续训练，采样时 70%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 70%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -7968,7 +7986,7 @@ progress: 128/445 steps = 28.76%
 elapsed_train_time: 7:53:25
 train_log_mtime: 2026-06-07 11:40:43
 latest_logged_metric: loss 0.04278 / mean_token_accuracy 0.9828 at step 120
-GPU: 8 张 H200 继续训练，采样时 46%-83% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 46%-83% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8002,7 +8020,7 @@ progress: 127/445 steps = 28.54%
 elapsed_train_time: 7:49:46
 train_log_mtime: 2026-06-07 11:37:04
 latest_logged_metric: loss 0.04278 / mean_token_accuracy 0.9828 at step 120
-GPU: 8 张 H200 继续训练，采样时 70%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 70%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8037,7 +8055,7 @@ progress: 125/445 steps = 28.09%
 elapsed_train_time: 7:42:16
 train_log_mtime: 2026-06-07 11:29:35
 latest_logged_metric: loss 0.04278 / mean_token_accuracy 0.9828 at step 120
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8068,7 +8086,7 @@ progress: 124/445 steps = 27.87%
 elapsed_train_time: 7:38:34
 train_log_mtime: 2026-06-07 11:25:52
 latest_logged_metric: loss 0.04278 / mean_token_accuracy 0.9828 at step 120
-GPU: 8 张 H200 继续训练，采样时 70%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 70%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8103,7 +8121,7 @@ progress: 123/445 steps = 27.64%
 elapsed_train_time: 7:34:49
 train_log_mtime: 2026-06-07 11:22:07
 latest_logged_metric: loss 0.04278 / mean_token_accuracy 0.9828 at step 120
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8134,7 +8152,7 @@ progress: 122/445 steps = 27.42%
 elapsed_train_time: 7:31:14
 train_log_mtime: 2026-06-07 11:18:32
 latest_logged_metric: loss 0.04278 / mean_token_accuracy 0.9828 at step 120
-GPU: 8 张 H200 继续训练，采样时 99%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 99%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8169,7 +8187,7 @@ progress: 121/445 steps = 27.19%
 elapsed_train_time: 7:27:30
 train_log_mtime: 2026-06-07 11:14:49
 latest_logged_metric: loss 0.04278 / mean_token_accuracy 0.9828 at step 120
-GPU: 8 张 H200 继续训练，采样时 65%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 65%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8204,7 +8222,7 @@ grad_norm: 0.6641
 learning_rate: 8.899e-06
 mean_token_accuracy: 0.9828
 epoch: 1.349
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -8236,7 +8254,7 @@ progress: 118/445 steps = 26.52%
 elapsed_train_time: 7:16:21
 train_log_mtime: 2026-06-07 11:03:39
 latest_logged_metric: loss 0.04472 / mean_token_accuracy 0.982 at step 110
-GPU: 8 张 H200 继续训练，采样时 67%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 67%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8267,7 +8285,7 @@ progress: 117/445 steps = 26.29%
 elapsed_train_time: 7:12:48
 train_log_mtime: 2026-06-07 11:00:06
 latest_logged_metric: loss 0.04472 / mean_token_accuracy 0.982 at step 110
-GPU: 8 张 H200 继续训练，采样时部分卡短时 0%，其余 100%，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时部分卡短时 0%，其余 100%，显存高占用
 ```
 
 当前仍未生成：
@@ -8298,7 +8316,7 @@ progress: 115/445 steps = 25.84%
 elapsed_train_time: 7:05:27
 train_log_mtime: 2026-06-07 10:52:45
 latest_logged_metric: loss 0.04472 / mean_token_accuracy 0.982 at step 110
-GPU: 8 张 H200 继续训练，采样时 72%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 72%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8333,7 +8351,7 @@ progress: 114/445 steps = 25.62%
 elapsed_train_time: 7:01:46
 train_log_mtime: 2026-06-07 10:49:04
 latest_logged_metric: loss 0.04472 / mean_token_accuracy 0.982 at step 110
-GPU: 8 张 H200 继续训练，采样时 96%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 96%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8364,7 +8382,7 @@ progress: 113/445 steps = 25.39%
 elapsed_train_time: 6:58:05
 train_log_mtime: 2026-06-07 10:45:23
 latest_logged_metric: loss 0.04472 / mean_token_accuracy 0.982 at step 110
-GPU: 8 张 H200 继续训练，采样时 52%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 52%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8399,7 +8417,7 @@ progress: 112/445 steps = 25.17%
 elapsed_train_time: 6:54:21
 train_log_mtime: 2026-06-07 10:41:39
 latest_logged_metric: loss 0.04472 / mean_token_accuracy 0.982 at step 110
-GPU: 8 张 H200 继续训练，采样时 81%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 81%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
@@ -8434,7 +8452,7 @@ grad_norm: 0.5977
 learning_rate: 9.109e-06
 mean_token_accuracy: 0.982
 epoch: 1.236
-GPU: 8 张 H200 继续训练，采样时 0%-100% 利用波动，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 0%-100% 利用波动，显存高占用
 ```
 
 当前仍未生成：
@@ -8466,7 +8484,7 @@ progress: 109/445 steps = 24.49%
 elapsed_train_time: 6:43:20
 train_log_mtime: 2026-06-07 10:30:38
 latest_logged_metric: loss 0.03776 / mean_token_accuracy 0.9846 at step 100
-GPU: 8 张 H200 继续训练，采样时 83%-100% 利用，显存仍约 124GB/card
+GPU: 8-GPU worker 继续训练，采样时 83%-100% 利用，显存高占用
 ```
 
 当前仍未生成：
