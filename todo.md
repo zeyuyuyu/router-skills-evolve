@@ -33,6 +33,8 @@ Current delivery status:
 - Latest watch: Cycle 2 trace collection has reached `8` rows. The tau2 train
   split skips some numeric task ids by design; this was checked against the
   loaded task list. The latest row has non-empty student and large completions.
+- Latest watch: Cycle 2 trace collection has reached `10` rows. Current
+  sampled quality check: `small_empty=0`, `empty_both=0`, service healthy.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
