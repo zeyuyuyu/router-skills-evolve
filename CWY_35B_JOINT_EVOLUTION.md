@@ -43,6 +43,9 @@
   vLLM health OK。
 - 最新复查：Cycle 2 trace 已继续增长到 `12` 行；`small_empty=0`，
   `empty_both=0`，最新行仍为 35B student / large 双 completion 非空。
+- 最新复查：Cycle 2 trace 已继续增长到 `14` 行；`small_empty=0`，
+  `empty_both=0`。最新行 35B student 失败但 completion 已保留，
+  large 成功，`final_success=True`，vLLM health OK。
 - 当前正在执行 Cycle 2 Phase 1 trace collection；之后会继续进入
   SkillBook、LLM SFT、router train、E2E ablation 和 cycle 汇总。
 

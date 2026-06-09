@@ -37,6 +37,10 @@ Current delivery status:
   sampled quality check: `small_empty=0`, `empty_both=0`, service healthy.
 - Latest watch: Cycle 2 trace collection has reached `12` rows. Current
   sampled quality check remains `small_empty=0`, `empty_both=0`.
+- Latest watch: Cycle 2 trace collection has reached `14` rows. Current
+  quality check remains `small_empty=0`, `empty_both=0`; the latest row keeps
+  the 35B student completion even when the student fails, and the large-model
+  fallback succeeds with `final_success=True`.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
