@@ -89,6 +89,8 @@ fi
 # one in-flight request that is comfortably more than 128K of headroom.
 # Override at the env-var level if needed: MAX_MODEL_LEN=262144 bash ...
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-131072}"
+MAX_NUM_SEQS="${MAX_NUM_SEQS:-16}"
+MOE_BACKEND="${MOE_BACKEND:-auto}"
 VLLM_LOG="$CKPT/vllm_serve.log"
 CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
     vllm serve "$CKPT" \
@@ -96,13 +98,14 @@ CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
     --tensor-parallel-size "$TP_SIZE" \
     --max-model-len "$MAX_MODEL_LEN" \
     --dtype bfloat16 \
-    --max-num-seqs 16 \
+    --max-num-seqs "$MAX_NUM_SEQS" \
     --language-model-only \
     --enable-auto-tool-choice \
     --tool-call-parser "$TOOL_PARSER" \
     --reasoning-parser qwen3 \
     --gpu-memory-utilization "$GPU_MEM_UTIL" \
     --gdn-prefill-backend "${GDN_PREFILL_BACKEND:-triton}" \
+    --moe-backend "$MOE_BACKEND" \
     --served-model-name "evol-llm-student" \
     >> "$VLLM_LOG" 2>&1 < /dev/null &
 
