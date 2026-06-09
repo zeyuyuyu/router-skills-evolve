@@ -27,6 +27,12 @@
 - 修正后已重新归档不干净 trace，并干净重启 Cycle 2 Phase 1。
   当前前两条正式 trace 均为 35B student 成功，`small_completion`
   非空，vLLM health OK。
+- tau2 adapter 已进一步修正：evaluation 阶段异常不再丢弃已完成的
+  trajectory。这样 retail evaluator / golden action 的 JSON parse 异常
+  只会让 reward 记为失败，不会写出空 completion。
+- 修正后已再次归档旧 trace 并干净重启 Cycle 2 Phase 1。当前前四条
+  trace 均保留了 35B student completion；其中 evaluator 异常任务也
+  有非空 `small_completion` / `large_completion`，vLLM health OK。
 - 当前正在执行 Cycle 2 Phase 1 trace collection；之后会继续进入
   SkillBook、LLM SFT、router train、E2E ablation 和 cycle 汇总。
 

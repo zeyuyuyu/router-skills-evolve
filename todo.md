@@ -22,6 +22,11 @@ Current delivery status:
   reasoning-only responses.
 - Current verification: the first two clean Cycle 2 traces have non-empty
   35B student completions and no context-window / empty-assistant errors.
+- The tau2 adapter now keeps completed trajectories when evaluation fails.
+  Retail evaluator JSON/golden-action exceptions mark reward as failed, but
+  no longer discard `small_completion` / `large_completion`.
+- Current verification after the adapter patch: Cycle 2 was restarted cleanly
+  again, and the first four trace rows all retain non-empty completions.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
