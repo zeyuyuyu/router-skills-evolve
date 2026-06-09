@@ -258,6 +258,8 @@ string_overrides = {
 }
 bool_overrides = {
     "SCALING_LOAD_BEST_MODEL_AT_END": "load_best_model_at_end",
+    "SCALING_PACKING": "packing",
+    "SCALING_PADDING_FREE": "padding_free",
 }
 applied = {}
 for env_name, (cfg_key, caster) in overrides.items():
@@ -289,8 +291,8 @@ dst.write_text(yaml.safe_dump(cfg, sort_keys=False))
 PY
         RUN_CONFIG_ARG="$GENERATED_CFG"
         echo "  scaling: using per-cycle output_dir=$OUT_DIR_ABS"
-        if [[ -n "${SCALING_NUM_TRAIN_EPOCHS:-}" || -n "${SCALING_MAX_SEQ_LENGTH:-}" || -n "${SCALING_CONFIG_MAX_STEPS:-}" || -n "${SCALING_EVAL_STRATEGY:-}" || -n "${SCALING_SAVE_STRATEGY:-}" || -n "${SCALING_ATTN_IMPLEMENTATION:-}" ]]; then
-            echo "  scaling: training overrides epochs=${SCALING_NUM_TRAIN_EPOCHS:-default} max_seq=${SCALING_MAX_SEQ_LENGTH:-default} max_steps=${SCALING_CONFIG_MAX_STEPS:-default} eval=${SCALING_EVAL_STRATEGY:-default} save=${SCALING_SAVE_STRATEGY:-default} attn=${SCALING_ATTN_IMPLEMENTATION:-default}"
+        if [[ -n "${SCALING_NUM_TRAIN_EPOCHS:-}" || -n "${SCALING_MAX_SEQ_LENGTH:-}" || -n "${SCALING_CONFIG_MAX_STEPS:-}" || -n "${SCALING_EVAL_STRATEGY:-}" || -n "${SCALING_SAVE_STRATEGY:-}" || -n "${SCALING_ATTN_IMPLEMENTATION:-}" || -n "${SCALING_PACKING:-}" || -n "${SCALING_PADDING_FREE:-}" ]]; then
+            echo "  scaling: training overrides epochs=${SCALING_NUM_TRAIN_EPOCHS:-default} max_seq=${SCALING_MAX_SEQ_LENGTH:-default} max_steps=${SCALING_CONFIG_MAX_STEPS:-default} eval=${SCALING_EVAL_STRATEGY:-default} save=${SCALING_SAVE_STRATEGY:-default} attn=${SCALING_ATTN_IMPLEMENTATION:-default} packing=${SCALING_PACKING:-default} padding_free=${SCALING_PADDING_FREE:-default}"
         fi
     fi
 
