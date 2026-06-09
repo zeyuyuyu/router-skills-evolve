@@ -41,11 +41,11 @@ Current delivery status:
   quality check remains `small_empty=0`, `empty_both=0`; the latest row keeps
   the 35B student completion even when the student fails, and the large-model
   fallback succeeds with `final_success=True`.
-- Latest watch: Cycle 2 trace collection has reached `49/74` rows. The
+- Latest watch: Cycle 2 trace collection has reached `52/74` rows. The
   full-pipeline command keeps the tau2 cap parameter, but the current train
   split actually loaded `74` tasks, not `848` traces. Current quality check
   remains `small_empty=0`, `large_empty=0`, `empty_both=0`; current
-  `final_success=38/49`. The latest row has `final_success=True` and keeps
+  `final_success=41/52`. The latest row has `final_success=True` and keeps
   non-empty student and large completions, so collection quality remains
   clean.
 - The student model cost-mapping warning still appears in logs, but it is
@@ -54,7 +54,9 @@ Current delivery status:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
   tower and uses plain text mrope positions for text-only requests.
-- Current watch item: let Cycle 2 trace collection finish, then verify the
+- Current watch item: Cycle 2 is still in Phase 1; downstream SkillBook /
+  LLM SFT / router artifacts are not present yet. Let trace collection finish,
+  then verify the
   downstream SkillBook, LLM SFT, router training, and E2E ablation stages.
 
 Code change before rerun:
