@@ -41,11 +41,11 @@ Current delivery status:
   quality check remains `small_empty=0`, `empty_both=0`; the latest row keeps
   the 35B student completion even when the student fails, and the large-model
   fallback succeeds with `final_success=True`.
-- Latest watch: Cycle 2 trace collection has reached `32/74` rows. The
+- Latest watch: Cycle 2 trace collection has reached `33/74` rows. The
   full-pipeline command keeps the tau2 cap parameter, but the current train
   split actually loaded `74` tasks, not `848` traces. Current quality check
   remains `small_empty=0`, `large_empty=0`, `empty_both=0`; current
-  `final_success=25/32`. The latest row has `final_success=False` but keeps
+  `final_success=25/33`. The latest row has `final_success=False` but keeps
   non-empty student and large completions, so this is a task failure rather
   than a collection failure.
 - The student model cost-mapping warning still appears in logs, but it is
