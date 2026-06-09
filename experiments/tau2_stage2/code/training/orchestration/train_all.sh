@@ -308,7 +308,11 @@ PY
     # before the failure-branch below can mark this run as failed and
     # continue to the next. We intentionally swallow it here and rely on
     # train.py writing STATUS=done to indicate success.
-    "$VENV/accelerate" launch \
+    ACCELERATE_LAUNCH=("$VENV/python" -m accelerate.commands.launch)
+    if [[ -x "$VENV/accelerate" ]]; then
+        ACCELERATE_LAUNCH=("$VENV/accelerate" launch)
+    fi
+    "${ACCELERATE_LAUNCH[@]}" \
         --config_file "training/$ACCEL_CFG" \
         -m training.train \
         --run-config "$RUN_CONFIG_ARG" \
