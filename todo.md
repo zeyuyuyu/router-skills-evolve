@@ -5,6 +5,19 @@
 User-approved runtime target: finish the full 35B tau2 skills + LLM + router
 closed-loop run within about one day if possible.
 
+Current delivery status:
+
+- Code fixes were committed and pushed before the corrected run.
+- The corrected run is active on a private 8-GPU worker.
+- Cycle 1 Phase 1 trace collection is complete and skipped on resume: `74/74`.
+- Cycle 1 Phase 2 regenerated `results/cwy_35b_joint_20260606_165203/cycle_1/skillbook.json`.
+- Cycle 1 Phase 3 is training with bounded replay:
+  `512` base replay rows + `4` hard trace rows repeated `16` times.
+- Runtime environment fixes applied on the worker:
+  torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
+- Current watch item: verify the first optimizer step and then let the pipeline
+  advance to router training and E2E ablation.
+
 Code change before rerun:
 
 - `experiments/scaling/tau2_train_wrapper.sh`
@@ -33,8 +46,8 @@ export EVOL_DISABLE_AUTO_RESUME=1
 Reason for `EVOL_DISABLE_AUTO_RESUME=1`: old `checkpoint-89` belongs to the
 previous full-replay 5-epoch recipe. The corrected recipe has far fewer steps,
 so auto-resuming Trainer optimizer/scheduler state from step 89 is incompatible.
-Keep the checkpoint in Ceph for audit/backup, but do not auto-resume it for the
-short hard-example adaptation run.
+Keep the checkpoint in shared storage for audit/backup, but do not auto-resume
+it for the short hard-example adaptation run.
 
 Current worker:
 
@@ -48,8 +61,8 @@ experiment path: results/cwy_35b_joint_20260606_165203/
 Before experiment launch:
 
 - commit and push code.
-- sync repo to new machine.
-- restore experiment dir from Ceph, but protect/archive old cycle_1
+- sync repo to the private worker.
+- restore experiment dir from shared storage, but protect/archive old cycle_1
   `llm_adapter` state or disable auto-resume as above.
 - if the portable bundle lacks `stage2_v1/train.jsonl`, restore the 6413 base
   rows from the previous `train_augmented_stage2.jsonl` by excluding

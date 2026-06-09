@@ -1,5 +1,33 @@
 # CWY：35B Skills + LLM + Router 联合演进记录
 
+## 2026-06-09 最新交付状态
+
+目标：在约 1 天窗口内完成 35B tau2 `Skills -> LLM -> Router`
+全流程，不把单模型 SFT 当成最终交付。
+
+当前状态：
+
+- 代码修复已提交并推送。
+- 文档已脱敏：只保留相对路径和泛化 worker 描述，不记录连接信息。
+- 正式 run 已在私有 8 卡 worker 上启动。
+- Cycle 1 Phase 1 已确认 trace 完整并跳过：`74/74`。
+- Cycle 1 Phase 2 已重新生成 `results/cwy_35b_joint_20260606_165203/cycle_1/skillbook.json`。
+- Cycle 1 Phase 3 使用 bounded replay：
+  `512` base replay rows + `4` hard trace rows repeated `16` times。
+- 训练环境已修复并验证：
+  torch `2.11.0`、flash-attn `2.8.3`、torchvision `0.26.0` 均从 run venv 加载。
+- 当前正在验证 first optimizer step；过了这一步后，主要剩余工作是等待
+  LLM checkpoint、router train、E2E ablation 和 cycle 汇总。
+
+相对路径：
+
+```text
+repo: router-skills-evolve/
+run: results/cwy_35b_joint_20260606_165203/
+pipeline log: results/cwy_35b_joint_20260606_165203/cwy_corrected_bounded_replay.log
+train log: results/cwy_35b_joint_20260606_165203/cycle_1/llm_adapter/train_stdout.log
+```
+
 ## 2026-06-09 配方修正：bounded replay 35B 正式续跑
 
 结论：旧 tau2 port 的 LLM track 不是代码崩坏，但训练策略过重，偏离 MERA 论文里的 hard-example adaptation 口径。
@@ -33,7 +61,7 @@ SCALING_NUM_TRAIN_EPOCHS=1
 
 - 旧 `checkpoint-89` 是按 `6413+4` 全量 replay、5 epochs 配方产生的。
 - 新短训配方的总 step 数小于 89，不能安全从旧 Trainer optimizer/scheduler state auto-resume。
-- 旧 checkpoint 继续作为 Ceph 备份/审计保留。
+- 旧 checkpoint 继续作为共享存储备份/审计保留。
 - 新正式 run 启动时必须设置 `EVOL_DISABLE_AUTO_RESUME=1`，避免 Trainer 把旧 checkpoint-89 当成兼容续训点。
 - 如果需要从旧权重继续而不是从 base 模型开始，应另开独立 init-from-checkpoint 配方；本次为了 1 天内完成全流程，按 corrected hard-example SFT recipe 重训 cycle_1 LLM track。
 
@@ -121,7 +149,7 @@ hard traces -> traces_to_sft.py -> tau2_train_wrapper.sh -> tau2_stage2 SFT
 已读取论文：
 
 ```text
-/root/cwy/projects/evol/routerevolving-2.pdf
+../routerevolving-2.pdf
 ```
 
 PDF 元信息：
@@ -309,7 +337,7 @@ large_cost_sum: $2.50593310
 - 35B模型缓存：CPU 本机已下载完整 HF cache，已同步到 H200
 - H200 模型验证：已用 `local_files_only=True` 验证 `AutoConfig` 和 `AutoTokenizer` 可加载
 - API / HF token：`.env` 中已确认存在，不在文档里记录密钥
-- CommonStack：H200 通过 CPU 反向隧道 `https://api.commonstack.ai:18443/v1` 测试通过，HTTP 200
+- CommonStack：H200 通过 CPU 反向隧道 `<api-base-from-env>` 测试通过，HTTP 200
 
 ## 当前进度
 
@@ -1647,7 +1675,7 @@ curve.png
 2026-06-07 08:20 CST：
 
 - 按新加入论文再次复核项目和指标口径：
-  - 已读 `/root/cwy/projects/evol/routerevolving-2.pdf` 全文。
+  - 已读 `../routerevolving-2.pdf` 全文。
   - 已重读 `scaling/run_full_pipeline.sh`、`collect_traces.py`、`traces_to_sft.py`、`tau2_train_wrapper.sh`、`train_router_simple.py`、`run_e2e_ablation_simple.py`、`aggregate_cycles.py`、`src/skills.py`。
   - 本次必须按 MERA 三轨口径报告：初始 small accuracy、Skills 变体、LLM adapter 任务级 accuracy、Router accuracy、Full=Skills+LLM+Router 的 E2E task pass / fallback / cost。
 
@@ -1869,7 +1897,7 @@ curve.png
 
 ```text
 results/cwy_35b_joint_20260606_165203/cycle_0/llm_adapter/checkpoint-best
--> /root/cwy/projects/evol/router-skills-evolve/experiments/tau2_stage2/train_outputs/08_qwen3_6_35b_a3b_273/checkpoint-best
+-> router-skills-evolve/experiments/tau2_stage2/train_outputs/08_qwen3_6_35b_a3b_273/checkpoint-best
 ```
 
 - 当前目标 checkpoint 还没生成，所以 symlink 暂时不 resolve；等全局 `checkpoint-best` 出来后，`cycle_0/llm_adapter/checkpoint-best` 会自动可用。
@@ -3542,10 +3570,10 @@ LARGE_MODEL=openai/openai/gpt-5.4-2026-03-05
 下载记录：
 
 ```text
-CPU download log: /tmp/cwy_hf_35b_seq_download.log
-CPU cache: /root/.cache/huggingface/hub/models--Qwen--Qwen3.6-35B-A3B
+CPU download log: tmp/cwy_hf_35b_seq_download.log
+CPU cache: <hf-cache>/models--Qwen--Qwen3.6-35B-A3B
 download method: sequential hf download, max-workers=1
-H200 cache: /root/.cache/huggingface/hub/models--Qwen--Qwen3.6-35B-A3B
+worker HF cache: <hf-cache>/models--Qwen--Qwen3.6-35B-A3B
 H200 files: 40
 H200 model_type: qwen3_5_moe
 H200 architecture: Qwen3_5MoeForConditionalGeneration
@@ -5524,8 +5552,8 @@ empty_completion_rows: 0
 
 ```text
 preflight:
-  https://api.commonstack.ai/v1        -> connection refused
-  https://api.commonstack.ai:18443/v1  -> minimal chat 200 OK
+  <api-base-from-env>        -> connection refused
+  <api-base-from-env>  -> minimal chat 200 OK
 resume attempt:
   SCALING_TRACE_RESUME=1
   --resume 1

@@ -26,7 +26,7 @@
 最新代码：
 
 ```bash
-/root/cwy/projects/evol/router-skills-evolve
+router-skills-evolve/
 ```
 
 主流程：
@@ -52,7 +52,7 @@ experiments/tau2_stage2/code/training/configs/runs/
 已确认 CEPHFS 上有 30B 模型：
 
 ```text
-/mnt/cephfs/home/dan.qiao/models/Qwen3-30B-A3B-Base
+shared-storage/models/Qwen3-30B-A3B-Base
 ```
 
 检查结果：
@@ -70,7 +70,7 @@ experiments/tau2_stage2/code/training/configs/runs/
 检查是否已有 30B run config：
 
 ```bash
-cd /root/cwy/projects/evol/router-skills-evolve
+cd router-skills-evolve/
 ls experiments/tau2_stage2/code/training/configs/runs/
 rg -n "30B|30b" experiments/tau2_stage2/code/training/configs/runs/
 ```
@@ -96,7 +96,7 @@ XX_<30b_model_name>_273.yaml
 已检查机器：
 
 ```text
-10.100.0.53:27525
+private 8-GPU worker
 ```
 
 状态：
@@ -105,7 +105,7 @@ XX_<30b_model_name>_273.yaml
 - GPU 显存占用约 1MB
 - GPU 利用率 0%
 - 没有训练 / eval / vLLM 进程占卡
-- CEPHFS 已挂载：`/mnt/cephfs`
+- CEPHFS 已挂载：`<shared-storage>`
 
 正式跑前确认：
 
@@ -128,7 +128,7 @@ pgrep -af "python|torchrun|accelerate|vllm|train|eval"
 先验证 pipeline 调度，不用 GPU，不花 API：
 
 ```bash
-cd /root/cwy/projects/evol/router-skills-evolve
+cd router-skills-evolve/
 MODEL_SWEEP=<30B_RUN_CONFIG> \
 N_CYCLES=1 \
 bash scaling/run_full_pipeline.sh --mock --skip-llm
@@ -141,7 +141,7 @@ bash scaling/run_full_pipeline.sh --mock --skip-llm
 正式训练前先跑 3 条真实 tau2，确认 adapter 没坏：
 
 ```bash
-cd /root/cwy/projects/evol/router-skills-evolve
+cd router-skills-evolve/
 SCALING_MOCK=0 \
 TAU2_DOMAIN=retail \
 python experiments/scaling/collect_traces.py \
@@ -149,7 +149,7 @@ python experiments/scaling/collect_traces.py \
   --n-tasks 3 \
   --small-model <30B_MODEL_OR_ENDPOINT> \
   --large-model openai/gpt-5.4-2026-03-05 \
-  --out /tmp/cwy_tau2_30b_sanity.jsonl
+  --out tmp/cwy_tau2_30b_sanity.jsonl
 ```
 
 通过标准：
@@ -163,7 +163,7 @@ python experiments/scaling/collect_traces.py \
 ## 正式跑 30B
 
 ```bash
-cd /root/cwy/projects/evol/router-skills-evolve
+cd router-skills-evolve/
 MODEL_SWEEP=<30B_RUN_CONFIG> \
 N_CYCLES=2 \
 bash scaling/run_full_pipeline.sh
@@ -193,13 +193,13 @@ bash scaling/run_full_pipeline.sh
 机器：
 
 ```text
-10.100.0.53:27525
+private 8-GPU worker
 ```
 
 训练日志：
 
 ```text
-/root/cwy/projects/evol/router-skills-evolve/experiments/tau2_stage2/train_outputs/11_qwen3_30b_a3b_273/cwy_train_20260605_225120_restart2.log
+router-skills-evolve/experiments/tau2_stage2/train_outputs/11_qwen3_30b_a3b_273/cwy_train_20260605_225120_restart2.log
 ```
 
 训练结果：
@@ -230,12 +230,12 @@ baseline 含义：评测里的“基准/对照组”，用于和训练后的 30B
 评测最终状态：
 
 - 评测已跑完
-- 远端 H200 进程：`10.100.0.53:27525`
+- 远端 H200 进程：`private 8-GPU worker`
 - vLLM：评测完成后已停止，GPU 已释放
 - vLLM 模型服务名：`evol-llm-student`
 - vLLM 上下文：`131072`
 - CommonStack：H200 无公网，已通过 CPU 机器 SSH 反向隧道转发
-- H200 API 地址：`https://api.commonstack.ai:18443/v1`
+- API 地址：`<api-base-from-env>`
 - 第一个 rollout 已完成：`airline__0__seed300__methodB_step0`
 - 最后完成 rollout：`telecom__svc_H_003__seed300__methodA`
 - 最终进度：`385/385`
