@@ -96,6 +96,7 @@ CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
     vllm serve "$CKPT" \
     --port "$PORT" \
     --tensor-parallel-size "$TP_SIZE" \
+    ${DISABLE_CUSTOM_ALL_REDUCE:+--disable-custom-all-reduce} \
     --max-model-len "$MAX_MODEL_LEN" \
     --dtype bfloat16 \
     --max-num-seqs "$MAX_NUM_SEQS" \
