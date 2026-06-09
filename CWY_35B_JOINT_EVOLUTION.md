@@ -20,6 +20,13 @@
 - worker 运行环境已补 vLLM Qwen3.5 text-only 兼容：
   language-model-only 跳过视觉塔、纯文本 mrope 返回普通 position ids，
   probe 生成请求通过且服务健康。
+- Cycle 2 进一步修正 vLLM serving 参数：
+  `MAX_MODEL_LEN=32768`，`REASONING_PARSER=`。原因是 8K context 会在
+  tau2 多轮任务中溢出，且 reasoning parser 会把 35B 输出放进
+  `reasoning` 字段，导致 trace 中 `small_completion` 为空。
+- 修正后已重新归档不干净 trace，并干净重启 Cycle 2 Phase 1。
+  当前前两条正式 trace 均为 35B student 成功，`small_completion`
+  非空，vLLM health OK。
 - 当前正在执行 Cycle 2 Phase 1 trace collection；之后会继续进入
   SkillBook、LLM SFT、router train、E2E ablation 和 cycle 汇总。
 

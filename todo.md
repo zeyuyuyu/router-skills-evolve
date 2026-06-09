@@ -16,6 +16,12 @@ Current delivery status:
 - Cycle 2 Phase 1 has been cleanly restarted after a vLLM Qwen3.5 text-only
   compatibility fix; the new trace file has started writing:
   `results/cwy_35b_joint_20260606_165203/cycle_2/traces.jsonl`.
+- Cycle 2 was restarted again after confirming the previous rows had empty
+  `small_completion`. Serving now uses `MAX_MODEL_LEN=32768` and an empty
+  `REASONING_PARSER` so tau2 receives normal chat `content` instead of
+  reasoning-only responses.
+- Current verification: the first two clean Cycle 2 traces have non-empty
+  35B student completions and no context-window / empty-assistant errors.
 - Runtime environment fixes applied on the worker:
   torch `2.11.0`, flash-attn `2.8.3`, torchvision `0.26.0`, all inside the run venv.
 - Runtime vLLM patch applied on the worker: language-model-only skips vision
