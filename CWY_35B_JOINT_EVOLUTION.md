@@ -27,6 +27,23 @@ final train aggregate: results/<experiment>/final_ablation_table.md
 held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
 ```
 
+启动记录：
+
+- 代码已推送到 `main`：
+  - `b1d1f46`：multi-domain train + held-out eval。
+  - `b8e2e1d`：tau2 LiteLLM proxy 兼容兜底。
+- 正式 run 已启动：
+  `results/cwy_35b_fullsplit_20260610_081730/`。
+- preflight 已确认：train `178`，eval `100`，overlap `0`。
+- 由于默认 deepseek/gpt 模型组当前无可用 channel，cycle 0 的 teacher
+  路径改用当前可用的 OpenAI-compatible Claude 模型组；cycle 1 以后
+  small 仍切换为本地 35B adapter。
+- worker runtime 已补 tau2 LiteLLM 请求兼容：跳过远程 cost-map 拉取，
+  并移除 Claude provider 不支持的 `seed` 请求参数。
+- 当前观察：Cycle 0 Phase 1 已开始写入 train traces，`2/178` 行；
+  前两条 trace completion 正常，large skipped 仅表示 small 成功时没有
+  额外调用 large。
+
 ## 2026-06-10 最新交付状态
 
 目标：在约 1 天窗口内完成 35B tau2 `Skills -> LLM -> Router`

@@ -24,6 +24,21 @@ RUN_HELDOUT_EVAL=1
 SCALING_NUM_TRAIN_EPOCHS=2
 ```
 
+Current run:
+
+- Code pushed before launch:
+  - `b1d1f46` for multi-domain train + held-out eval.
+  - `b8e2e1d` for tau2 LiteLLM proxy hardening.
+- Active run path:
+  `results/cwy_35b_fullsplit_20260610_081730/`.
+- Preflight count: train `178`, eval `100`, overlap `0`.
+- Cycle 0 Phase 1 has started writing train traces; latest check saw `2/178`
+  rows with valid completions.
+- Runtime note: the previously configured deepseek/gpt model groups currently
+  had no available channel, so cycle 0 uses available OpenAI-compatible Claude
+  model groups. Later cycles still switch the small side to the trained local
+  35B adapter.
+
 ## 2026-06-10 immediate action
 
 User-approved runtime target: finish the full 35B tau2 skills + LLM + router
