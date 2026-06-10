@@ -66,8 +66,23 @@ held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
 - Cycle 0 Phase 3 SFT 数据抽取已完成：`178` traces -> `17` hard tasks ->
   `17` SFT pairs，覆盖三个 domain；bounded replay 后训练集为 `784`
   rows（`512` base replay + `17 x 16` scaling rows）。
-- Cycle 0 35B SFT 已使用本地模型缓存启动，chat-template validation
-  `758/758` 通过，当前训练进度为 `3/24` steps。
+- Cycle 0 35B SFT 已完成：chat-template validation `758/758` 通过，
+  2 epochs 训练完成 `24/24` steps，`checkpoint-best` 已写出。
+- Cycle 0 Phase 4 router 已完成：`178` examples，其中 `57` 个
+  label=large，`121` 个 label=small；router train `acc=0.778`，
+  `f1_large=0.667`。
+- Cycle 0 Phase 5 E2E ablation 已完成：base task pass `67.98%`，
+  always-large task pass `66.85%`，skills task pass `67.98%`，
+  router/full task pass `70.22%`；router/full routing acc `84.27%`，
+  large F1 `77.42%`，fallback `5.06%`，cost vs always-large `43.88%`。
+- Serving 修复已提交并推送：`13c948a`。根因是 vLLM 自动选择的
+  FlashInfer MoE backend 与当前底层库调用签名不兼容；wrapper 默认改为
+  Triton MoE，并默认启用 eager serving，同时保留环境变量覆盖入口。
+- 修复后 smoke test 已通过：Cycle 0 `checkpoint-best` 的 OpenAI-compatible
+  student endpoint 能正常返回 model list。
+- Cycle 1 已从同一正式 run 恢复并进入 Phase 1 trace collection；
+  当前早期健康检查为 `12/178` rows，`final_success=9/12`，
+  `small_empty=0`、`large_empty=0`、`large_skipped=0`。
 
 ## 2026-06-10 最新交付状态
 

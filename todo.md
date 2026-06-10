@@ -54,8 +54,23 @@ Current run:
 - Cycle 0 Phase 2 SkillBook completed with size `21`.
 - Cycle 0 Phase 3 SFT extraction completed: `178` traces -> `17` hard tasks
   -> `17` SFT pairs across all three domains.
-- Cycle 0 35B SFT is running from the local model cache. Chat-template
-  validation passed `758/758`; latest training progress was `3/24` steps.
+- Cycle 0 35B SFT completed from the local model cache. Chat-template
+  validation passed `758/758`; 2-epoch training completed `24/24` steps and
+  produced `checkpoint-best`.
+- Cycle 0 Phase 4 router completed: `178` examples, `57` large labels,
+  `121` small labels, train `acc=0.778`, `f1_large=0.667`.
+- Cycle 0 Phase 5 E2E ablation completed: base task pass `67.98%`,
+  always-large task pass `66.85%`, skills task pass `67.98%`,
+  router/full task pass `70.22%`, router/full routing acc `84.27%`,
+  large F1 `77.42%`, fallback `5.06%`, cost vs always-large `43.88%`.
+- Serving fix was committed and pushed as `13c948a`. vLLM's automatic
+  FlashInfer MoE serving path was incompatible with the current runtime, so
+  the wrapper now defaults to Triton MoE and eager serving, with env-var
+  overrides left available.
+- Post-fix smoke test passed against Cycle 0 `checkpoint-best`.
+- Cycle 1 has resumed in the same formal fullsplit run. Early Phase 1 health
+  check: `12/178` traces, `final_success=9/12`, `small_empty=0`,
+  `large_empty=0`, `large_skipped=0`.
 - Runtime note: the previously configured deepseek/gpt model groups currently
   had no available channel, so cycle 0 uses available OpenAI-compatible Claude
   model groups. Later cycles still switch the small side to the trained local
