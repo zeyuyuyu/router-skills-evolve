@@ -257,7 +257,6 @@ class Adapter:
         if getattr(llm_utils, "_scaling_completion_patched", False):
             return
         original = llm_utils.completion
-        original_cost = llm_utils.get_response_cost
 
         def completion_drop_unsupported(*args, **kwargs):
             kwargs.setdefault("drop_params", True)
@@ -265,10 +264,10 @@ class Adapter:
             return original(*args, **kwargs)
 
         def get_response_cost_or_zero(response):
-            try:
-                return original_cost(response)
-            except Exception:
-                return 0.0
+            # tau2 calls this for accounting only. OpenAI-compatible gateway
+            # aliases often are not in LiteLLM's model cost map, which can
+            # flood logs and slow long trace jobs without affecting pass/fail.
+            return 0.0
 
         llm_utils.completion = completion_drop_unsupported
         llm_utils.get_response_cost = get_response_cost_or_zero
