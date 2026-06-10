@@ -40,9 +40,9 @@ Current run:
 - Preflight count: train `178`, eval `100`, overlap `0`.
 - `SCALING_FORCE_BOTH=1` is enabled so both small and large are real for all
   train/eval traces.
-- Cycle 0 Phase 1 is collecting train traces; latest check saw `80/178`
-  rows with domain counts `retail=74`, `telecom=6`, `small_empty=0`,
-  `large_empty=0`, `large_skipped=0`, and `final_success=61/80`. The tau2
+- Cycle 0 Phase 1 completed `178/178` train traces with domain counts
+  `retail=74`, `telecom=74`, `airline=30`, `small_empty=0`,
+  `large_empty=0`, `large_skipped=0`, and `final_success=138/178`. The tau2
   train split can skip numeric task ids, so do not use numeric task id
   continuity as the missing-row signal.
 - Latest resume check: collection continued from `18/178` with
@@ -51,6 +51,11 @@ Current run:
   rate-limit, or traceback errors appeared after the resume line.
 - Cross-domain check passed: Cycle 0 Phase 1 completed all `74` retail train
   rows and continued into telecom rows.
+- Cycle 0 Phase 2 SkillBook completed with size `21`.
+- Cycle 0 Phase 3 SFT extraction completed: `178` traces -> `17` hard tasks
+  -> `17` SFT pairs across all three domains.
+- Cycle 0 35B SFT is running from the local model cache. Chat-template
+  validation passed `758/758`; latest training progress was `3/24` steps.
 - Runtime note: the previously configured deepseek/gpt model groups currently
   had no available channel, so cycle 0 uses available OpenAI-compatible Claude
   model groups. Later cycles still switch the small side to the trained local

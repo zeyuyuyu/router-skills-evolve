@@ -51,16 +51,23 @@ held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
   `seed` 请求参数，并把 tau2 内部 cost accounting 固定为 `0.0`，
   避免 OpenAI-compatible model alias 未在 LiteLLM cost map 中注册时刷日志。
 - 当前观察：新 run Cycle 0 Phase 1 正在写入 train traces，最新检查为
-  `80/178` 行，domain 计数为 `retail=74`、`telecom=6`；
-  `small_empty=0`、`large_empty=0`、`large_skipped=0`，当前
-  `final_success=61/80`。train split task id 本身会跳号，不按连续数字
-  判断是否漏写。
+- Cycle 0 Phase 1 已完成 `178/178` 行，domain 计数为
+  `retail=74`、`telecom=74`、`airline=30`；`small_empty=0`、
+  `large_empty=0`、`large_skipped=0`，`final_success=138/178`。
+  train split task id 本身会跳号，不按连续数字判断是否漏写。
 - 最新 resume 后检查：从 `18/178` 继续，`SCALING_TRACE_WORKERS=4` 已生效；
   10 分钟观察窗口内从 `26/178` 增至 `44/178`，新增 rows 质量正常，
   resume 后新增 cost mapping / worker init fatal / rate-limit / traceback
   均为 `0`。
 - 跨域检查已通过：Cycle 0 Phase 1 完成 `retail` train split 的 `74`
   条后，已继续写入 `telecom` rows。
+- Cycle 0 Phase 2 SkillBook 已完成：`skillbook.json` 已写出，SkillBook
+  size 为 `21`。
+- Cycle 0 Phase 3 SFT 数据抽取已完成：`178` traces -> `17` hard tasks ->
+  `17` SFT pairs，覆盖三个 domain；bounded replay 后训练集为 `784`
+  rows（`512` base replay + `17 x 16` scaling rows）。
+- Cycle 0 35B SFT 已使用本地模型缓存启动，chat-template validation
+  `758/758` 通过，当前训练进度为 `3/24` steps。
 
 ## 2026-06-10 最新交付状态
 
