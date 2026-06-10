@@ -103,11 +103,21 @@ fi
 # Override at the env-var level if needed: MAX_MODEL_LEN=262144 bash ...
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-131072}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-16}"
-MOE_BACKEND="${MOE_BACKEND:-auto}"
+MOE_BACKEND="${MOE_BACKEND:-triton}"
 REASONING_PARSER="${REASONING_PARSER-qwen3}"
 REASONING_ARGS=()
 if [[ -n "$REASONING_PARSER" ]]; then
     REASONING_ARGS=(--reasoning-parser "$REASONING_PARSER")
+fi
+VLLM_COMPILATION_CONFIG="${VLLM_COMPILATION_CONFIG:-{\"pass_config\":{\"fuse_allreduce_rms\":false}}}"
+COMPILATION_ARGS=()
+if [[ -n "$VLLM_COMPILATION_CONFIG" ]]; then
+    COMPILATION_ARGS=(--compilation-config "$VLLM_COMPILATION_CONFIG")
+fi
+VLLM_ENFORCE_EAGER="${VLLM_ENFORCE_EAGER:-1}"
+EAGER_ARGS=()
+if [[ "$VLLM_ENFORCE_EAGER" == "1" ]]; then
+    EAGER_ARGS=(--enforce-eager)
 fi
 VLLM_LOG="$CKPT/vllm_serve.log"
 export FLASHINFER_DISABLE_VERSION_CHECK="${FLASHINFER_DISABLE_VERSION_CHECK:-1}"
@@ -123,6 +133,8 @@ CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
     --enable-auto-tool-choice \
     --tool-call-parser "$TOOL_PARSER" \
     "${REASONING_ARGS[@]}" \
+    "${COMPILATION_ARGS[@]}" \
+    "${EAGER_ARGS[@]}" \
     --gpu-memory-utilization "$GPU_MEM_UTIL" \
     --gdn-prefill-backend "${GDN_PREFILL_BACKEND:-triton}" \
     --moe-backend "$MOE_BACKEND" \
