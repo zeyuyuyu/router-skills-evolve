@@ -51,11 +51,12 @@ held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
   `seed` 请求参数，并把 tau2 内部 cost accounting 固定为 `0.0`，
   避免 OpenAI-compatible model alias 未在 LiteLLM cost map 中注册时刷日志。
 - 当前观察：新 run Cycle 0 Phase 1 正在写入 train traces，最新检查为
-  `22/178` 行；`small_empty=0`、`large_empty=0`、`large_skipped=0`，
-  当前 `final_success=17/22`。train split task id 本身会跳号，当前
-  latest task id 跳到 `retail:23` 不是漏写。
+  `44/178` 行；`small_empty=0`、`large_empty=0`、`large_skipped=0`，
+  当前 `final_success=34/44`。train split task id 本身会跳号，当前
+  latest task id 跳到 `retail:69` 不是漏写。
 - 最新 resume 后检查：从 `18/178` 继续，`SCALING_TRACE_WORKERS=4` 已生效；
-  新增 rows 质量正常，resume 后新增 cost mapping / worker init fatal error
+  10 分钟观察窗口内从 `26/178` 增至 `44/178`，新增 rows 质量正常，
+  resume 后新增 cost mapping / worker init fatal / rate-limit / traceback
   均为 `0`。
 
 ## 2026-06-10 最新交付状态
