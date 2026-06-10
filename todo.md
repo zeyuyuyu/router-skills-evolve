@@ -40,14 +40,17 @@ Current run:
 - Preflight count: train `178`, eval `100`, overlap `0`.
 - `SCALING_FORCE_BOTH=1` is enabled so both small and large are real for all
   train/eval traces.
-- Cycle 0 Phase 1 is collecting train traces; latest check saw `44/178`
-  rows with `small_empty=0`, `large_empty=0`, `large_skipped=0`, and
-  `final_success=34/44`. The tau2 train split can skip numeric task ids, so
-  latest task id `retail:69` does not imply missing trace rows.
+- Cycle 0 Phase 1 is collecting train traces; latest check saw `80/178`
+  rows with domain counts `retail=74`, `telecom=6`, `small_empty=0`,
+  `large_empty=0`, `large_skipped=0`, and `final_success=61/80`. The tau2
+  train split can skip numeric task ids, so do not use numeric task id
+  continuity as the missing-row signal.
 - Latest resume check: collection continued from `18/178` with
   `SCALING_TRACE_WORKERS=4`; a 10-minute watch moved `26/178` -> `44/178`,
   newly written rows are clean, and no new tau2 cost-mapping, worker-init,
   rate-limit, or traceback errors appeared after the resume line.
+- Cross-domain check passed: Cycle 0 Phase 1 completed all `74` retail train
+  rows and continued into telecom rows.
 - Runtime note: the previously configured deepseek/gpt model groups currently
   had no available channel, so cycle 0 uses available OpenAI-compatible Claude
   model groups. Later cycles still switch the small side to the trained local
