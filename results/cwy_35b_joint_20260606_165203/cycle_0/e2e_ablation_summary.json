@@ -1,0 +1,47 @@
+{
+  "variants": {
+    "base": {
+      "routing_acc": 0.5675675675675675,
+      "large_f1": 0,
+      "fallback": 0.43243243243243246,
+      "cost_vs_large": 0.09999999999999999,
+      "n_eval": 74,
+      "task_pass": 0.5675675675675675
+    },
+    "skills": {
+      "routing_acc": 0.5675675675675675,
+      "large_f1": 0,
+      "fallback": 0.43243243243243246,
+      "cost_vs_large": 0.09999999999999999,
+      "n_eval": 74,
+      "task_pass": 0.5675675675675675
+    },
+    "router": {
+      "routing_acc": 0.9324324324324325,
+      "large_f1": 0.9206349206349206,
+      "fallback": 0.04054054054054054,
+      "cost_vs_large": 0.477027027027027,
+      "n_eval": 74,
+      "task_pass": 0.7837837837837838
+    },
+    "full": {
+      "routing_acc": 0.9324324324324325,
+      "large_f1": 0.9206349206349206,
+      "fallback": 0.04054054054054054,
+      "cost_vs_large": 0.477027027027027,
+      "n_eval": 74,
+      "task_pass": 0.7837837837837838
+    }
+  },
+  "label_distribution": {
+    "1": 32,
+    "0": 42
+  },
+  "n_traces_total": 74,
+  "n_traces_with_label": 74,
+  "router_threshold": 0.5,
+  "cycle": 0,
+  "bench": "tau2_bench",
+  "model_config": "08_qwen3_6_35b_a3b_273",
+  "schedule": "SLR"
+}
