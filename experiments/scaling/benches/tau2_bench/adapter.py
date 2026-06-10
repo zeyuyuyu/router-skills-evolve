@@ -21,6 +21,7 @@ import json
 import os
 import random
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -177,7 +178,7 @@ class Adapter:
             return self._mock_run(task, small_model, large_model, sig, cycle,
                                   force_both=force_both)
 
-        small_res = self._run_one(task, small_model)
+        small_res = self._run_one_with_retries(task, small_model)
         large_skipped = False
         if small_res["success"] and not force_both:
             large_res = {"success": True, "cost": 0.0, "skipped": True, "completion": ""}
@@ -185,7 +186,7 @@ class Adapter:
             decision = "probe:small→small_OK"
             final_model, final_success, final_cost = small_model, True, small_res["cost"]
         else:
-            large_res = self._run_one(task, large_model)
+            large_res = self._run_one_with_retries(task, large_model)
             if small_res["success"]:
                 # force_both: small already OK, large run for oracle completeness
                 decision = "oracle:small_OK+large_run"
@@ -224,6 +225,24 @@ class Adapter:
         }
 
     # ----------------------------------------------------------- internals
+    def _run_one_with_retries(self, task: dict, model: str) -> dict:
+        attempts = max(1, int(os.environ.get("SCALING_TRACE_MODEL_RETRIES", "3")))
+        last: dict | None = None
+        for attempt in range(1, attempts + 1):
+            res = self._run_one(task, model)
+            last = res
+            if (res.get("completion") or "").strip():
+                return res
+            if attempt < attempts:
+                delay = min(30.0, 2.0 * attempt)
+                print(
+                    f"[tau2_adapter] retrying empty completion model={model} "
+                    f"task_id={task.get('task_id')} attempt={attempt}/{attempts}",
+                    file=sys.stderr,
+                )
+                time.sleep(delay)
+        return last or {"success": False, "cost": 0.0, "completion": ""}
+
     def _lazy_import_tau2(self) -> None:
         """Import colleague's Tau2BenchAdapter from tau2_stage2 bundle."""
         if not TAU2_BUNDLE.exists():

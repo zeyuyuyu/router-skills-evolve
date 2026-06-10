@@ -105,6 +105,11 @@ def _validate_trace_or_abort(trace: dict, task_id: str) -> None:
         raise FatalTraceCollectionError(
             f"empty completions for task_id={task_id}; aborting to avoid poisoned traces"
         )
+    large_was_run = not bool(trace.get("large_skipped", False)) and int(trace.get("attempts_count") or 0) >= 2
+    if large_was_run and not large_completion:
+        raise FatalTraceCollectionError(
+            f"empty large completion for task_id={task_id}; aborting to avoid poisoned traces"
+        )
 
 
 def _load_router(path: str | None):
