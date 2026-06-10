@@ -47,6 +47,7 @@ import json
 import os
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 # Make `experiments.scaling.benches` importable when invoked as a script.
@@ -57,6 +58,26 @@ from experiments.scaling.benches import load_adapter  # noqa: E402
 
 class FatalTraceCollectionError(RuntimeError):
     """Abort collection without writing a poisoned trace row."""
+
+
+_TRACE_WORKER_ADAPTER = None
+
+
+def _init_trace_worker(bench: str) -> None:
+    global _TRACE_WORKER_ADAPTER
+    _TRACE_WORKER_ADAPTER = load_adapter(bench)
+
+
+def _run_trace_worker(payload: tuple[str, dict, str, str, int, bool]) -> dict:
+    bench, task, small_model, large_model, cycle, force_both = payload
+    adapter = _TRACE_WORKER_ADAPTER or load_adapter(bench)
+    return adapter.run_task_pair(
+        task,
+        small_model=small_model,
+        large_model=large_model,
+        cycle=cycle,
+        force_both=force_both,
+    )
 
 
 def _is_provider_cap_error(exc: Exception) -> bool:
@@ -230,6 +251,8 @@ def main() -> int:
                     help="append to an existing traces.jsonl and skip task_ids already present")
     ap.add_argument("--force-both", action="store_true",
                     help="run both small and large for every task, even without router/skillbook")
+    ap.add_argument("--workers", type=int, default=int(os.environ.get("SCALING_TRACE_WORKERS", "1")),
+                    help="parallel task workers for trace collection; default from SCALING_TRACE_WORKERS or 1")
     ap.add_argument("--mock", action="store_true",
                     help="generate synthetic deterministic traces (no API/GPU). Equivalent to SCALING_MOCK=1.")
     args = ap.parse_args()
@@ -243,6 +266,7 @@ def main() -> int:
     closed_loop = router_pipe is not None or skillbook is not None
     print(f"[collect_traces] bench={args.bench} cycle={args.cycle} split={args.split} "
           f"closed_loop={closed_loop} "
+          f"workers={max(1, args.workers)} "
           f"mock={os.environ.get('SCALING_MOCK', '0') == '1'}", file=sys.stderr)
 
     tasks = adapter.load_tasks(args.n_tasks, split=args.split)
@@ -275,66 +299,118 @@ def main() -> int:
 
     mode = "a" if args.resume else "w"
     t0 = time.time()
+    tasks_to_run = [
+        (i, task)
+        for i, task in enumerate(tasks, 1)
+        if str(task.get("task_id", f"unknown-{i}")) not in existing_task_ids
+    ]
+
+    def handle_trace(fh, i: int, task: dict, trace: dict, completed: int) -> None:
+        nonlocal n_success, n_policy_small, n_policy_large
+        task_id = str(task.get("task_id", f"unknown-{i}"))
+        _validate_trace_or_abort(trace, task_id)
+        if closed_loop:
+            route, rprob, sverd = _policy_decision(
+                trace.get("prompt", "") or task.get("prompt", ""),
+                router_pipe, skillbook, args.small_model,
+                router_threshold=args.router_threshold,
+            )
+            trace = _apply_policy(trace, route, rprob, sverd,
+                                  args.small_model, args.large_model)
+            if route == "small":
+                n_policy_small += 1
+            else:
+                n_policy_large += 1
+        fh.write(json.dumps(trace, ensure_ascii=False) + "\n")
+        fh.flush()
+        if trace.get("final_success"):
+            n_success += 1
+        total_done = len(existing_task_ids) + completed
+        if total_done % 10 == 0 or total_done == len(tasks):
+            elapsed = time.time() - t0
+            print(f"[collect_traces] {total_done}/{len(tasks)}  "
+                  f"success={n_success}/{total_done}  elapsed={elapsed:.1f}s",
+                  file=sys.stderr)
+
     with out_path.open(mode) as fh:
-        for i, task in enumerate(tasks, 1):
-            task_id = str(task.get("task_id", f"unknown-{i}"))
-            if task_id in existing_task_ids:
-                continue
-            try:
-                # closed_loop => force both models so the policy annotation has
-                # a REAL large outcome even when small also succeeded (review
-                # round 2, 2026-05-21). Without this, routing to large on a
-                # small-OK task would bill a fake skip placeholder.
-                trace = adapter.run_task_pair(
-                    task,
-                    small_model=args.small_model,
-                    large_model=args.large_model,
-                    cycle=args.cycle,
-                    force_both=(closed_loop or args.force_both),
-                )
-                _validate_trace_or_abort(trace, task_id)
-                if closed_loop:
-                    route, rprob, sverd = _policy_decision(
-                        trace.get("prompt", "") or task.get("prompt", ""),
-                        router_pipe, skillbook, args.small_model,
-                        router_threshold=args.router_threshold,
+        if max(1, args.workers) == 1:
+            for completed, (i, task) in enumerate(tasks_to_run, 1):
+                task_id = str(task.get("task_id", f"unknown-{i}"))
+                try:
+                    # closed_loop => force both models so the policy annotation has
+                    # a REAL large outcome even when small also succeeded (review
+                    # round 2, 2026-05-21). Without this, routing to large on a
+                    # small-OK task would bill a fake skip placeholder.
+                    trace = adapter.run_task_pair(
+                        task,
+                        small_model=args.small_model,
+                        large_model=args.large_model,
+                        cycle=args.cycle,
+                        force_both=(closed_loop or args.force_both),
                     )
-                    trace = _apply_policy(trace, route, rprob, sverd,
-                                          args.small_model, args.large_model)
-                    if route == "small":
-                        n_policy_small += 1
-                    else:
-                        n_policy_large += 1
-                fh.write(json.dumps(trace, ensure_ascii=False) + "\n")
-                fh.flush()
-                if trace.get("final_success"):
-                    n_success += 1
-                if i % 10 == 0 or i == len(tasks):
-                    elapsed = time.time() - t0
-                    print(f"[collect_traces] {i}/{len(tasks)}  "
-                          f"success={n_success}/{i}  elapsed={elapsed:.1f}s",
-                          file=sys.stderr)
-            except FatalTraceCollectionError:
-                raise
-            except Exception as e:  # noqa: BLE001
-                if _is_provider_cap_error(e):
-                    raise FatalTraceCollectionError(
-                        f"provider cap/rate limit while collecting task_id={task_id}: {e}"
-                    ) from e
-                print(f"[collect_traces] task {task.get('task_id')} FAILED: {e}", file=sys.stderr)
-                # write a failure row so downstream can see it
-                fh.write(json.dumps({
-                    "task_id": task.get("task_id", f"unknown-{i}"),
-                    "signature": "",
-                    "decision": "error",
-                    "attempts": 0,
-                    "attempts_count": 0,
-                    "final_success": False,
-                    "final_model": "",
-                    "total_cost": 0.0,
-                    "round": args.cycle,
-                    "error": str(e),
-                }) + "\n")
+                    handle_trace(fh, i, task, trace, completed)
+                except FatalTraceCollectionError:
+                    raise
+                except Exception as e:  # noqa: BLE001
+                    if _is_provider_cap_error(e):
+                        raise FatalTraceCollectionError(
+                            f"provider cap/rate limit while collecting task_id={task_id}: {e}"
+                        ) from e
+                    print(f"[collect_traces] task {task.get('task_id')} FAILED: {e}", file=sys.stderr)
+                    fh.write(json.dumps({
+                        "task_id": task.get("task_id", f"unknown-{i}"),
+                        "signature": "",
+                        "decision": "error",
+                        "attempts": 0,
+                        "attempts_count": 0,
+                        "final_success": False,
+                        "final_model": "",
+                        "total_cost": 0.0,
+                        "round": args.cycle,
+                        "error": str(e),
+                    }) + "\n")
+                    fh.flush()
+        else:
+            force_both = closed_loop or args.force_both
+            with ProcessPoolExecutor(
+                max_workers=max(1, args.workers),
+                initializer=_init_trace_worker,
+                initargs=(args.bench,),
+            ) as pool:
+                futures = {
+                    pool.submit(
+                        _run_trace_worker,
+                        (args.bench, task, args.small_model, args.large_model, args.cycle, force_both),
+                    ): (i, task)
+                    for i, task in tasks_to_run
+                }
+                for completed, fut in enumerate(as_completed(futures), 1):
+                    i, task = futures[fut]
+                    task_id = str(task.get("task_id", f"unknown-{i}"))
+                    try:
+                        trace = fut.result()
+                        handle_trace(fh, i, task, trace, completed)
+                    except FatalTraceCollectionError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        if _is_provider_cap_error(e):
+                            raise FatalTraceCollectionError(
+                                f"provider cap/rate limit while collecting task_id={task_id}: {e}"
+                            ) from e
+                        print(f"[collect_traces] task {task.get('task_id')} FAILED: {e}", file=sys.stderr)
+                        fh.write(json.dumps({
+                            "task_id": task.get("task_id", f"unknown-{i}"),
+                            "signature": "",
+                            "decision": "error",
+                            "attempts": 0,
+                            "attempts_count": 0,
+                            "final_success": False,
+                            "final_model": "",
+                            "total_cost": 0.0,
+                            "round": args.cycle,
+                            "error": str(e),
+                        }) + "\n")
+                        fh.flush()
 
     elapsed = time.time() - t0
     msg = (f"[collect_traces] DONE  out={out_path}  "

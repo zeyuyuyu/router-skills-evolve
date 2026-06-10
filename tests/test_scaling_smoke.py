@@ -205,3 +205,30 @@ def test_ablation_reports_always_large_variant(tmp_path):
     assert "large" in data["variants"]
     assert data["variants"]["base"]["task_pass"] == 0.5
     assert data["variants"]["large"]["task_pass"] == 0.5
+
+
+def test_collect_traces_parallel_mock_force_both(tmp_path, monkeypatch):
+    out = tmp_path / "traces.jsonl"
+    monkeypatch.setenv("SCALING_MOCK", "1")
+    monkeypatch.setenv("TAU2_DOMAINS", "retail,telecom")
+
+    rc = subprocess.call([
+        sys.executable,
+        str(REPO / "experiments/scaling/collect_traces.py"),
+        "--bench", "tau2_bench",
+        "--n-tasks", "3",
+        "--small-model", "small",
+        "--large-model", "large",
+        "--cycle", "0",
+        "--split", "train",
+        "--out", str(out),
+        "--force-both",
+        "--workers", "2",
+    ])
+
+    assert rc == 0
+    rows = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
+    assert len(rows) == 6
+    assert {r["domain"] for r in rows} == {"retail", "telecom"}
+    assert not any(r.get("large_skipped") for r in rows)
+    assert not any(not (r.get("small_completion") or r.get("large_completion")) for r in rows)
