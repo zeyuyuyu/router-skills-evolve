@@ -47,8 +47,9 @@ held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
 - worker runtime 已补 tau2 LiteLLM 请求兼容：跳过远程 cost-map 拉取，
   并移除 Claude provider 不支持的 `seed` 请求参数。
 - 当前观察：新 run Cycle 0 Phase 1 正在写入 train traces，最新检查为
-  `8/178` 行；`small_empty=0`、`large_empty=0`、`large_skipped=0`，
-  当前 `final_success=5/8`。
+  `14/178` 行；`small_empty=0`、`large_empty=0`、`large_skipped=0`，
+  当前 `final_success=10/14`。train split task id 本身会跳号，当前
+  latest task id 跳到 `retail:16` 不是漏写。
 
 ## 2026-06-10 最新交付状态
 

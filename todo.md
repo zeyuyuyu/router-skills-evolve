@@ -37,9 +37,10 @@ Current run:
 - Preflight count: train `178`, eval `100`, overlap `0`.
 - `SCALING_FORCE_BOTH=1` is enabled so both small and large are real for all
   train/eval traces.
-- Cycle 0 Phase 1 is collecting train traces; latest check saw `8/178`
+- Cycle 0 Phase 1 is collecting train traces; latest check saw `14/178`
   rows with `small_empty=0`, `large_empty=0`, `large_skipped=0`, and
-  `final_success=5/8`.
+  `final_success=10/14`. The tau2 train split can skip numeric task ids, so
+  latest task id `retail:16` does not imply missing trace rows.
 - Runtime note: the previously configured deepseek/gpt model groups currently
   had no available channel, so cycle 0 uses available OpenAI-compatible Claude
   model groups. Later cycles still switch the small side to the trained local
