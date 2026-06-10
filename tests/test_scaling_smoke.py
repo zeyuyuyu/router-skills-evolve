@@ -185,6 +185,27 @@ def test_tau2_mock_multi_domain_tasks_are_namespaced(monkeypatch):
     assert trace["original_task_id"] == tasks[0]["original_task_id"]
 
 
+def test_tau2_split_test_alias_uses_heldout_ids(monkeypatch, tmp_path):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "tau2ad", REPO / "experiments/scaling/benches/tau2_bench/adapter.py")
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+
+    adapter = m.Adapter()
+    adapter._domains_root = tmp_path
+    split_dir = tmp_path / "retail"
+    split_dir.mkdir()
+    (split_dir / "split_tasks.json").write_text(json.dumps({
+        "train": ["train-1"],
+        "test": ["test-1"],
+    }))
+    rows = [{"id": "train-1"}, {"id": "test-1"}]
+
+    assert adapter._filter_split(rows, "train", domain="retail") == [{"id": "train-1"}]
+    assert adapter._filter_split(rows, "eval", domain="retail") == [{"id": "test-1"}]
+    assert adapter._filter_split(rows, "test", domain="retail") == [{"id": "test-1"}]
+
+
 def test_ablation_reports_always_large_variant(tmp_path):
     traces = tmp_path / "traces.jsonl"
     rows = [

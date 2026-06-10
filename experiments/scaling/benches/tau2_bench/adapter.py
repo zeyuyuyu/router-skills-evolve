@@ -307,7 +307,7 @@ class Adapter:
             return tasks
         with split_path.open() as f:
             split_map = json.load(f)
-        split_key = "test" if split == "eval" else "train"
+        split_key = "test" if split in {"eval", "test"} else "train"
         wanted = split_map.get(split_key)
         if not wanted:
             return tasks
