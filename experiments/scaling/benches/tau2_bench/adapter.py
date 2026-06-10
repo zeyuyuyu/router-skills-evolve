@@ -257,13 +257,21 @@ class Adapter:
         if getattr(llm_utils, "_scaling_completion_patched", False):
             return
         original = llm_utils.completion
+        original_cost = llm_utils.get_response_cost
 
         def completion_drop_unsupported(*args, **kwargs):
             kwargs.setdefault("drop_params", True)
             kwargs.pop("seed", None)
             return original(*args, **kwargs)
 
+        def get_response_cost_or_zero(response):
+            try:
+                return original_cost(response)
+            except Exception:
+                return 0.0
+
         llm_utils.completion = completion_drop_unsupported
+        llm_utils.get_response_cost = get_response_cost_or_zero
         llm_utils._scaling_completion_patched = True
 
     def _filter_split(
