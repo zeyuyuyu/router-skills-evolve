@@ -72,6 +72,10 @@ class Adapter:
         self.domain = os.environ.get("TAU2_DOMAIN", "retail")  # airline | retail | telecom
         domains = os.environ.get("TAU2_DOMAINS", "").strip()
         self.domains = [d.strip() for d in domains.split(",") if d.strip()] or [self.domain]
+        if not os.environ.get("TAU2_API_BASE") and os.environ.get("OPENAI_API_BASE"):
+            os.environ["TAU2_API_BASE"] = os.environ["OPENAI_API_BASE"]
+        if not os.environ.get("TAU2_API_KEY") and os.environ.get("OPENAI_API_KEY"):
+            os.environ["TAU2_API_KEY"] = os.environ["OPENAI_API_KEY"]
         os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
         try:
             import litellm  # type: ignore
@@ -240,9 +244,27 @@ class Adapter:
                 f"experiments/tau2_stage2/code/training/orchestration/setup_env_server.sh? "
                 f"Original error: {e}"
             )
+        self._patch_tau2_litellm()
         vendor_root = code_dir / "vendor" / "tau2-bench"
         self._domains_root = vendor_root / "data" / "tau2" / "domains"
         self._tau2_adapter = Tau2BenchAdapter(vendor_root=vendor_root, domain=self.domain)
+
+    def _patch_tau2_litellm(self) -> None:
+        try:
+            import tau2.utils.llm_utils as llm_utils  # type: ignore
+        except Exception:
+            return
+        if getattr(llm_utils, "_scaling_completion_patched", False):
+            return
+        original = llm_utils.completion
+
+        def completion_drop_unsupported(*args, **kwargs):
+            kwargs.setdefault("drop_params", True)
+            kwargs.pop("seed", None)
+            return original(*args, **kwargs)
+
+        llm_utils.completion = completion_drop_unsupported
+        llm_utils._scaling_completion_patched = True
 
     def _filter_split(
         self,
