@@ -29,11 +29,16 @@ Current run:
 - Code pushed before launch:
   - `b1d1f46` for multi-domain train + held-out eval.
   - `b8e2e1d` for tau2 LiteLLM proxy hardening.
+- Superseded run:
+  `results/cwy_35b_fullsplit_20260610_081730/` was stopped because cycle 0
+  did not force real large outcomes for small-success rows.
 - Active run path:
-  `results/cwy_35b_fullsplit_20260610_081730/`.
+  `results/cwy_35b_fullsplit_20260610_083624/`.
 - Preflight count: train `178`, eval `100`, overlap `0`.
+- `SCALING_FORCE_BOTH=1` is enabled so both small and large are real for all
+  train/eval traces.
 - Cycle 0 Phase 1 has started writing train traces; latest check saw `2/178`
-  rows with valid completions.
+  rows with valid small/large completions and `large_skipped=0`.
 - Runtime note: the previously configured deepseek/gpt model groups currently
   had no available channel, so cycle 0 uses available OpenAI-compatible Claude
   model groups. Later cycles still switch the small side to the trained local

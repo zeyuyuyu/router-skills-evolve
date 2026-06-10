@@ -32,17 +32,22 @@ held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
 - 代码已推送到 `main`：
   - `b1d1f46`：multi-domain train + held-out eval。
   - `b8e2e1d`：tau2 LiteLLM proxy 兼容兜底。
-- 正式 run 已启动：
-  `results/cwy_35b_fullsplit_20260610_081730/`。
+- 第一版 fullsplit run `results/cwy_35b_fullsplit_20260610_081730/`
+  已停止并作废：它没有强制 cycle 0 全量 large 运行，small 成功的
+  train rows 会出现 `large_skipped=True`，不适合报告 pure-large /
+  router route-to-large 口径。
+- 新正式 run 已启动：
+  `results/cwy_35b_fullsplit_20260610_083624/`。
 - preflight 已确认：train `178`，eval `100`，overlap `0`。
+- 新 run 显式设置 `SCALING_FORCE_BOTH=1`，train/eval traces 都会真实运行
+  small 与 large，避免 train-side E2E 和 held-out pure-large 指标污染。
 - 由于默认 deepseek/gpt 模型组当前无可用 channel，cycle 0 的 teacher
   路径改用当前可用的 OpenAI-compatible Claude 模型组；cycle 1 以后
   small 仍切换为本地 35B adapter。
 - worker runtime 已补 tau2 LiteLLM 请求兼容：跳过远程 cost-map 拉取，
   并移除 Claude provider 不支持的 `seed` 请求参数。
-- 当前观察：Cycle 0 Phase 1 已开始写入 train traces，`2/178` 行；
-  前两条 trace completion 正常，large skipped 仅表示 small 成功时没有
-  额外调用 large。
+- 当前观察：新 run Cycle 0 Phase 1 已开始写入 train traces，`2/178`
+  行；前两条 small/large completion 均非空，`large_skipped=0`。
 
 ## 2026-06-10 最新交付状态
 
