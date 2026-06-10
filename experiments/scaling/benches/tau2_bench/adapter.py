@@ -362,6 +362,9 @@ class Adapter:
             return {"success": False, "cost": 0.0, "completion": "",
                     "error": f"could not import RunTaskConfig/LLMSpec: {e}"}
 
+        if self._tau2_adapter is None:
+            self._lazy_import_tau2()
+
         config = RunTaskConfig(
             agent=LLMSpec(model=model, args=self._llm_args("agent", model=model)),
             user=LLMSpec(model=self.user_model, args=self._llm_args("user")),
