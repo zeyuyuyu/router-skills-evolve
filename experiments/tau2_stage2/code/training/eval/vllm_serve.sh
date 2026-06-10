@@ -7,6 +7,19 @@ set -euo pipefail
 CKPT="$1"
 PORT="$2"
 GPU="${3:-0}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DEFAULT_VLLM_BIN="$SCRIPT_DIR/../../.venv/bin/vllm"
+VLLM_BIN="${VLLM_BIN:-}"
+if [[ -z "$VLLM_BIN" ]]; then
+    if [[ -x "$DEFAULT_VLLM_BIN" ]]; then
+        VLLM_BIN="$DEFAULT_VLLM_BIN"
+    elif command -v vllm >/dev/null 2>&1; then
+        VLLM_BIN="$(command -v vllm)"
+    else
+        echo "vLLM command not found; checked $DEFAULT_VLLM_BIN and PATH" >&2
+        exit 1
+    fi
+fi
 
 if [[ ! -d "$CKPT" ]]; then
     echo "Checkpoint dir does not exist: $CKPT" >&2; exit 1
@@ -98,7 +111,7 @@ if [[ -n "$REASONING_PARSER" ]]; then
 fi
 VLLM_LOG="$CKPT/vllm_serve.log"
 CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
-    vllm serve "$CKPT" \
+    "$VLLM_BIN" serve "$CKPT" \
     --port "$PORT" \
     --tensor-parallel-size "$TP_SIZE" \
     ${DISABLE_CUSTOM_ALL_REDUCE:+--disable-custom-all-reduce} \
