@@ -72,6 +72,12 @@ class Adapter:
         self.domain = os.environ.get("TAU2_DOMAIN", "retail")  # airline | retail | telecom
         domains = os.environ.get("TAU2_DOMAINS", "").strip()
         self.domains = [d.strip() for d in domains.split(",") if d.strip()] or [self.domain]
+        os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
+        try:
+            import litellm  # type: ignore
+            litellm.drop_params = True
+        except Exception:
+            pass
         # User-simulator + run knobs for live tau2 (RunTaskConfig). The agent
         # model is the one under test (passed to _run_one); the user simulator
         # and litellm args (api_base/api_key/custom_llm_provider for a
