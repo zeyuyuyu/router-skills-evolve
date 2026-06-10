@@ -46,8 +46,9 @@ held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
   small 仍切换为本地 35B adapter。
 - worker runtime 已补 tau2 LiteLLM 请求兼容：跳过远程 cost-map 拉取，
   并移除 Claude provider 不支持的 `seed` 请求参数。
-- 当前观察：新 run Cycle 0 Phase 1 已开始写入 train traces，`2/178`
-  行；前两条 small/large completion 均非空，`large_skipped=0`。
+- 当前观察：新 run Cycle 0 Phase 1 正在写入 train traces，最新检查为
+  `8/178` 行；`small_empty=0`、`large_empty=0`、`large_skipped=0`，
+  当前 `final_success=5/8`。
 
 ## 2026-06-10 最新交付状态
 

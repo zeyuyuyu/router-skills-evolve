@@ -37,8 +37,9 @@ Current run:
 - Preflight count: train `178`, eval `100`, overlap `0`.
 - `SCALING_FORCE_BOTH=1` is enabled so both small and large are real for all
   train/eval traces.
-- Cycle 0 Phase 1 has started writing train traces; latest check saw `2/178`
-  rows with valid small/large completions and `large_skipped=0`.
+- Cycle 0 Phase 1 is collecting train traces; latest check saw `8/178`
+  rows with `small_empty=0`, `large_empty=0`, `large_skipped=0`, and
+  `final_success=5/8`.
 - Runtime note: the previously configured deepseek/gpt model groups currently
   had no available channel, so cycle 0 uses available OpenAI-compatible Claude
   model groups. Later cycles still switch the small side to the trained local
