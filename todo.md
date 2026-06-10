@@ -30,6 +30,8 @@ Current run:
   - `b1d1f46` for multi-domain train + held-out eval.
   - `b8e2e1d` for tau2 LiteLLM proxy hardening.
   - `b39007f` and `7aa2a2d` for proxy parameter / cost-accounting log fixes.
+  - `0efa79f` and `b2a95a4` for parallel trace collection and worker-side
+    tau2 adapter lazy init.
 - Superseded run:
   `results/cwy_35b_fullsplit_20260610_081730/` was stopped because cycle 0
   did not force real large outcomes for small-success rows.
@@ -38,12 +40,13 @@ Current run:
 - Preflight count: train `178`, eval `100`, overlap `0`.
 - `SCALING_FORCE_BOTH=1` is enabled so both small and large are real for all
   train/eval traces.
-- Cycle 0 Phase 1 is collecting train traces; latest check saw `16/178`
+- Cycle 0 Phase 1 is collecting train traces; latest check saw `22/178`
   rows with `small_empty=0`, `large_empty=0`, `large_skipped=0`, and
-  `final_success=11/16`. The tau2 train split can skip numeric task ids, so
-  latest task id `retail:20` does not imply missing trace rows.
-- Latest resume check: collection continued from `16/178`, and no new
-  tau2 cost-mapping errors appeared after the resume line.
+  `final_success=17/22`. The tau2 train split can skip numeric task ids, so
+  latest task id `retail:23` does not imply missing trace rows.
+- Latest resume check: collection continued from `18/178` with
+  `SCALING_TRACE_WORKERS=4`; newly written rows are clean, and no new
+  tau2 cost-mapping or worker-init fatal errors appeared after the resume line.
 - Runtime note: the previously configured deepseek/gpt model groups currently
   had no available channel, so cycle 0 uses available OpenAI-compatible Claude
   model groups. Later cycles still switch the small side to the trained local

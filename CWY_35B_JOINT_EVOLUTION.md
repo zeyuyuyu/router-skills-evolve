@@ -33,6 +33,8 @@ held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
   - `b1d1f46`：multi-domain train + held-out eval。
   - `b8e2e1d`：tau2 LiteLLM proxy 兼容兜底。
   - `b39007f` / `7aa2a2d`：tau2 proxy 参数与 cost accounting 噪音修复。
+  - `0efa79f` / `b2a95a4`：trace collection 支持多 worker，并修复
+    worker 进程内 tau2 adapter lazy init。
 - 第一版 fullsplit run `results/cwy_35b_fullsplit_20260610_081730/`
   已停止并作废：它没有强制 cycle 0 全量 large 运行，small 成功的
   train rows 会出现 `large_skipped=True`，不适合报告 pure-large /
@@ -49,11 +51,12 @@ held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
   `seed` 请求参数，并把 tau2 内部 cost accounting 固定为 `0.0`，
   避免 OpenAI-compatible model alias 未在 LiteLLM cost map 中注册时刷日志。
 - 当前观察：新 run Cycle 0 Phase 1 正在写入 train traces，最新检查为
-  `16/178` 行；`small_empty=0`、`large_empty=0`、`large_skipped=0`，
-  当前 `final_success=11/16`。train split task id 本身会跳号，当前
-  latest task id 跳到 `retail:20` 不是漏写。
-- 最新 resume 后检查：从 `16/178` 继续，resume 行之后新增 cost mapping
-  error 为 `0`，`collect_traces --resume --force-both` 进程正常运行。
+  `22/178` 行；`small_empty=0`、`large_empty=0`、`large_skipped=0`，
+  当前 `final_success=17/22`。train split task id 本身会跳号，当前
+  latest task id 跳到 `retail:23` 不是漏写。
+- 最新 resume 后检查：从 `18/178` 继续，`SCALING_TRACE_WORKERS=4` 已生效；
+  新增 rows 质量正常，resume 后新增 cost mapping / worker init fatal error
+  均为 `0`。
 
 ## 2026-06-10 最新交付状态
 
