@@ -18,9 +18,10 @@ import sys
 from pathlib import Path
 
 
-VARIANT_ORDER = ["base", "skills", "router", "full"]
+VARIANT_ORDER = ["base", "large", "skills", "router", "full"]
 VARIANT_LABEL = {
-    "base":   "Base (always-small + fallback)",
+    "base":   "Base (always-small)",
+    "large":  "Always-large",
     "skills": "+ Skills evolve",
     "router": "+ Router training",
     "full":   "Full (+ LLM training)",

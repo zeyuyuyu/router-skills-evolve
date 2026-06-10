@@ -128,6 +128,8 @@ def convert(traces_path: Path, out_path: Path, skillbook_path=None) -> dict:
                 n_with_procedure += 1
             row = {
                 "task_id": trace.get("task_id", ""),
+                "original_task_id": trace.get("original_task_id", trace.get("task_id", "")),
+                "domain": trace.get("domain", ""),
                 "signature": trace.get("signature", ""),
                 "prompt": sft_prompt,
                 "completion": completion,

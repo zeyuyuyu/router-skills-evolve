@@ -1,5 +1,29 @@
 # Next Experiment TODO
 
+## 2026-06-10 new active goal
+
+Run the corrected tau2 full train / held-out test version.
+
+Required setting:
+
+- Train split: all tau2 domains, `retail + telecom + airline`, total `178`.
+- Test split: all tau2 domains, total `100`.
+- Train/test overlap must be `0`; preflight now checks this and fails on
+  overlap.
+- Each cycle collects fresh train traces for the current artifacts.
+- LLM SFT uses current-cycle hard examples with bounded replay.
+- 35B SFT uses `SCALING_NUM_TRAIN_EPOCHS=2`.
+- Final held-out eval runs on the full eval split and reports pure small,
+  pure large, skills, router, and full.
+
+Launch shape:
+
+```bash
+TAU2_DOMAINS=retail,telecom,airline
+RUN_HELDOUT_EVAL=1
+SCALING_NUM_TRAIN_EPOCHS=2
+```
+
 ## 2026-06-10 immediate action
 
 User-approved runtime target: finish the full 35B tau2 skills + LLM + router

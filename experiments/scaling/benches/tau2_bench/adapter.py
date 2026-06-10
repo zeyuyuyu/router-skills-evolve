@@ -70,6 +70,8 @@ class Adapter:
         self.mock = os.environ.get("SCALING_MOCK", "0") == "1"
         self._tau2_adapter = None
         self.domain = os.environ.get("TAU2_DOMAIN", "retail")  # airline | retail | telecom
+        domains = os.environ.get("TAU2_DOMAINS", "").strip()
+        self.domains = [d.strip() for d in domains.split(",") if d.strip()] or [self.domain]
         # User-simulator + run knobs for live tau2 (RunTaskConfig). The agent
         # model is the one under test (passed to _run_one); the user simulator
         # and litellm args (api_base/api_key/custom_llm_provider for a
@@ -118,20 +120,25 @@ class Adapter:
         if self.mock:
             rng = random.Random(42)
             tasks = []
-            for i in range(n):
-                tid = f"mock-{self.domain}-{split}-{i:04d}"
-                tasks.append({
-                    "task_id": tid,
-                    "prompt": f"[{self.domain}] mock task #{i}: please help the user with a {rng.choice(['refund','booking','transfer','cancellation','address change'])} request.",
-                    "domain": self.domain,
-                })
+            for domain in self.domains:
+                for i in range(n):
+                    tid = f"mock-{domain}-{split}-{i:04d}"
+                    tasks.append({
+                        "task_id": tid,
+                        "original_task_id": f"mock-{split}-{i:04d}",
+                        "prompt": f"[{domain}] mock task #{i}: please help the user with a {rng.choice(['refund','booking','transfer','cancellation','address change'])} request.",
+                        "domain": domain,
+                    })
             return tasks
 
         if self._tau2_adapter is None:
             self._lazy_import_tau2()
-        raw = self._tau2_adapter.load_tasks(self.domain)
-        raw = self._filter_split(raw, split)
-        return [self._normalize_task(t) for t in raw[:n]]
+        out = []
+        for domain in self.domains:
+            raw = self._tau2_adapter.load_tasks(domain)
+            raw = self._filter_split(raw, split, domain=domain)
+            out.extend(self._normalize_task(t, domain) for t in raw[:n])
+        return out
 
     # ----------------------------------------------------------- run pair
     def run_task_pair(
@@ -183,6 +190,8 @@ class Adapter:
 
         return {
             "task_id": task["task_id"],
+            "original_task_id": task.get("original_task_id", task["task_id"]),
+            "domain": task.get("domain", self.domain),
             "signature": sig,
             "decision": decision,
             "attempts": 1 if (small_res["success"] and not force_both) else 2,
@@ -229,11 +238,17 @@ class Adapter:
         self._domains_root = vendor_root / "data" / "tau2" / "domains"
         self._tau2_adapter = Tau2BenchAdapter(vendor_root=vendor_root, domain=self.domain)
 
-    def _filter_split(self, tasks: list[dict[str, Any]], split: str) -> list[dict[str, Any]]:
+    def _filter_split(
+        self,
+        tasks: list[dict[str, Any]],
+        split: str,
+        *,
+        domain: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Filter tau2 domain tasks by split_tasks.json when available."""
         if self._domains_root is None:
             return tasks
-        split_path = self._domains_root / self.domain / "split_tasks.json"
+        split_path = self._domains_root / (domain or self.domain) / "split_tasks.json"
         if not split_path.exists():
             return tasks
         with split_path.open() as f:
@@ -285,11 +300,16 @@ class Adapter:
 
         return ""
 
-    def _normalize_task(self, t: dict[str, Any]) -> dict:
+    def _normalize_task(self, t: dict[str, Any], domain: str | None = None) -> dict:
+        domain = domain or self.domain
+        original_task_id = str(
+            t.get("task_id") or t.get("id") or hashlib.md5(str(t).encode()).hexdigest()[:12]
+        )
         return {
-            "task_id": str(t.get("task_id") or t.get("id") or hashlib.md5(str(t).encode()).hexdigest()[:12]),
+            "task_id": f"{domain}:{original_task_id}",
+            "original_task_id": original_task_id,
             "prompt": self._task_prompt(t),
-            "domain": self.domain,
+            "domain": domain,
             "_raw": t,
         }
 
@@ -315,7 +335,9 @@ class Adapter:
             max_errors=self.max_errors,
         )
         try:
-            res = self._tau2_adapter.run_task(task["_raw"], config, domain=self.domain)
+            res = self._tau2_adapter.run_task(
+                task["_raw"], config, domain=task.get("domain", self.domain)
+            )
             # TaskRunResult: passed / agent_cost_usd / user_cost_usd / steps / messages
             cost = float(getattr(res, "agent_cost_usd", 0.0) or 0.0) + \
                 float(getattr(res, "user_cost_usd", 0.0) or 0.0)
@@ -354,7 +376,10 @@ class Adapter:
         if small_ok and not force_both:
             # cost-control path: large skipped, large_* is a placeholder
             return {
-                "task_id": task["task_id"], "signature": sig,
+                "task_id": task["task_id"],
+                "original_task_id": task.get("original_task_id", task["task_id"]),
+                "domain": task.get("domain", self.domain),
+                "signature": sig,
                 "decision": "probe:small→small_OK", "attempts": 1, "attempts_count": 1,
                 "final_success": True, "final_model": small_model, "total_cost": 0.001,
                 "round": cycle, "small_success": True, "large_success": False,
@@ -366,7 +391,10 @@ class Adapter:
         if small_ok and force_both:
             # oracle path: small OK but large run anyway -> real large outcome
             return {
-                "task_id": task["task_id"], "signature": sig,
+                "task_id": task["task_id"],
+                "original_task_id": task.get("original_task_id", task["task_id"]),
+                "domain": task.get("domain", self.domain),
+                "signature": sig,
                 "decision": "oracle:small_OK+large_run", "attempts": 2, "attempts_count": 2,
                 "final_success": True, "final_model": small_model, "total_cost": 0.001,
                 "round": cycle, "small_success": True, "large_success": large_ok,
@@ -376,7 +404,10 @@ class Adapter:
                 "large_completion": large_comp,
             }
         return {
-            "task_id": task["task_id"], "signature": sig,
+            "task_id": task["task_id"],
+            "original_task_id": task.get("original_task_id", task["task_id"]),
+            "domain": task.get("domain", self.domain),
+            "signature": sig,
             "decision": f"probe:small_fail→large_{'OK' if large_ok else 'fail'}",
             "attempts": 2, "attempts_count": 2,
             "final_success": large_ok, "final_model": large_model,

@@ -8,7 +8,8 @@ Why this exists: `experiments/run_e2e_ablation.py` is hard-coupled to
 schema the main-branch ablation uses (so aggregate_cycles.py just works).
 
 Variants:
-    base    always-small + fallback (no skills, no router)
+    base    always-small (no skills, no router)
+    large   always-large baseline
     skills  SkillBook-style signature routing (no learned router)
     router  + learned router
     full    + LLM training (LLM column populated only if --llm-eval given;
@@ -78,8 +79,13 @@ def score_routing(labels: list[int], preds: list[int]) -> dict:
 
 
 def predict_base(traces: list[dict]) -> list[int]:
-    """Always small (0) + fallback to large on observed failure."""
+    """Always small (0)."""
     return [0 for _ in traces]
+
+
+def predict_large(traces: list[dict]) -> list[int]:
+    """Always large (1). Requires traces where large_success is real."""
+    return [1 for _ in traces]
 
 
 def predict_skills(traces: list[dict], skillbook_path: Path | None) -> list[int]:
@@ -205,6 +211,10 @@ def main() -> int:
     p_base = predict_base(traces_kept)
     variants["base"] = score_routing(labels_kept, p_base)
     variants["base"]["task_pass"] = task_pass_rate(traces_kept, p_base)
+    # always-large baseline
+    p_large = predict_large(traces_kept)
+    variants["large"] = score_routing(labels_kept, p_large)
+    variants["large"]["task_pass"] = task_pass_rate(traces_kept, p_large)
     # skills
     p_sk = predict_skills(traces_kept, Path(args.skillbook) if args.skillbook else None)
     variants["skills"] = score_routing(labels_kept, p_sk)

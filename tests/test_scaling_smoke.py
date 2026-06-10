@@ -18,7 +18,7 @@ def test_traces_to_sft_extracts_hard_tasks(tmp_path):
         # hard task: small failed, large succeeded, has completion -> kept
         {"task_id": "t1", "prompt": "do X", "small_success": False,
          "large_success": True, "large_completion": "def x(): return 1",
-         "final_model": "large"},
+         "final_model": "large", "domain": "retail"},
         # small already OK -> not a hard task -> dropped
         {"task_id": "t2", "prompt": "do Y", "small_success": True,
          "large_success": False, "large_completion": "", "final_model": "small"},
@@ -35,6 +35,7 @@ def test_traces_to_sft_extracts_hard_tasks(tmp_path):
     pairs = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
     assert len(pairs) == 1
     assert pairs[0]["task_id"] == "t1"
+    assert pairs[0]["domain"] == "retail"
     assert pairs[0]["prompt"] == "do X"
     assert pairs[0]["completion"] == "def x(): return 1"
     # train_small_model.py compat keys present
@@ -160,3 +161,47 @@ def test_completion_from_steps_uses_stepdata_response():
     # JSON dict-form steps + empty input
     assert m._completion_from_steps([{"response": {"content": "hi", "tool_calls": []}}]) == "hi"
     assert m._completion_from_steps([]) == ""
+
+
+def test_tau2_mock_multi_domain_tasks_are_namespaced(monkeypatch):
+    """Multi-domain tau2 runs must keep domains separate and preserve domain in traces."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "tau2ad", REPO / "experiments/scaling/benches/tau2_bench/adapter.py")
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+
+    monkeypatch.setenv("SCALING_MOCK", "1")
+    monkeypatch.setenv("TAU2_DOMAINS", "retail,airline")
+    adapter = m.Adapter()
+    tasks = adapter.load_tasks(2, split="train")
+
+    assert len(tasks) == 4
+    assert {t["domain"] for t in tasks} == {"retail", "airline"}
+    assert len({t["task_id"] for t in tasks}) == 4
+    assert all(":" not in t["task_id"] or t["task_id"].startswith(("mock-", "retail:", "airline:")) for t in tasks)
+
+    trace = adapter.run_task_pair(tasks[0], "small", "large", cycle=0, force_both=True)
+    assert trace["domain"] == tasks[0]["domain"]
+    assert trace["original_task_id"] == tasks[0]["original_task_id"]
+
+
+def test_ablation_reports_always_large_variant(tmp_path):
+    traces = tmp_path / "traces.jsonl"
+    rows = [
+        {"task_id": "a", "prompt": "a", "small_success": True, "large_success": False},
+        {"task_id": "b", "prompt": "b", "small_success": False, "large_success": True},
+    ]
+    traces.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    out = tmp_path / "summary.json"
+    md = tmp_path / "summary.md"
+
+    rc = subprocess.call([sys.executable,
+                          str(REPO / "experiments/scaling/run_e2e_ablation_simple.py"),
+                          "--traces", str(traces),
+                          "--output", str(out),
+                          "--markdown-output", str(md)])
+    assert rc == 0
+    data = json.loads(out.read_text())
+    assert "large" in data["variants"]
+    assert data["variants"]["base"]["task_pass"] == 0.5
+    assert data["variants"]["large"]["task_pass"] == 0.5

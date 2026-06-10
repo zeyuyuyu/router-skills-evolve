@@ -7,7 +7,7 @@
 # Quick smoke (no GPU / no API key required — uses mock adapter):
 #   bash scaling/run_full_pipeline.sh --smoke --mock
 #
-# Real run (8×H200 or 8×A800; OPENAI_API_KEY + HF_TOKEN required):
+# Real run (8× high-memory GPUs; OPENAI_API_KEY + HF_TOKEN required):
 #   bash scaling/run_full_pipeline.sh
 #
 # Required env vars (for non-mock runs):
@@ -26,6 +26,8 @@
 #   SMALL_MODEL       default: deepseek/deepseek-v3.2
 #   LARGE_MODEL       default: openai/gpt-5.4-2026-03-05
 #   TAU2_DOMAIN       airline | retail | telecom (default: retail)
+#   TAU2_DOMAINS      comma-separated domains; overrides TAU2_DOMAIN for tau2
+#                     task loading (e.g. retail,telecom,airline)
 #   SKIP_LLM          set to 1 to skip Phase 3 (useful while colleague's
 #                     train framework is being set up)
 
@@ -69,9 +71,14 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${SMALL_MODEL:=deepseek/deepseek-v3.2}"
 : "${LARGE_MODEL:=openai/gpt-5.4-2026-03-05}"
 : "${TAU2_DOMAIN:=retail}"
+: "${TAU2_DOMAINS:=$TAU2_DOMAIN}"
 : "${SKIP_LLM:=0}"
+: "${RUN_HELDOUT_EVAL:=0}"
+: "${SCALING_NUM_TRAIN_EPOCHS:=2}"
 
 export TAU2_DOMAIN
+export TAU2_DOMAINS
+export SCALING_NUM_TRAIN_EPOCHS
 
 if $SMOKE; then
   MODEL_SWEEP="smoke_2b"
@@ -101,6 +108,9 @@ preflight() {
   echo "  N_CYCLES        = $N_CYCLES"
   echo "  SCHEDULE        = $SCHEDULE  (Skills→LLM→Router default)"
   echo "  TAU2_DOMAIN     = $TAU2_DOMAIN"
+  echo "  TAU2_DOMAINS    = $TAU2_DOMAINS"
+  echo "  RUN_HELDOUT_EVAL= $RUN_HELDOUT_EVAL"
+  echo "  SFT_EPOCHS      = $SCALING_NUM_TRAIN_EPOCHS"
   echo "  RESULTS_DIR     = $RESULTS_DIR"
   echo "  SMOKE=$SMOKE MOCK=$MOCK DRY_RUN=$DRY_RUN RESUME_FROM=$RESUME_FROM SKIP_LLM=$SKIP_LLM"
   echo
@@ -117,14 +127,14 @@ preflight() {
 
 
   # Secret checks (skipped in mock mode)
-  if ! $MOCK; then
+  if ! $MOCK && ! $DRY_RUN; then
     [[ -z "${OPENAI_API_KEY:-}" ]] && { echo "[FATAL] OPENAI_API_KEY not set (or run with --mock)"; exit 3; }
     [[ -z "${HF_TOKEN:-}" ]] && echo "[WARN] HF_TOKEN not set — large model download will be slow"
   fi
 
   # Disk
   free_gb=$(df -BG "$REPO_ROOT" 2>/dev/null | tail -1 | awk '{print $4}' | tr -d 'G' || echo 999)
-  if ! $MOCK && (( free_gb < 100 )); then
+  if ! $MOCK && ! $DRY_RUN && (( free_gb < 100 )); then
     echo "[FATAL] Need ≥100 GB free for non-mock runs; have ${free_gb}G"; exit 3
   fi
 
@@ -145,6 +155,31 @@ preflight() {
     exit 3
   fi
 
+  if [[ "$BENCH" == "tau2_bench" ]]; then
+    "$PYTHON" - "$REPO_ROOT" "$BENCH" "$N_TASKS" <<'PY'
+import sys
+from collections import Counter
+
+repo, bench, n_tasks = sys.argv[1], sys.argv[2], int(sys.argv[3])
+sys.path.insert(0, repo)
+from experiments.scaling.benches import load_adapter  # noqa: E402
+
+adapter = load_adapter(bench)
+train = adapter.load_tasks(n_tasks, split="train")
+eval_ = adapter.load_tasks(n_tasks, split="eval")
+train_ids = {str(t.get("task_id")) for t in train}
+eval_ids = {str(t.get("task_id")) for t in eval_}
+overlap = train_ids & eval_ids
+train_domains = Counter(str(t.get("domain", "unknown")) for t in train)
+eval_domains = Counter(str(t.get("domain", "unknown")) for t in eval_)
+print(f"  tau2 train tasks: {len(train)}  domains={dict(train_domains)}")
+print(f"  tau2 eval tasks:  {len(eval_)}  domains={dict(eval_domains)}")
+print(f"  tau2 train/eval overlap: {len(overlap)}")
+if overlap:
+    raise SystemExit("[FATAL] tau2 train/eval task_id overlap detected")
+PY
+  fi
+
   # Shepherd junk cleanup (see README common pitfall 5)
   shopt -s nullglob
   for f in "$REPO_ROOT"/shepherd.log "$REPO_ROOT"/shepherd_*.log "$REPO_ROOT"/.shepherd "$REPO_ROOT"/shepherd_logs "$REPO_ROOT"/shepherd_local_*; do
@@ -160,15 +195,17 @@ preflight() {
   "n_cycles": $N_CYCLES,
   "schedule": "$SCHEDULE",
   "tau2_domain": "$TAU2_DOMAIN",
+  "tau2_domains": "$TAU2_DOMAINS",
   "small_model": "$SMALL_MODEL",
   "large_model": "$LARGE_MODEL",
   "smoke": $SMOKE,
   "mock": $MOCK,
   "skip_llm": $([ "$SKIP_LLM" -eq 1 ] && echo true || echo false),
+  "run_heldout_eval": $([ "$RUN_HELDOUT_EVAL" = "1" ] && echo true || echo false),
+  "scaling_num_train_epochs": "$SCALING_NUM_TRAIN_EPOCHS",
   "resume_from": $RESUME_FROM,
   "git_sha": "$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)",
-  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "host": "$(hostname)"
+  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
 }
@@ -225,11 +262,13 @@ phase1_collect_traces() {
     --small-model "$small_arg"
     --large-model "$LARGE_MODEL"
     --cycle "$cycle"
+    --split train
     --out "$out/traces.jsonl"
   )
   [[ -n "$prev_router"    && -e "$prev_router"    ]] && cmd+=(--router "$prev_router")
   [[ -n "$prev_skillbook" && -e "$prev_skillbook" ]] && cmd+=(--skillbook "$prev_skillbook")
   [[ "${SCALING_TRACE_RESUME:-0}" == "1" ]] && cmd+=(--resume)
+  [[ "${SCALING_FORCE_BOTH:-0}" == "1" ]] && cmd+=(--force-both)
   $MOCK && cmd+=(--mock)
   $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
 
@@ -497,7 +536,111 @@ run_cycle() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Final aggregation
+# 5. Held-out eval
+# ─────────────────────────────────────────────────────────────────────────────
+
+phase6_heldout_eval() {
+  [[ "$RUN_HELDOUT_EVAL" == "1" ]] || { echo "═══ Held-out eval skipped (RUN_HELDOUT_EVAL=0) ═══"; return; }
+
+  local cycle=$((N_CYCLES-1))
+  local out="$RESULTS_DIR/heldout_eval"
+  mkdir -p "$out"
+  echo "═══ Held-out eval — split=eval cycle=$cycle ═══"
+
+  local final_ckpt="$RESULTS_DIR/cycle_$cycle/llm_adapter/checkpoint-best"
+  local final_router="$RESULTS_DIR/cycle_$cycle/router/router.joblib"
+  local final_skillbook="$RESULTS_DIR/cycle_$cycle/skillbook.json"
+  local small_arg="$SMALL_MODEL"
+  local local_student_ckpt="" local_student_port="" local_student_served=""
+  if [[ -d "$final_ckpt" ]]; then
+    local_student_ckpt="$final_ckpt"
+    local_student_port="${TAU2_LOCAL_PORT:-8050}"
+    local_student_served="${TAU2_LOCAL_SERVED_MODEL:-evol-llm-student}"
+    small_arg="openai/$local_student_served"
+  fi
+
+  local cmd=(
+    "$PYTHON" "$REPO_ROOT/experiments/scaling/collect_traces.py"
+    --bench "$BENCH"
+    --n-tasks "$N_TASKS"
+    --small-model "$small_arg"
+    --large-model "$LARGE_MODEL"
+    --cycle "$cycle"
+    --split eval
+    --out "$out/traces.jsonl"
+    --force-both
+  )
+  [[ -e "$final_router" ]] && cmd+=(--router "$final_router")
+  [[ -e "$final_skillbook" ]] && cmd+=(--skillbook "$final_skillbook")
+  $MOCK && cmd+=(--mock)
+  $DRY_RUN && { echo "  DRY: ${cmd[*]}"; return; }
+
+  local rc=0
+  if [[ -n "$local_student_ckpt" && "$MOCK" != "true" ]]; then
+    echo "  [Held-out eval] Starting local student vLLM from $local_student_ckpt on port $local_student_port"
+    stop_local_vllm "$local_student_ckpt"
+    rm -f "$out/vllm_start.log"
+    TP_SIZE="${TAU2_LOCAL_TP_SIZE:-8}" \
+      NUM_GPUS="${NUM_GPUS:-8}" \
+      bash "$BUNDLE_ROOT/code/training/eval/vllm_serve.sh" "$local_student_ckpt" "$local_student_port" "${TAU2_LOCAL_GPU:-0}" \
+      2>&1 | tee "$out/vllm_start.log" &
+    local vllm_start_pid=$!
+    for _ in $(seq 1 120); do
+      if curl -sf "http://127.0.0.1:$local_student_port/v1/models" >/dev/null 2>&1; then
+        break
+      fi
+      if ! kill -0 "$vllm_start_pid" 2>/dev/null; then
+        wait "$vllm_start_pid" || true
+        echo "[FATAL] held-out vLLM starter exited before ready; see $out/vllm_start.log" >&2
+        return 1
+      fi
+      sleep 5
+    done
+    if ! curl -sf "http://127.0.0.1:$local_student_port/v1/models" >/dev/null 2>&1; then
+      echo "[FATAL] held-out vLLM failed to become ready on port $local_student_port" >&2
+      kill "$vllm_start_pid" 2>/dev/null || true
+      stop_local_vllm "$local_student_ckpt"
+      return 1
+    fi
+    TAU2_LOCAL_API_BASE="http://127.0.0.1:$local_student_port/v1" \
+      TAU2_LOCAL_API_KEY="${TAU2_LOCAL_API_KEY:-EMPTY}" \
+      TAU2_LOCAL_SERVED_MODEL="$local_student_served" \
+      "${cmd[@]}" 2>&1 | tee "$out/collect.log" || rc=${PIPESTATUS[0]}
+    stop_local_vllm "$local_student_ckpt"
+    kill "$vllm_start_pid" 2>/dev/null || true
+    wait "$vllm_start_pid" 2>/dev/null || true
+    [[ "$rc" -eq 0 ]] || return "$rc"
+  else
+    "${cmd[@]}" 2>&1 | tee "$out/collect.log"
+  fi
+
+  local thresh=0.5
+  if [[ -f "$RESULTS_DIR/cycle_$cycle/router_threshold.json" ]]; then
+    thresh=$($PYTHON -c "import json; print(json.load(open('$RESULTS_DIR/cycle_$cycle/router_threshold.json')).get('threshold', 0.5))" 2>/dev/null || echo 0.5)
+  fi
+  "$PYTHON" "$REPO_ROOT/experiments/scaling/run_e2e_ablation_simple.py" \
+    --traces "$out/traces.jsonl" \
+    --skillbook "$final_skillbook" \
+    --router-dir "$RESULTS_DIR/cycle_$cycle/router" \
+    --router-threshold "$thresh" \
+    --output "$out/e2e_ablation_summary.json" \
+    --markdown-output "$out/e2e_ablation_summary.md" \
+    2>&1 | tee "$out/ablation.log"
+
+  "$PYTHON" - <<PY
+import json
+from pathlib import Path
+p = Path("$out/e2e_ablation_summary.json")
+if p.exists():
+    d = json.loads(p.read_text())
+    d.update({"cycle": $cycle, "bench": "$BENCH", "split": "eval",
+              "model_config": "$MODEL_SWEEP", "schedule": "$SCHEDULE"})
+    p.write_text(json.dumps(d, indent=2))
+PY
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Final aggregation
 # ─────────────────────────────────────────────────────────────────────────────
 
 aggregate() {
@@ -528,4 +671,5 @@ for ((cycle=RESUME_FROM; cycle<N_CYCLES; cycle++)); do
   run_cycle "$cycle"
 done
 
+phase6_heldout_eval
 aggregate

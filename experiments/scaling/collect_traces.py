@@ -228,6 +228,8 @@ def main() -> int:
     ap.add_argument("--router-threshold", type=float, default=0.5)
     ap.add_argument("--resume", action="store_true",
                     help="append to an existing traces.jsonl and skip task_ids already present")
+    ap.add_argument("--force-both", action="store_true",
+                    help="run both small and large for every task, even without router/skillbook")
     ap.add_argument("--mock", action="store_true",
                     help="generate synthetic deterministic traces (no API/GPU). Equivalent to SCALING_MOCK=1.")
     args = ap.parse_args()
@@ -288,7 +290,7 @@ def main() -> int:
                     small_model=args.small_model,
                     large_model=args.large_model,
                     cycle=args.cycle,
-                    force_both=closed_loop,
+                    force_both=(closed_loop or args.force_both),
                 )
                 _validate_trace_or_abort(trace, task_id)
                 if closed_loop:

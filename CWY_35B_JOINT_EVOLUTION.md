@@ -1,5 +1,32 @@
 # CWY：35B Skills + LLM + Router 联合演进记录
 
+## 2026-06-10 新目标：tau2 全量 train / held-out test 版
+
+目标：把上一轮 single-domain in-sample 口径升级为正式 train/test 划分口径。
+
+新设置：
+
+- train split 使用全部 tau2 domains：`retail + telecom + airline`。
+- 当前 tau2 bundle 的 split 计数为 train `178`，test/eval `100`。
+- 官方 split 已检查：各 domain 的 train/test task id overlap 为 `0`。
+- pipeline 会在 preflight 重新打印 train/eval domain 计数并在发现 overlap
+  时直接退出。
+- 每轮 cycle 重新收集新的 train traces；LLM SFT 只使用当前 cycle 的
+  hard examples，再混入 bounded base replay。
+- 35B SFT epochs 默认改为 `2`，不再跑 5 epochs。
+- 最终新增 held-out eval：使用最终 cycle 的 adapter、SkillBook、router，
+  在完整 eval split 上强制 small/large 都真实运行，报告 pure small、
+  pure large、skills、router、full。
+
+相对路径约定：
+
+```text
+train cycles: results/<experiment>/cycle_*/
+held-out eval: results/<experiment>/heldout_eval/
+final train aggregate: results/<experiment>/final_ablation_table.md
+held-out summary: results/<experiment>/heldout_eval/e2e_ablation_summary.md
+```
+
 ## 2026-06-10 最新交付状态
 
 目标：在约 1 天窗口内完成 35B tau2 `Skills -> LLM -> Router`

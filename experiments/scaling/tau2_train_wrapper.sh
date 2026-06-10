@@ -99,7 +99,7 @@ case "$MODE" in
     #    assistant turn so convert_to_prompt_completion masks the user prompt.
     "${PYTHON:-python3}" - "$TRAINING_DATA" "$STAGE2_ROWS" "${TAU2_DOMAIN:-retail}" <<'PY'
 import json, sys
-src, dst, domain = sys.argv[1], sys.argv[2], sys.argv[3]
+src, dst, default_domain = sys.argv[1], sys.argv[2], sys.argv[3]
 n = 0
 with open(src) as fh, open(dst, "w") as out:
     for line in fh:
@@ -111,6 +111,7 @@ with open(src) as fh, open(dst, "w") as out:
         completion = r.get("completion") or r.get("output") or ""
         if not prompt or not completion:
             continue
+        domain = str(r.get("domain") or default_domain or "unknown")
         task_id = str(r.get("task_id", "") or f"row{n}")
         row_id = f"{domain}_{task_id}_scaling_traces"
         row = {
