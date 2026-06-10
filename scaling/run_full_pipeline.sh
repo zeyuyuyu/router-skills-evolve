@@ -122,6 +122,10 @@ preflight() {
     else echo "[FATAL] No python interpreter found"; exit 3
     fi
   fi
+  if [[ "$PYTHON" == */* && "$PYTHON" != /* ]]; then
+    PYTHON="$REPO_ROOT/$PYTHON"
+  fi
+  export PYTHON
   echo "  PYTHON          = $PYTHON ($($PYTHON --version 2>&1))"
 
 
