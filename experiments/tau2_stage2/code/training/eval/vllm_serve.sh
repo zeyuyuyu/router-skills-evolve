@@ -110,6 +110,7 @@ if [[ -n "$REASONING_PARSER" ]]; then
     REASONING_ARGS=(--reasoning-parser "$REASONING_PARSER")
 fi
 VLLM_LOG="$CKPT/vllm_serve.log"
+export FLASHINFER_DISABLE_VERSION_CHECK="${FLASHINFER_DISABLE_VERSION_CHECK:-1}"
 CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
     "$VLLM_BIN" serve "$CKPT" \
     --port "$PORT" \
