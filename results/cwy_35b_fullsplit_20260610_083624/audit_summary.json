@@ -1,0 +1,151 @@
+{
+  "bench": "tau2_bench",
+  "model_config": "08_qwen3_6_35b_a3b_273",
+  "schedule": "SLR",
+  "domains": [
+    "retail",
+    "telecom",
+    "airline"
+  ],
+  "split": {
+    "train_total": 178,
+    "train_domains": {
+      "retail": 74,
+      "telecom": 74,
+      "airline": 30
+    },
+    "test_total": 100,
+    "test_domains": {
+      "retail": 40,
+      "telecom": 40,
+      "airline": 20
+    },
+    "train_test_overlap": 0,
+    "test_eval_alias_same_tasks": true
+  },
+  "cycles": {
+    "0": {
+      "trace_rows": 178,
+      "trace_domains": {
+        "retail": 74,
+        "telecom": 74,
+        "airline": 30
+      },
+      "trace_success": 138,
+      "large_empty": 0,
+      "empty_both": 0,
+      "duplicates": 0,
+      "sft_epoch": 2.0,
+      "sft_global_step": 24,
+      "sft_train_rows": 712,
+      "full_task_pass": 0.702247191011236,
+      "full_routing_acc": 0.8426966292134831,
+      "full_cost_vs_large": 0.4387640449438202
+    },
+    "1": {
+      "trace_rows": 178,
+      "trace_domains": {
+        "retail": 74,
+        "telecom": 74,
+        "airline": 30
+      },
+      "trace_success": 142,
+      "large_empty": 0,
+      "empty_both": 0,
+      "duplicates": 0,
+      "sft_epoch": 2.0,
+      "sft_global_step": 22,
+      "sft_train_rows": 664,
+      "full_task_pass": 0.7247191011235955,
+      "full_routing_acc": 0.8426966292134831,
+      "full_cost_vs_large": 0.4337078651685393
+    },
+    "2": {
+      "trace_rows": 178,
+      "trace_domains": {
+        "retail": 74,
+        "telecom": 74,
+        "airline": 30
+      },
+      "trace_success": 146,
+      "large_empty": 0,
+      "empty_both": 0,
+      "duplicates": 0,
+      "sft_epoch": 2.0,
+      "sft_global_step": 20,
+      "sft_train_rows": 616,
+      "full_task_pass": 0.702247191011236,
+      "full_routing_acc": 0.8146067415730337,
+      "full_cost_vs_large": 0.3932584269662921
+    },
+    "3": {
+      "trace_rows": 178,
+      "trace_domains": {
+        "retail": 74,
+        "telecom": 74,
+        "airline": 30
+      },
+      "trace_success": 146,
+      "large_empty": 0,
+      "empty_both": 0,
+      "duplicates": 0,
+      "sft_epoch": 2.0,
+      "sft_global_step": 20,
+      "sft_train_rows": 584,
+      "full_task_pass": 0.6966292134831461,
+      "full_routing_acc": 0.797752808988764,
+      "full_cost_vs_large": 0.4691011235955056
+    }
+  },
+  "heldout_eval": {
+    "split": "eval",
+    "trace_rows": 100,
+    "trace_domains": {
+      "retail": 40,
+      "telecom": 40,
+      "airline": 20
+    },
+    "trace_success": 87,
+    "large_empty": 0,
+    "empty_both": 0,
+    "duplicates": 0,
+    "label_distribution": {
+      "0": 80,
+      "1": 20
+    },
+    "variants": {
+      "base": {
+        "task_pass": 0.8,
+        "routing_acc": 0.8,
+        "cost_vs_large": 0.1
+      },
+      "large": {
+        "task_pass": 0.71,
+        "routing_acc": 0.2,
+        "cost_vs_large": 1.0
+      },
+      "skills": {
+        "task_pass": 0.8,
+        "routing_acc": 0.8,
+        "cost_vs_large": 0.1
+      },
+      "router": {
+        "task_pass": 0.71,
+        "routing_acc": 0.66,
+        "cost_vs_large": 0.46
+      },
+      "full": {
+        "task_pass": 0.71,
+        "routing_acc": 0.66,
+        "cost_vs_large": 0.46
+      }
+    }
+  },
+  "sanitization": {
+    "raw_traces_included": false,
+    "logs_included": false,
+    "model_weights_included": false,
+    "task_text_included": false,
+    "environment_paths_included": false
+  }
+}

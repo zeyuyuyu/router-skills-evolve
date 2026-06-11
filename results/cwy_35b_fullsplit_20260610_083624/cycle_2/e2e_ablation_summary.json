@@ -1,0 +1,55 @@
+{
+  "variants": {
+    "base": {
+      "routing_acc": 0.7584269662921348,
+      "large_f1": 0,
+      "fallback": 0.24157303370786518,
+      "cost_vs_large": 0.09999999999999999,
+      "n_eval": 178,
+      "task_pass": 0.7584269662921348
+    },
+    "large": {
+      "routing_acc": 0.24157303370786518,
+      "large_f1": 0.3891402714932127,
+      "fallback": 0.0,
+      "cost_vs_large": 1.0,
+      "n_eval": 178,
+      "task_pass": 0.6235955056179775
+    },
+    "skills": {
+      "routing_acc": 0.7584269662921348,
+      "large_f1": 0,
+      "fallback": 0.24157303370786518,
+      "cost_vs_large": 0.09999999999999999,
+      "n_eval": 178,
+      "task_pass": 0.7584269662921348
+    },
+    "router": {
+      "routing_acc": 0.8146067415730337,
+      "large_f1": 0.6732673267326732,
+      "fallback": 0.05056179775280899,
+      "cost_vs_large": 0.3932584269662921,
+      "n_eval": 178,
+      "task_pass": 0.702247191011236
+    },
+    "full": {
+      "routing_acc": 0.8146067415730337,
+      "large_f1": 0.6732673267326732,
+      "fallback": 0.05056179775280899,
+      "cost_vs_large": 0.3932584269662921,
+      "n_eval": 178,
+      "task_pass": 0.702247191011236
+    }
+  },
+  "label_distribution": {
+    "1": 43,
+    "0": 135
+  },
+  "n_traces_total": 178,
+  "n_traces_with_label": 178,
+  "router_threshold": 0.5,
+  "cycle": 2,
+  "bench": "tau2_bench",
+  "model_config": "08_qwen3_6_35b_a3b_273",
+  "schedule": "SLR"
+}

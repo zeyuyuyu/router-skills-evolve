@@ -1,0 +1,56 @@
+{
+  "variants": {
+    "base": {
+      "routing_acc": 0.8,
+      "large_f1": 0,
+      "fallback": 0.2,
+      "cost_vs_large": 0.1,
+      "n_eval": 100,
+      "task_pass": 0.8
+    },
+    "large": {
+      "routing_acc": 0.2,
+      "large_f1": 0.33333333333333337,
+      "fallback": 0.0,
+      "cost_vs_large": 1.0,
+      "n_eval": 100,
+      "task_pass": 0.71
+    },
+    "skills": {
+      "routing_acc": 0.8,
+      "large_f1": 0,
+      "fallback": 0.2,
+      "cost_vs_large": 0.1,
+      "n_eval": 100,
+      "task_pass": 0.8
+    },
+    "router": {
+      "routing_acc": 0.66,
+      "large_f1": 0.43333333333333335,
+      "fallback": 0.07,
+      "cost_vs_large": 0.46,
+      "n_eval": 100,
+      "task_pass": 0.71
+    },
+    "full": {
+      "routing_acc": 0.66,
+      "large_f1": 0.43333333333333335,
+      "fallback": 0.07,
+      "cost_vs_large": 0.46,
+      "n_eval": 100,
+      "task_pass": 0.71
+    }
+  },
+  "label_distribution": {
+    "0": 80,
+    "1": 20
+  },
+  "n_traces_total": 100,
+  "n_traces_with_label": 100,
+  "router_threshold": 0.5,
+  "cycle": 3,
+  "bench": "tau2_bench",
+  "split": "eval",
+  "model_config": "08_qwen3_6_35b_a3b_273",
+  "schedule": "SLR"
+}
