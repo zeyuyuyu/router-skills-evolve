@@ -1,5 +1,5 @@
-% Router-Skills Evolve: AAAI 2027 submission
-% paper.tex — auto-generated 2026-05-29 by weekly pipeline
+% MERA: Model Evolution and Routing with Skill Adaptation — AAAI 2027 submission
+% paper.tex — auto-generated 2026-06-12 by weekly pipeline
 % DO NOT edit the %% MANUAL-PIN blocks below.
 
 \documentclass[letterpaper]{article}
@@ -21,8 +21,8 @@
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
 
-\title{Router-Skills Evolve: Adaptive LLM Cost-Quality Optimization\\
-via Skill-Based Routing and Reinforcement Learning}
+\title{MERA: Model Evolution and Routing with Skill Adaptation\\
+for Agentic Systems at Scale}
 
 \author{
 Zeyu Wang\\
@@ -38,22 +38,25 @@ Zeyu Wang\\
 \begin{abstract}
 Large language model (LLM) serving faces a fundamental cost-quality trade-off: powerful
 frontier models are expensive while cheaper models often fail on hard tasks.
-We present \textbf{Router-Skills Evolve}, a self-improving serving system that continuously
-learns which model to route each request to, while simultaneously evolving the small
-model's capabilities via reinforcement learning.
-The system maintains a \emph{SkillBook} of per-signature routing statistics and a
+We present \textbf{MERA} (Model Evolution and Routing with Skill Adaptation), a
+self-improving agentic serving system that jointly evolves routing decisions and model
+capabilities via reinforcement learning and supervised fine-tuning.
+MERA maintains a \emph{SkillBook} of per-signature routing statistics and a
 \emph{learned router} trained from execution traces.
-On HumanEval (164 tasks), our skills-based routing achieves \textbf{99\% task accuracy
-at 83\% lower cost} than always using the large model.
-A BERT-based learned router trained on 2{,}662 labeled routing traces achieves
-\textbf{93.04\% routing accuracy} with a \textbf{2.12\% fallback rate}---compared to
-68.28\% and 31.72\% for the no-routing baseline.
-For model evolution, we train a Qwen2.5-Coder-1.5B adapter via Group Relative Policy
-Optimization (GRPO) with executable-test rewards, improving MBPP pass@1 from 47\% to
-49\% (+4.3\% relative).
-A component-wise ablation confirms each module contributes independently.
-Our analysis identifies winner-takes-all GRPO collapse and 73\%-silent-group failure
-as binding constraints on further improvement, motivating cooperative policy optimization.
+On HumanEval (164 code tasks), MERA achieves \textbf{99\% task accuracy at 83\% lower
+cost} than always routing to the frontier model.
+A BERT-based router achieves \textbf{93.04\% routing accuracy} with a \textbf{2.12\%
+fallback rate}.
+A GRPO evolution pass yields +2pp MBPP pass@1 for Qwen2.5-Coder-1.5B (provisional,
+$n{=}1$ seed).
+Extending MERA to three-domain agentic customer-service tasks (tau2-bench) with a
+Qwen3.6-35B-A3B adapter, we achieve \textbf{89.19\% agentic task pass at 22.16\%
+of always-large cost} at peak.
+On a held-out 100-task split, the domain-specialized 35B model (80\%) surpasses the
+frontier GPT-5.4 (71\%), revealing that agent specialization can render frontier
+escalation counterproductive.
+We identify router overfitting and the 73\%-silent-group GRPO problem as the two
+binding constraints on further improvement.
 \end{abstract}
 
 %% SECTION 1 %%
@@ -90,6 +93,9 @@ We contribute:
   each component's contribution.
 \item \textbf{Failure mode analysis} (\S\ref{sec:analysis}): identification of
   winner-takes-all collapse and 73\%-silent-group failure as the binding GRPO constraints.
+\item \textbf{Agentic extension} (\S\ref{sec:tau2}): 4-cycle joint evolution on tau2-bench
+  showing the domain-specialized small model surpasses the frontier model on held-out
+  tasks (80\% vs.\ 71\%), and identifying router overfitting in agentic settings.
 \end{enumerate}
 
 %% SECTION 2 %%
@@ -260,6 +266,72 @@ Full & \checkmark & \checkmark & \checkmark & \textbf{93.0\%} & \textbf{2.1\%} &
 
 Router training is the single largest contributor; LLM GRPO adds orthogonal code quality gain.
 
+%% SECTION 6.5 — AGENTIC EXTENSION %%
+\section{Agentic Extension: Tau2-Bench Joint Evolution}
+\label{sec:tau2}
+
+We extend MERA to tau2-bench, a three-domain agentic customer-service benchmark
+(airline, retail, telecom). The ``small'' model is a Qwen3.6-35B-A3B adapter
+fine-tuned via SFT on hard agent traces; the ``large'' model is GPT-5.4.
+We run the full MERA pipeline (SkillBook $\to$ LLM SFT $\to$ Router) for 4 cycles.
+
+\subsection{Joint Evolution Run (74 In-Distribution Tasks)}
+
+\begin{table}[h]
+\centering
+\caption{Tau2 joint evolution per-cycle results (74 in-sample tasks,
+Qwen3.6-35B-A3B adapter).}
+\label{tab:tau2_joint}
+\begin{tabular}{lrrrr}
+\toprule
+Cycle & Task Pass & Router Acc & Fallback & Cost vs.\ Large \\
+\midrule
+Cycle 0 & 78.38\% & 93.24\% & 4.05\% & 47.70\% \\
+\textbf{Cycle 1} & \textbf{89.19\%} & 93.24\% & \textbf{4.05\%} & \textbf{22.16\%} \\
+Cycle 2 & 70.27\% & 82.43\% & 5.41\% & 48.92\% \\
+Cycle 3 & 72.97\% & 89.19\% & 6.76\% & 35.54\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At peak (Cycle~1), MERA achieves 89.19\% task pass at 22.16\% of always-large cost---a
+4.5$\times$ cost reduction with competitive accuracy.
+
+\subsection{Formal Train/Test Split (178 Train / 100 Held-Out)}
+
+We run a second experiment with zero train/test overlap (all three domains: retail 40,
+telecom 40, airline 20 held-out tasks).
+
+\begin{table}[h]
+\centering
+\caption{Tau2 held-out evaluation (100 unseen tasks, final-cycle adapter).}
+\label{tab:tau2_heldout}
+\begin{tabular}{lrrr}
+\toprule
+Variant & Task Pass & Route Acc & Cost vs.\ Large \\
+\midrule
+Always-large (GPT-5.4) & 71.00\% & --- & 100\% \\
+Base (35B MoE, always-small) & \textbf{80.00\%} & 80.00\% & \textbf{10\%} \\
++~SkillBook & 80.00\% & 80.00\% & 10\% \\
++~Router & 71.00\% & 66.00\% & 46\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Key findings.}
+\textbf{(1) Specialized small model outperforms frontier.}
+On held-out tasks, the domain-fine-tuned 35B MoE achieves 80\% task pass, exceeding
+GPT-5.4 at 71\%, at only 10\% of the cost.
+\textbf{(2) Router overfits in agentic domains.}
+The TF-IDF+LR router drops to 66\% routing accuracy on held-out, 14pp below the
+always-small baseline (80\%). Routing to the large model actively \emph{hurts}:
+task pass degrades from 80\% to 71\% while cost rises from 10\% to 46\%.
+This is a fundamental limitation of in-distribution routing on agentic multi-turn tasks
+where frontier model quality is not reliably superior.
+\textbf{(3) SkillBook provides no gain beyond base.}
+With the 35B adapter already specialized, the signature-based SkillBook cannot improve
+beyond always-small routing.
+
 %% SECTION 7 %%
 \section{Failure Mode Analysis}
 \label{sec:analysis}
@@ -285,12 +357,17 @@ Both are queued as priority experiments.
 %% SECTION 8 %%
 \section{Conclusion}
 
-We present Router-Skills Evolve, achieving 99\% task accuracy at 17\% of frontier-model
-cost via skills evolution, 93.04\% routing accuracy via a learned router, and a first
-positive LLM evolution signal (+2pp MBPP) via GRPO.
-Component ablation isolates each contribution.
-We identify winner-takes-all collapse and 73\%-silent-group failure as the binding GRPO
-constraints, proposing cooperative policy optimization as a remedy.
+We present MERA, achieving 99\% task accuracy at 17\% of frontier cost on HumanEval via
+skills evolution, 93.04\% routing accuracy with a learned BERT router, and a first positive
+LLM evolution signal (+2pp MBPP) via GRPO.
+Extended to tau2 agentic tasks, MERA demonstrates 89.19\% task pass at 22.16\% of
+always-large cost at peak, and reveals a novel finding: domain-specialized adaptation
+of the small model renders frontier model routing counterproductive on held-out tasks
+(80\% small vs.\ 71\% large), reframing routing as a domain-specialization decision
+rather than a pure capability-gap decision.
+We identify router overfitting, winner-takes-all collapse, and 73\%-silent-group failure
+as the three binding constraints, and propose regularized routing and cooperative policy
+optimization as remedies.
 
 %% REFERENCES %%
 \bibliographystyle{aaai}

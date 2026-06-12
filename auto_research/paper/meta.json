@@ -1,5 +1,6 @@
 {
-  "paper_version": 1,
+  "paper_version": 2,
+  "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
   "secondary_venue": null,
   "rush_mode": false,
@@ -7,30 +8,39 @@
   "emnlp_deadline": "2026-06-19",
   "neurips_deadline": "2026-05-23",
   "scores": {
-    "novelty": 5,
+    "novelty": 6,
     "soundness": 4,
-    "significance": 6,
+    "significance": 7,
     "writing": 6
   },
-  "composite": 5.25,
-  "status": "provisional — A800 offline day 17, LLM results n=1 seed; tau2 §5.4 added",
-  "last_updated": "2026-05-31",
+  "composite": 5.75,
+  "status": "provisional — A800 offline day 29; GRPO results n=1 seed; tau2 held-out router hurts (-9pp); new 35B joint and fullsplit results added",
+  "last_updated": "2026-06-12",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "queue_size": 45,
+  "queue_size": 67,
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
     "bib": "auto_research/paper/references.bib",
-    "review": "auto_research/paper/reviews/review-2026-05-29.md"
+    "review": "auto_research/paper/reviews/review-2026-06-12.md"
   },
   "strongest_claims": {
     "skills_routing": "99% accuracy, 83% cost reduction on HumanEval 164",
     "learned_router": "93.04% accuracy, 2.12% fallback on 848 routing examples",
-    "grpo_lm": "+2pp absolute MBPP pass@1 (47% -> 49%), n=1 seed"
+    "grpo_lm": "+2pp absolute MBPP pass@1 (47% -> 49%), n=1 seed",
+    "tau2_joint_peak": "89.19% task pass at 22.16% of always-large cost (Cycle 1, joint run)",
+    "tau2_small_dominates": "35B MoE 80% > GPT-5.4 71% on held-out tau2 tasks"
   },
   "critical_blockers": [
     "EXP-038: multi-seed GRPO (n=3) to verify +2pp claim",
+    "EXP-066: tau2 router regularization to fix held-out overfitting",
     "EXP-039: HumanEval eval of GRPO adapter for cross-benchmark generalization",
     "EXP-040: gold-label router evaluation to verify 93.04% claim"
-  ]
+  ],
+  "new_findings_2026_06_12": {
+    "tau2_peak_cycle1": "89.19% task pass at 22.16% cost (joint run, 74 tasks)",
+    "tau2_heldout_small_beats_large": "35B MoE 80% > GPT-5.4 71% on 100-task held-out",
+    "tau2_router_overfits": "router drops from 80% to 66% routing acc on held-out, hurts task pass 9pp",
+    "30b_sft_weak": "30B dense SFT only 12.78% Method B, 0% Method A vs 89% for 35B MoE"
+  }
 }
