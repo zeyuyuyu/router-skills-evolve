@@ -191,3 +191,13 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s.
   Actions taken: none (cannot assess state without server access).
   Recommendation: Check if A800 is powered on, VPN/firewall rules, or if port 50507 is open.
+[2026-06-12T20:04:04Z] SHEPHERD RUN — FAILED
+  A800 (117.74.66.181:50507) unreachable: TCP probe timed out (15s); sshpass missing (installed from apt w/ --fix-missing), openssh-client unavailable (apt mirror 404), paramiko installed as fallback — SSH still timed out. Day 30 of persistent outage (first failure 2026-05-14). Steps A–E all skipped — no state.json readable.
+  ROUTINE HEALTH (local repo, 20:04 UTC 2026-06-12):
+    - reports/ideas-2026-06-12.md EXISTS ✓ (idea-gen fired today, 65 experiments pending in queue scripts)
+    - hotspots/2026-06-12.json MISSING (no hotspots/ dir in local clone; arxiv hotspot pipeline offline)
+    - paper_draft-2026-06-07.md is latest weekly (5 days old; next weekly due ~2026-06-14)
+    - EMNLP 2026 abstract deadline: 2026-06-19 (7 days) — per idea-gen: routing 93.04% result is self-contained for abstract
+    - 65 experiments queued (EXP-001–EXP-065), 0 executed since 2026-05-14
+  Actions taken: none (cannot reach A800).
+  DONE: FAILED: A800 unreachable (day 30)
