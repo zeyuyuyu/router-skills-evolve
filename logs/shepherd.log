@@ -202,3 +202,14 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Actions taken: none (cannot reach A800).
   DONE: FAILED: A800 unreachable (day 30)
 [2026-06-13T00:04:13Z] SHEPHERD: A800 unreachable (117.74.66.181:50507 timed out). No SSH client in cloud container; paramiko connect timeout after 15s. No actions taken. Will retry on next cron tick.
+[2026-06-13T06:04:51Z] SHEPHERD RUN — FAILED
+  A800 (117.74.66.181:50507) unreachable: TCP probe timed out (10s); openssh-client unavailable (apt mirror 404); paramiko SSH timed out (20s). Day 31 of persistent outage (first failure ~2026-05-14). Steps A–E all skipped — no state.json readable.
+  ROUTINE HEALTH (local repo, 06:04 UTC 2026-06-13):
+    - reports/ideas-2026-06-13.md MISSING (expected by 07:00 UTC, not yet past deadline — check next run)
+    - hotspots/2026-06-13.json MISSING (expected by 06:00 UTC — 4+ min late; hotspot pipeline appears offline)
+    - Last ideas-gen: ideas-2026-06-12.md (yesterday) ✓
+    - Last weekly: paper_draft-2026-06-07.md (6 days old; weekly due ~2026-06-14 tomorrow)
+    - EMNLP 2026 abstract deadline: 2026-06-19 (6 DAYS) — critical
+    - 65 experiments queued (EXP-001–EXP-065), 0 executed since 2026-05-14
+  Actions taken: none (cannot reach A800).
+  DONE: FAILED: A800 unreachable (day 31)
