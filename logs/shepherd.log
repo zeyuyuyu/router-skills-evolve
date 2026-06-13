@@ -227,3 +227,14 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
     - 65 experiments queued (EXP-001–EXP-065), 0 executed since 2026-05-14
   Actions taken: none (A800 unreachable; conservative policy — no cloud triggers fired without confirmed queue/state).
   DONE: FAILED: A800 unreachable (day 32)
+[2026-06-13T20:03:46Z] SHEPHERD RUN — FAILED (A800 unreachable, day 32)
+  A800 (117.74.66.181:50507): TCP probe timed out 15s; no ssh binary in cloud container; paramiko also timed out. Outage consistent since ~2026-05-14. Steps A–D fully skipped — no state.json readable.
+  ROUTINE HEALTH (Step E, local repo, 20:03 UTC 2026-06-13):
+    - hotspots/2026-06-13.json: cannot check (hotspots dir not in local repo clone; would need A800 access)
+    - reports/ideas-2026-06-13.md: MISSING (expected by 07:00 UTC — 13h overdue; idea-gen pipeline offline)
+    - Last successful idea-gen: ideas-2026-06-12.md (yesterday) ✓
+    - Last weekly draft: paper_draft-2026-06-07.md (6 days old; weekly due ~2026-06-14 tomorrow)
+    - EMNLP 2026 abstract deadline: 2026-06-19 — 6 DAYS REMAINING (CRITICAL — manual intervention needed)
+    - 65 experiments queued (EXP-001–EXP-065), 0 executed since 2026-05-14 (~30-day gap)
+  Actions taken: none (A800 unreachable; conservative policy maintained).
+  DONE: FAILED: A800 unreachable (day 32)
