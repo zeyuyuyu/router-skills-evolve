@@ -216,3 +216,14 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
 
 [2026-06-13T00:00:00Z] SHEPHERD RUN FAILED — A800 unreachable. TCP connect to 117.74.66.181:50507 returned errno=11 (EAGAIN / firewall drop) from cloud execution environment. SSH client unavailable locally and paramiko timed out. No state read, no experiments checked, no queue actions taken. Remote environment (code.claude.com) appears to block outbound non-HTTP/S connections. All shepherd steps (STEP 1–4) skipped. Next shepherd run should verify A800 network reachability before proceeding.
 [2026-06-13T00:00:00Z] SHEPHERD RUN FAILED — A800 unreachable. TCP connection to 117.74.66.181:50507 timed out (15s). No state read, no actions taken. Will retry at next scheduled run. sshpass missing → installed paramiko → port still unreachable. DONE: actions=none
+[2026-06-13T16:04:53Z] SHEPHERD RUN — FAILED (A800 unreachable, day 32)
+  A800 (117.74.66.181:50507): TCP probe timed out 15s; sshpass installed but no openssh-client binary in cloud container; paramiko SSH also timed out. Consistent with persistent outage since ~2026-05-14. Steps A–D all skipped — no state.json readable.
+  ROUTINE HEALTH (Step E, local repo, 16:04 UTC 2026-06-13):
+    - hotspots/2026-06-13.json: MISSING (expected by 06:00 UTC — 10h overdue; hotspot/arxiv pipeline offline)
+    - reports/ideas-2026-06-13.md: MISSING (expected by 07:00 UTC — 9h overdue; idea-gen pipeline offline)
+    - Last successful idea-gen: ideas-2026-06-12.md (yesterday)
+    - Last weekly draft: paper_draft-2026-06-07.md (6 days old; next weekly due ~2026-06-14 tomorrow)
+    - EMNLP 2026 abstract deadline: 2026-06-19 — 6 days remaining (CRITICAL)
+    - 65 experiments queued (EXP-001–EXP-065), 0 executed since 2026-05-14
+  Actions taken: none (A800 unreachable; conservative policy — no cloud triggers fired without confirmed queue/state).
+  DONE: FAILED: A800 unreachable (day 32)
