@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pending queue update bootstrap — last updated 2026-06-11 by daily pipeline.
+Pending queue update bootstrap — last updated 2026-06-13 by daily pipeline.
 
 RECOVERY NOTE (2026-06-06): The cloud idea-gen routine could not push the full
 184K experiment list due to MCP socket size limits. The full 53-experiment version
@@ -15,12 +15,15 @@ To restore and apply all experiments on A800:
     # Step 2: run it to apply experiments 1-53
     python3 /tmp/pending_queue_update_full.py
 
-    # Step 3: apply daily patches in order (EXP-054 through EXP-063)
+    # Step 3: apply daily patches in order (EXP-054 through EXP-069)
     python3 auto_research/pending_queue_update_2026_06_06.py
     python3 auto_research/pending_queue_update_2026_06_07.py
     python3 auto_research/pending_queue_update_2026_06_08.py
     python3 auto_research/pending_queue_update_2026_06_10.py
     python3 auto_research/pending_queue_update_2026_06_11.py
+    python3 auto_research/pending_queue_update_2026_06_12.py
+    python3 auto_research/pending_queue_update_2026_06_12_v2.py
+    python3 auto_research/pending_queue_update_2026_06_13.py
 
 Alternatively, this script auto-detects git and does all steps:
     python3 auto_research/pending_queue_update.py
@@ -112,6 +115,18 @@ def main():
     # Apply 2026-06-11 patch (EXP-062, EXP-063)
     print("\nApplying 2026-06-11 patch (EXP-062, EXP-063)...")
     run_daily_patch("pending_queue_update_2026_06_11.py")
+
+    # Apply 2026-06-12 patch (EXP-064, EXP-065)
+    print("\nApplying 2026-06-12 patch (EXP-064, EXP-065)...")
+    run_daily_patch("pending_queue_update_2026_06_12.py")
+
+    # Apply 2026-06-12 v2 patch (EXP-066, EXP-067)
+    print("\nApplying 2026-06-12 v2 patch (EXP-066, EXP-067)...")
+    run_daily_patch("pending_queue_update_2026_06_12_v2.py")
+
+    # Apply 2026-06-13 patch (EXP-068, EXP-069)
+    print("\nApplying 2026-06-13 patch (EXP-068, EXP-069)...")
+    run_daily_patch("pending_queue_update_2026_06_13.py")
     return 0
 
 

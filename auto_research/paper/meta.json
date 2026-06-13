@@ -14,10 +14,10 @@
     "writing": 6
   },
   "composite": 5.75,
-  "status": "provisional — A800 offline day 29; GRPO results n=1 seed; tau2 held-out router hurts (-9pp); new 35B joint and fullsplit results added",
-  "last_updated": "2026-06-12",
+  "status": "provisional — A800 offline day 30; GRPO results n=1 seed; tau2 held-out router hurts (-9pp); EXP-068 (F-GRPO focal) + EXP-069 (S2L-PO explorer) queued",
+  "last_updated": "2026-06-13",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "queue_size": 67,
+  "queue_size": 69,
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
