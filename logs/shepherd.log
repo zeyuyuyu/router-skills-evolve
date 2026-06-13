@@ -213,3 +213,5 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
     - 65 experiments queued (EXP-001–EXP-065), 0 executed since 2026-05-14
   Actions taken: none (cannot reach A800).
   DONE: FAILED: A800 unreachable (day 31)
+
+[2026-06-13T00:00:00Z] SHEPHERD RUN FAILED — A800 unreachable. TCP connect to 117.74.66.181:50507 returned errno=11 (EAGAIN / firewall drop) from cloud execution environment. SSH client unavailable locally and paramiko timed out. No state read, no experiments checked, no queue actions taken. Remote environment (code.claude.com) appears to block outbound non-HTTP/S connections. All shepherd steps (STEP 1–4) skipped. Next shepherd run should verify A800 network reachability before proceeding.
