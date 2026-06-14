@@ -252,3 +252,15 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   DONE: FAILED: A800 unreachable (day 32)
 [2026-06-14T$(date -u +%H:%M:%S)Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Remote experiment queue status unknown. Requires manual investigation or network check.
 [2026-06-14T00:04:56Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Remote experiment queue status unknown. Requires manual investigation or network check.
+[2026-06-14T02:02:41Z] SHEPHERD RUN — FAILED (A800 unreachable, day 31)
+  A800 (117.74.66.181:50507): SSH binary not available in cloud container; TCP probe not possible. Outage consistent since ~2026-05-14. Steps A–D fully skipped — no state.json readable.
+  ROUTINE HEALTH (Step E, local repo, 02:02 UTC 2026-06-14):
+    - hotspots/2026-06-14.json: cannot check (hotspots dir not in local repo clone; A800 access required)
+    - reports/ideas-2026-06-14.md: MISSING (expected by 07:00 UTC — not yet due, but pipeline offline)
+    - reports/paper_draft-2026-06-14.md: MISSING (weekly due ~today 2026-06-14; not yet generated)
+    - Last successful idea-gen: ideas-2026-06-12.md (2 days ago)
+    - Last weekly draft: paper_draft-2026-06-07.md (7 days old — WEEKLY OVERDUE)
+    - EMNLP 2026 abstract deadline: 2026-06-19 — 5 DAYS REMAINING (CRITICAL — manual intervention needed)
+    - 65 experiments queued (EXP-001–EXP-065), 0 executed since 2026-05-14 (~31-day gap)
+  Actions taken: none (A800 unreachable; conservative policy maintained — no cloud triggers fired without confirmed state).
+  DONE: FAILED: A800 unreachable (day 31)
