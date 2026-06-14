@@ -264,3 +264,13 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
     - 65 experiments queued (EXP-001–EXP-065), 0 executed since 2026-05-14 (~31-day gap)
   Actions taken: none (A800 unreachable; conservative policy maintained — no cloud triggers fired without confirmed state).
   DONE: FAILED: A800 unreachable (day 31)
+[2026-06-14T04:02:47Z] SHEPHERD FAILED: A800 unreachable. SSH/sshpass not available in this remote execution environment (cloud container). No state read, no actions taken. Manual check of A800 required.
+[2026-06-14T04:03:01Z] SHEPHERD RUN — FAILED (A800 unreachable, day 33)
+  A800 (117.74.66.181:50507): SSH binary not available in cloud container (confirmed again). Outage consistent since ~2026-05-14. Steps A–D fully skipped.
+  ROUTINE HEALTH (Step E, 04:02 UTC 2026-06-14):
+    - reports/ideas-2026-06-14.md: MISSING (not yet due, but pipeline offline)
+    - reports/paper_draft-2026-06-14.md: MISSING (weekly — OVERDUE, last was 2026-06-07)
+    - EMNLP 2026 abstract deadline: 2026-06-19 — 5 DAYS REMAINING (CRITICAL)
+    - 65 experiments queued, 0 executed since 2026-05-14 (~31-day gap)
+  Actions taken: none (A800 unreachable; conservative policy maintained).
+  DONE: FAILED: A800 unreachable (day 33)
