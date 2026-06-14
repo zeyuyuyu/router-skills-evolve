@@ -274,3 +274,4 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
     - 65 experiments queued, 0 executed since 2026-05-14 (~31-day gap)
   Actions taken: none (A800 unreachable; conservative policy maintained).
   DONE: FAILED: A800 unreachable (day 33)
+[2026-06-14T08:03:40Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) is TCP-unreachable (connection timed out). Unable to read state.json, check running experiments, or write remote shepherd.log. No actions taken. Machine may be down, port blocked, or network path disrupted. Manual investigation required.
