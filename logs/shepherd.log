@@ -284,3 +284,4 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 30s.
   Actions taken: none (cannot assess state without server access).
   Next: Verify server is up; check if port 50507 is still the correct port. All steps (state check, GPU check, queue check, artifact check) skipped.
+[2026-06-15 10:04:16 UTC] SHEPHERD RUN FAILED: A800 unreachable. SSH to zeyuwang@117.74.66.181:50507 timed out after 15s. No state was read, no actions were taken. Manual check of A800 connectivity required.
