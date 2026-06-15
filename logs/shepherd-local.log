@@ -1,3 +1,4 @@
 [2026-05-31T04:13:09Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. Next shepherd run should retry.
 [2026-06-07T06:03:31Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. sshpass installed in container but openssh-client 9.6p1-3ubuntu13 (non-security build) used. Manual check of A800 required.
 [2026-06-08T02:04:07Z] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. Manual investigation required.
+[2026-06-15 UTC] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connect returned EAGAIN (host not responding, port filtered or server down). SSH attempted via paramiko with 30s timeout; also confirmed via raw socket TCP test. No state read; no actions taken. Please check A800 power/network, VPN, or firewall rules for port 50507.
