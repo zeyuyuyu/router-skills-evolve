@@ -292,3 +292,11 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Actions taken: none
   Next: manual check of A800 network/SSH daemon required.
 
+[2026-06-15T$(date -u +%H:%M:%S)Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. All checks (queue, stuck experiments, disk, artifacts) skipped. Manual verification required.
+[2026-06-15T18:04:43Z] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. All checks (queue, stuck experiments, disk, artifacts) skipped. Manual verification required.
+[2026-06-15T18:04:53Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out (8s + 15s probes both failed).
+  Context: log history shows this host has been unreachable since at least 2026-05-14 (>30 days of consecutive failures).
+  Actions taken: none. All steps (A/B/C/D/E) skipped — cannot safely act without state.
+  Escalation: CRITICAL/ONGOING. auto-research pipeline has been unmonitored for 30+ days. Experiments may be stalled or crashed with no shepherd intervention.
+  Recommendation: (1) confirm A800 is powered on and SSH service is up; (2) verify outbound SSH on port 50507 is not blocked by this cloud env's network policy; (3) consider exposing state.json via authenticated HTTP endpoint as fallback.
