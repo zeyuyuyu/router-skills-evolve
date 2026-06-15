@@ -286,3 +286,9 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Next: Verify server is up; check if port 50507 is still the correct port. All steps (state check, GPU check, queue check, artifact check) skipped.
 [2026-06-15 10:04:16 UTC] SHEPHERD RUN FAILED: A800 unreachable. SSH to zeyuwang@117.74.66.181:50507 timed out after 15s. No state was read, no actions were taken. Manual check of A800 connectivity required.
 [2026-06-15T14:04:36Z] SHEPHERD RUN FAILED — A800 unreachable (117.74.66.181:50507). SSH connection timed out on both attempts (15s and 20s). No state read, no actions taken. All checks (state, GPU, disk, experiments, daily artifacts) skipped. Next shepherd run will retry.
+[2026-06-15T16:06:35Z] SHEPHERD RUN FAILED — A800 unreachable
+  Host: 117.74.66.181:50507
+  Error: SSH connection timed out (ConnectTimeout=15s)
+  Actions taken: none
+  Next: manual check of A800 network/SSH daemon required.
+
