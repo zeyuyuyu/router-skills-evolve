@@ -300,3 +300,8 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Actions taken: none. All steps (A/B/C/D/E) skipped — cannot safely act without state.
   Escalation: CRITICAL/ONGOING. auto-research pipeline has been unmonitored for 30+ days. Experiments may be stalled or crashed with no shepherd intervention.
   Recommendation: (1) confirm A800 is powered on and SSH service is up; (2) verify outbound SSH on port 50507 is not blocked by this cloud env's network policy; (3) consider exposing state.json via authenticated HTTP endpoint as fallback.
+[2026-06-15T20:10:52Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out (consistent with 30+ day outage since ~2026-05-14).
+  Context: Consecutive failures logged throughout today and for >30 days. EMNLP 2026 abstract deadline 2026-06-19 is 4 days away. 65 experiments queued, 0 executed since outage began. Paper pipeline offline for entire deadline window.
+  Actions taken: none — cannot read state.json or act safely without A800 access. All steps (A/B/C/D/E) skipped.
+  DONE: FAILED: A800 unreachable (day ~32)
