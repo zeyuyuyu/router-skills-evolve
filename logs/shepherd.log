@@ -305,3 +305,4 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Context: Consecutive failures logged throughout today and for >30 days. EMNLP 2026 abstract deadline 2026-06-19 is 4 days away. 65 experiments queued, 0 executed since outage began. Paper pipeline offline for entire deadline window.
   Actions taken: none — cannot read state.json or act safely without A800 access. All steps (A/B/C/D/E) skipped.
   DONE: FAILED: A800 unreachable (day ~32)
+[2026-06-16T02:04:36Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable. SSH connection timed out after 30s (port 50507 not responding). No state read, no actions taken. All steps skipped. Manual check required.
