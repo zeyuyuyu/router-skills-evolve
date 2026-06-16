@@ -318,3 +318,10 @@ Action: A800 SSH connection failed (117.74.66.181:50507, timeout after 20s).
 sshpass installed successfully but TCP connection timed out — host unreachable from remote execution environment.
 No state read. No experiments checked. No actions taken.
 Next shepherd run will retry. If this persists, check A800 network/firewall or VPN requirements.
+[2026-06-16T16:04:20Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 30s.
+  Outage: ~33 days continuous (since ~2026-05-14). All steps A-E skipped. EMNLP abstract deadline 2026-06-19 in 3 days.
+  Context: sshpass+openssh-client installed successfully in this run; TCP connection timed out regardless.
+    This confirms the port/host is not routable from this cloud execution environment — likely a firewall or network policy block, not A800 being down per se.
+  Actions taken: none (conservative policy).
+  DONE: FAILED: A800 unreachable (day ~33, outage ongoing)
