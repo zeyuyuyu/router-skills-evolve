@@ -18,11 +18,13 @@ import sys
 from pathlib import Path
 
 
-VARIANT_ORDER = ["base", "large", "skills", "router", "full"]
+# Single global skill → no signature routing, so there is no separate
+# "base" (always-small, no-procedure) arm. The "skills" arm is always-small
+# WITH the distilled procedure and doubles as the small-only baseline.
+VARIANT_ORDER = ["large", "skills", "router", "full"]
 VARIANT_LABEL = {
-    "base":   "Base (always-small)",
     "large":  "Always-large",
-    "skills": "+ Skills evolve",
+    "skills": "Small + Skills (always-small + procedure)",
     "router": "+ Router training",
     "full":   "Full (+ LLM training)",
 }

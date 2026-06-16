@@ -1,7 +1,7 @@
 """Skills 数据结构 + 学习算法
 
 核心思想:
-- 每个 prompt 抽取一个 signature (如 "M|list/num")
+- 所有 prompt 共享单一 signature "coding"（全局一个 skill bucket）
 - Skill 记录该 signature 下每个模型的 success/total 统计
 - 基于统计决定"能不能用便宜模型"
 """
@@ -16,50 +16,9 @@ from typing import Dict, List, Optional, Tuple
 # Prompt → Signature 提取
 # ============================================================================
 
-def extract_signature(prompt: str) -> str:
-    """
-    从 prompt 提取 signature (cluster key)。
-    
-    格式: "<length_bucket>|<tag1>/<tag2>/..."
-    例如:
-      "M|list/num"  中等长度 + 涉及 list 和 num
-      "L|crypto/str"  长 + 密码学 + 字符串
-      "S|general"   短 + 通用
-    """
-    p = prompt.lower()
-    length = len(prompt)
-
-    # 长度分桶
-    if length < 200:
-        len_b = "S"
-    elif length < 500:
-        len_b = "M"
-    else:
-        len_b = "L"
-
-    # 标签提取 (基于关键词)
-    tags = []
-    if any(k in p for k in ["list", "array"]):
-        tags.append("list")
-    if any(k in p for k in ["string", "str"]):
-        tags.append("str")
-    if any(k in p for k in ["number", "integer", "float"]):
-        tags.append("num")
-    if any(k in p for k in ["sort", "order"]):
-        tags.append("sort")
-    if any(k in p for k in ["prime", "factor", "divisor"]):
-        tags.append("theory")
-    if any(k in p for k in ["encode", "decode", "cipher", "cyclic", "shift"]):
-        tags.append("crypto")
-    if any(k in p for k in ["poly", "recursion", "recursive"]):
-        tags.append("advanced")
-    if any(k in p for k in ["true", "false", "check", "boolean"]):
-        tags.append("bool")
-
-    if not tags:
-        tags.append("general")
-
-    return f"{len_b}|{'/'.join(sorted(set(tags)))}"
+def extract_signature(prompt: str) -> str:  # noqa: ARG001
+    """All tasks share a single global skill bucket."""
+    return "coding"
 
 
 # ============================================================================

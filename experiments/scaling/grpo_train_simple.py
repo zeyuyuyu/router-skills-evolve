@@ -1,0 +1,389 @@
+#!/usr/bin/env python3
+"""Phase 3b: GRPO on-policy RL for the small coding model.
+
+After SFT (Phase 3a) warm-starts the model on teacher + self-repair data,
+GRPO further refines it with a direct test-execution reward signal. The reward
+is binary: passing all HumanEval tests = 1.0, failing = 0.0.
+
+Key design choices
+------------------
+- Group size K (--n-generations): generate K completions per prompt, normalize
+  rewards within the group → advantage = (r - mean) / (std + eps). This is the
+  GRPO estimator from DeepSeekMath; no value network needed.
+- Warm-start: loads the Phase 3a SFT checkpoint (LoRA adapter or full model).
+  Merges LoRA weights before wrapping with a fresh LoRA for GRPO, so the
+  reference policy is clean.
+- Procedure prefix: same format as SFT training — skillbook procedure prepended
+  to each prompt so the inference context matches training.
+- Output: LoRA adapter saved to grpo_adapter/. The pipeline's Phase 1 checkpoint
+  handoff prefers grpo_adapter/ over llm_adapter/checkpoint-best.
+
+Usage:
+    python experiments/scaling/grpo_train_simple.py \\
+        --model results/.../cycle_N/llm_adapter \\
+        --bench-data data/HumanEval.jsonl \\
+        --output-dir results/.../cycle_N/grpo_adapter \\
+        [--skillbook results/.../cycle_N/skillbook.json] \\
+        [--n-generations 8] [--epochs 1] [--lr 5e-6]
+
+Algorithm comparison (--algo flag)
+------------------------------------
+GRPO  loss_type="grpo"  clip(r, 1-ε, 1+ε)            sequence-level norm
+DAPO  loss_type="dapo"  clip(r, 1-ε_low, 1+ε_high)   token-level global norm
+      + dynamic sampling: zero-grad for all-same-reward groups (reward wrapper)
+
+Both implemented via TRL 1.6 native GRPOConfig. No subclassing needed.
+
+Requires: trl >= 1.6, transformers, peft, datasets
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Data helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load_humaneval_tasks(data_path: str, split: str = "train") -> list[dict]:
+    tasks = []
+    with open(data_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            tasks.append(json.loads(line))
+    if split == "train":
+        return tasks[0::2]
+    if split == "eval":
+        return tasks[1::2]
+    return tasks
+
+
+def _load_procedures(skillbook_path: str | None):
+    if not skillbook_path:
+        return lambda _: ""
+    p = Path(skillbook_path)
+    if not p.exists():
+        return lambda _: ""
+    try:
+        from src.skills import SkillBook
+        sb = SkillBook()
+        sb.load(p)
+        print(f"[grpo] loaded skillbook ({len(sb.skills)} clusters) from {skillbook_path}",
+              flush=True)
+        return sb.get_procedure
+    except Exception as e:  # noqa: BLE001
+        print(f"[grpo] WARN could not load skillbook: {e}", flush=True)
+        return lambda _: ""
+
+
+def _build_dataset(tasks: list[dict], get_procedure, prompt_style: str):
+    """Build a HF Dataset with formatted prompts and task metadata.
+
+    The `prompt` column is the full formatted prompt string fed to GRPOTrainer.
+    Extra columns (entry_point, test_code, raw_problem) are passed as kwargs to
+    the reward function via TRL's automatic column forwarding.
+    """
+    from datasets import Dataset
+    from experiments.train_small_model import format_prompt
+
+    rows = []
+    for t in tasks:
+        problem = t["prompt"]
+        procedure = get_procedure(problem)
+        raw_prompt = f"{procedure}\n\n---\n\n{problem}" if procedure else problem
+        rows.append({
+            "prompt": format_prompt(raw_prompt, style=prompt_style),
+            "task_id": t["task_id"],
+            "entry_point": t["entry_point"],
+            "test_code": t["test"],
+            "raw_problem": problem,
+        })
+    return Dataset.from_list(rows)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Reward function
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_reward_fn():
+    """Return a GRPO reward function backed by HumanEval test execution.
+
+    TRL 0.9+ passes extra dataset columns as kwargs. The reward is binary:
+    1.0 if all tests pass, 0.0 otherwise.
+    """
+    from src.models import extract_code, run_humaneval_test
+
+    def reward_fn(completions: list[str], **kwargs) -> list[float]:
+        entry_points = kwargs.get("entry_point", [""] * len(completions))
+        test_codes   = kwargs.get("test_code",   [""] * len(completions))
+        raw_problems = kwargs.get("raw_problem",  [""] * len(completions))
+        rewards = []
+        for completion, ep, tc, rp in zip(completions, entry_points, test_codes, raw_problems):
+            try:
+                task = {"entry_point": ep, "test": tc, "prompt": rp}
+                code = extract_code(completion, ep, rp)
+                ok, _ = run_humaneval_test(task, code)
+                rewards.append(1.0 if ok else 0.0)
+            except Exception:  # noqa: BLE001
+                rewards.append(0.0)
+        n_pass = sum(1 for r in rewards if r > 0)
+        print(f"[grpo_reward] batch pass={n_pass}/{len(rewards)}", flush=True)
+        return rewards
+
+    return reward_fn
+
+
+def _make_dapo_reward_fn(base_fn, n_generations: int):
+    """Dynamic sampling wrapper (DAPO §3.2).
+
+    When all K completions for a prompt share the same binary reward (all-pass
+    or all-fail), the GRPO group-normalized advantage is identically zero and
+    the batch contributes no gradient signal. DAPO skips such groups entirely.
+
+    We approximate that here by zeroing the rewards for all-same groups, which
+    drives their advantage to ~0 via (0-0)/(0+ε). This is gradient-equivalent
+    to skipping, without requiring changes to TRL's sampler.
+    """
+    def reward_fn(completions: list[str], **kwargs) -> list[float]:
+        rewards = list(base_fn(completions, **kwargs))
+        K = n_generations
+        if K > 1 and len(rewards) >= K and len(rewards) % K == 0:
+            n_prompts = len(rewards) // K
+            filtered = 0
+            for i in range(n_prompts):
+                grp = rewards[i * K : (i + 1) * K]
+                if len(set(grp)) == 1:      # all pass or all fail
+                    for j in range(K):
+                        rewards[i * K + j] = 0.0
+                    filtered += 1
+            if filtered:
+                print(
+                    f"[dapo] dynamic_sampling: zeroed {filtered}/{n_prompts} "
+                    f"zero-variance groups  (informative={n_prompts - filtered}/{n_prompts})",
+                    flush=True,
+                )
+        return rewards
+    return reward_fn
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Model loading
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load_model_and_tok(model_path: str):
+    """Load model + tokenizer. Merges LoRA adapter if detected."""
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    adapter_dir = Path(model_path)
+    is_adapter = (adapter_dir / "adapter_config.json").exists()
+
+    if is_adapter:
+        cfg = json.loads((adapter_dir / "adapter_config.json").read_text())
+        base = cfg.get("base_model_name_or_path",
+                       os.environ.get("HE_SMALL_MODEL",
+                                      "Qwen/Qwen2.5-Coder-1.5B-Instruct"))
+        print(f"[grpo] loading LoRA adapter ({model_path}) on top of {base}", flush=True)
+        tok   = AutoTokenizer.from_pretrained(base, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            base, torch_dtype=torch.bfloat16, device_map="auto",
+            trust_remote_code=True)
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, model_path)
+        # Merge adapter weights before adding a fresh GRPO LoRA
+        model = model.merge_and_unload()
+        print("[grpo] LoRA merged", flush=True)
+    else:
+        print(f"[grpo] loading base model: {model_path}", flush=True)
+        tok   = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path, torch_dtype=torch.bfloat16, device_map="auto",
+            trust_remote_code=True)
+
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    return model, tok
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--model", required=True,
+                    help="SFT checkpoint path or base HF model ID")
+    ap.add_argument("--bench-data",
+                    default=str(REPO_ROOT / "data" / "HumanEval.jsonl"))
+    ap.add_argument("--output-dir", required=True)
+    ap.add_argument("--skillbook", default=None)
+    ap.add_argument("--n-generations", type=int,
+                    default=int(os.environ.get("GRPO_N_GENERATIONS", "8")),
+                    help="K: completions per prompt (group size for advantage estimation)")
+    ap.add_argument("--epochs", type=int,
+                    default=int(os.environ.get("GRPO_EPOCHS", "1")))
+    ap.add_argument("--lr", type=float,
+                    default=float(os.environ.get("GRPO_LR", "5e-6")))
+    ap.add_argument("--batch-size", type=int,
+                    default=int(os.environ.get("GRPO_BATCH_SIZE", "4")))
+    ap.add_argument("--max-completion-len", type=int, default=768)
+    ap.add_argument("--lora-r", type=int, default=16)
+    ap.add_argument("--lora-alpha", type=int, default=32)
+    ap.add_argument("--beta", type=float,
+                    default=float(os.environ.get("GRPO_BETA", "0.04")),
+                    help="KL penalty coefficient")
+    ap.add_argument("--prompt-style",
+                    default=os.environ.get("HE_PROMPT_STYLE", "qwen-chat"))
+    ap.add_argument("--split", default="train", choices=["train", "eval"])
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--algo", default=os.environ.get("GRPO_ALGO", "grpo"),
+        choices=["grpo", "dapo"],
+        help=(
+            "Training algorithm. 'dapo' enables three improvements over vanilla GRPO: "
+            "(1) dynamic sampling — zero-grad for all-same-reward groups; "
+            "(2) clip-higher — asymmetric PPO ratio clip [1-ε_low, 1+ε_high]; "
+            "(3) token-level loss (loss_type=token, if TRL supports it). "
+            "Use GRPO_ALGO=dapo to enable from shell."
+        ),
+    )
+    ap.add_argument("--clip-low",  type=float,
+                    default=float(os.environ.get("DAPO_CLIP_LOW",  "0.2")),
+                    help="PPO lower clip bound (both algos; standard ε=0.2)")
+    ap.add_argument("--clip-high", type=float,
+                    default=float(os.environ.get("DAPO_CLIP_HIGH", "0.5")),
+                    help="DAPO upper clip bound for positive-advantage tokens")
+    args = ap.parse_args()
+
+    get_procedure = _load_procedures(args.skillbook)
+    tasks = _load_humaneval_tasks(args.bench_data, split=args.split)
+    print(f"[grpo] {len(tasks)} tasks (split={args.split})", flush=True)
+
+    dataset = _build_dataset(tasks, get_procedure, args.prompt_style)
+    print(f"[grpo] dataset built: {len(dataset)} prompts", flush=True)
+
+    if args.dry_run:
+        print(f"[grpo] dry-run ({args.algo}): stopping after dataset build")
+        print(f"  prompt[:300]:\n{dataset[0]['prompt'][:300]}")
+        return 0
+
+    from peft import LoraConfig, TaskType, get_peft_model
+    from trl import GRPOConfig, GRPOTrainer
+
+    is_dapo = args.algo == "dapo"
+    print(f"[grpo] algo={args.algo}", flush=True)
+
+    # Build reward function — DAPO wraps with dynamic sampling.
+    base_reward_fn = _make_reward_fn()
+    reward_fn = (
+        _make_dapo_reward_fn(base_reward_fn, args.n_generations)
+        if is_dapo else base_reward_fn
+    )
+
+    model, tok = _load_model_and_tok(args.model)
+
+    lora_cfg = LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        r=args.lora_r,
+        lora_alpha=args.lora_alpha,
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        lora_dropout=0.05,
+        bias="none",
+    )
+    model = get_peft_model(model, lora_cfg)
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total     = sum(p.numel() for p in model.parameters())
+    print(f"[grpo] trainable: {trainable:,} / {total:,} ({100*trainable/total:.2f}%)",
+          flush=True)
+
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── GRPOConfig: TRL 1.6 has native DAPO support ──────────────────────────
+    # loss_type="grpo" : symmetric clip clamp(r, 1-ε, 1+ε), sequence-level norm
+    # loss_type="dapo" : asymmetric clip clamp(r, 1-ε_low, 1+ε_high),
+    #                    token-level global norm (better gradient signal)
+    # Dynamic sampling (DAPO §3.2) is handled by _make_dapo_reward_fn above;
+    # TRL normalises advantages within each group so zeroed rewards → zero grad.
+    # ─────────────────────────────────────────────────────────────────────────
+    if is_dapo:
+        loss_type   = "dapo"
+        epsilon_low  = args.clip_low
+        epsilon_high = args.clip_high   # asymmetric upper bound (> epsilon_low)
+        print(
+            f"[dapo] loss_type=dapo  ε_low={epsilon_low}  ε_high={epsilon_high}  "
+            f"dynamic_sampling=True",
+            flush=True,
+        )
+    else:
+        loss_type    = "grpo"
+        epsilon_low  = args.clip_low
+        epsilon_high = args.clip_low    # same as low → symmetric clip
+
+    grpo_cfg = GRPOConfig(
+        output_dir=str(out_dir),
+        num_train_epochs=args.epochs,
+        per_device_train_batch_size=args.batch_size,
+        gradient_accumulation_steps=max(1, 8 // args.batch_size),
+        learning_rate=args.lr,
+        max_completion_length=args.max_completion_len,
+        num_generations=args.n_generations,
+        temperature=0.8,
+        beta=args.beta,
+        loss_type=loss_type,
+        epsilon=epsilon_low,
+        epsilon_high=epsilon_high,
+        logging_steps=5,
+        save_strategy="epoch",
+        report_to="none",
+    )
+
+    trainer = GRPOTrainer(
+        model=model,
+        reward_funcs=reward_fn,
+        args=grpo_cfg,
+        train_dataset=dataset,
+        processing_class=tok,
+    )
+
+    print(
+        f"[grpo] training  algo={args.algo}  K={args.n_generations}  "
+        f"epochs={args.epochs}  lr={args.lr}  beta={args.beta}",
+        flush=True,
+    )
+    trainer.train()
+    trainer.save_model(str(out_dir))
+    tok.save_pretrained(str(out_dir))
+    print(f"[grpo] saved to {out_dir}", flush=True)
+
+    json.dump({
+        "algo": args.algo,
+        "trl_loss_type": loss_type,
+        "model": args.model,
+        "bench_data": args.bench_data,
+        "n_generations": args.n_generations,
+        "epochs": args.epochs,
+        "lr": args.lr,
+        "beta": args.beta,
+        "epsilon_low": epsilon_low,
+        "epsilon_high": epsilon_high,
+        "dapo_dynamic_sampling": is_dapo,
+        "split": args.split,
+        "n_tasks": len(tasks),
+        "skillbook": args.skillbook,
+        "prompt_style": args.prompt_style,
+    }, open(out_dir / "grpo_info.json", "w"), indent=2)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

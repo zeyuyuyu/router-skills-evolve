@@ -79,21 +79,28 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${SKIP_LLM:=0}"
 : "${RUN_HELDOUT_EVAL:=0}"
 : "${SCALING_NUM_TRAIN_EPOCHS:=2}"
+: "${GRPO_N_GENERATIONS:=8}"
+: "${GRPO_EPOCHS:=1}"
+: "${GRPO_LR:=5e-6}"
+: "${GRPO_BETA:=0.04}"
+: "${GRPO_ALGO:=grpo}"       # grpo | dapo  (DAPO = dynamic-sampling + clip-higher + token-loss)
+: "${DAPO_CLIP_LOW:=0.2}"    # PPO ε lower bound (both algos)
+: "${DAPO_CLIP_HIGH:=0.5}"   # DAPO ε upper bound for positive-advantage tokens
 
 export TAU2_DOMAIN
 export TAU2_DOMAINS
 export SCALING_NUM_TRAIN_EPOCHS
 
-# HumanEval bench: local code models + pytest, no remote agent API. The tau2
-# LLM-training wrapper (Phase 3) is tau2-specific, so for HumanEval the loop
-# evolves Skills (procedural) + Router + ablation; LLM training stays off
-# unless explicitly wired. small=1.5B, large=3B by default (real capability gap).
+# HumanEval bench: local code models + pytest, no remote agent API.
+# Phase 3a uses train_small_model.py (bench-agnostic SFT) instead of the
+# tau2-specific wrapper. Phase 3b runs GRPO with test-execution reward.
 if [[ "$BENCH" == "humaneval" ]]; then
-  # Force local code models (the deepseek/gpt defaults above are remote-API ids
-  # and would be wrong as HF model ids). Override via HE_SMALL_MODEL/HE_LARGE_MODEL.
   SMALL_MODEL="${HE_SMALL_MODEL:-Qwen/Qwen2.5-Coder-1.5B-Instruct}"
   LARGE_MODEL="${HE_LARGE_MODEL:-Qwen/Qwen2.5-Coder-3B-Instruct}"
-  SKIP_LLM=1   # tau2 train wrapper is tau2-only; HumanEval loop = Skills+Router
+  SKIP_LLM=0     # use bench-agnostic SFT path inside phase3_llm_train
+  : "${SKIP_GRPO:=0}"   # GRPO enabled for HumanEval (has test executor)
+else
+  : "${SKIP_GRPO:=1}"   # GRPO disabled for tau2/SWE (no test executor yet)
 fi
 
 if $SMOKE; then
@@ -128,6 +135,7 @@ preflight() {
   echo "  SMALL_MODEL     = $SMALL_MODEL"
   echo "  LARGE_MODEL     = $LARGE_MODEL"
   echo "  DISTILLER_MODEL = ${DISTILLER_MODEL:-heuristic (no LLM)}"
+  echo "  SKIP_GRPO       = $SKIP_GRPO  (algo=$GRPO_ALGO K=$GRPO_N_GENERATIONS epochs=$GRPO_EPOCHS lr=$GRPO_LR  clip_low=$DAPO_CLIP_LOW clip_high=$DAPO_CLIP_HIGH)"
   echo "  TAU2_DOMAIN     = $TAU2_DOMAIN"
   echo "  TAU2_DOMAINS    = $TAU2_DOMAINS"
   echo "  RUN_HELDOUT_EVAL= $RUN_HELDOUT_EVAL"
@@ -225,6 +233,13 @@ PY
   "small_model": "$SMALL_MODEL",
   "large_model": "$LARGE_MODEL",
   "distiller_model": "${DISTILLER_MODEL:-heuristic}",
+  "skip_grpo": $([ "$SKIP_GRPO" -eq 1 ] && echo true || echo false),
+  "grpo_algo": "$GRPO_ALGO",
+  "grpo_n_generations": $GRPO_N_GENERATIONS,
+  "grpo_epochs": $GRPO_EPOCHS,
+  "grpo_lr": "$GRPO_LR",
+  "dapo_clip_low": "$DAPO_CLIP_LOW",
+  "dapo_clip_high": "$DAPO_CLIP_HIGH",
   "smoke": $SMOKE,
   "mock": $MOCK,
   "skip_llm": $([ "$SKIP_LLM" -eq 1 ] && echo true || echo false),
@@ -271,8 +286,14 @@ phase1_collect_traces() {
   local prev_router="" prev_skillbook=""
   local local_student_ckpt="" local_student_port="" local_student_served=""
   if (( cycle > 0 )); then
-    local prev="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
-    if [[ -d "$prev" ]]; then
+    # Prefer GRPO adapter (stronger) over SFT checkpoint when both exist.
+    local prev_grpo="$RESULTS_DIR/cycle_$((cycle-1))/grpo_adapter"
+    local prev_sft="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
+    local prev=""
+    if   [[ -d "$prev_grpo" ]]; then prev="$prev_grpo"
+    elif [[ -d "$prev_sft"  ]]; then prev="$prev_sft"
+    fi
+    if [[ -n "$prev" ]]; then
       local_student_ckpt="$prev"
       local_student_port="${TAU2_LOCAL_PORT:-8050}"
       local_student_served="${TAU2_LOCAL_SERVED_MODEL:-evol-llm-student}"
@@ -458,16 +479,8 @@ phase3_llm_train() {
     return
   fi
 
-  echo "  [Phase 3] LLM training — cycle=$cycle model=$MODEL_SWEEP"
+  echo "  [Phase 3] LLM SFT — cycle=$cycle"
 
-  # Convert THIS cycle's traces into SFT prompt/completion pairs.
-  # Use the bench-agnostic traces_to_sft.py (reads `prompt` + `large_completion`
-  # straight from the trace). The old experiments/extract_training_data.py is
-  # HumanEval-coupled (looks tasks up in HumanEval.jsonl and re-queries the
-  # large model) and produces nothing for tau2/SWE traces — review 2026-05-21.
-  # Pass this cycle's skillbook so distilled procedures get prepended to SFT
-  # prompts (tofix.md #3). skillbook.json is written by phase2 (SLR schedule
-  # runs Skills before LLM); guard in case a non-S-first schedule is used.
   SKILLBOOK_ARG=""
   [[ -f "$out/skillbook.json" ]] && SKILLBOOK_ARG="--skillbook $out/skillbook.json"
   $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/scaling/traces_to_sft.py" \
@@ -476,17 +489,75 @@ phase3_llm_train() {
     $SKILLBOOK_ARG \
     2>&1 | tee "$out/phase3_extract.log"
 
-  # Default to scaling_traces so the per-cycle data actually trains the model.
-  # (Previously defaulted to colleague_corpus, which ignored TRAINING_DATA — the
-  #  evolve loop never reached LLM SFT. Set TAU2_TRAIN_MODE=colleague_corpus to
-  #  restore the old fixed-corpus behaviour.)
-  TRAINING_DATA="$out/training_data.jsonl" \
-  TRAIN_OUTPUT_DIR="$out/llm_adapter" \
-  RUN_CONFIG="$MODEL_SWEEP" \
-  BUNDLE_ROOT="$BUNDLE_ROOT" \
-  MODE="${TAU2_TRAIN_MODE:-scaling_traces}" \
-    bash "$REPO_ROOT/experiments/scaling/tau2_train_wrapper.sh" \
-    2>&1 | tee "$out/phase3_train.log"
+  if [[ "$BENCH" == "humaneval" ]]; then
+    # HumanEval: bench-agnostic SFT via train_small_model.py.
+    # Warm-start from previous GRPO or SFT checkpoint if available.
+    local warmstart_model="$SMALL_MODEL"
+    local prev_grpo="$RESULTS_DIR/cycle_$((cycle-1))/grpo_adapter"
+    local prev_sft="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
+    if   (( cycle > 0 )) && [[ -d "$prev_grpo" ]]; then warmstart_model="$prev_grpo"
+    elif (( cycle > 0 )) && [[ -d "$prev_sft"  ]]; then warmstart_model="$prev_sft"
+    fi
+    $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/train_small_model.py" \
+      --data "$out/training_data.jsonl" \
+      --base-model "$warmstart_model" \
+      --output "$out/llm_adapter" \
+      --prompt-style "${HE_PROMPT_STYLE:-qwen-chat}" \
+      --epochs "$SCALING_NUM_TRAIN_EPOCHS" \
+      2>&1 | tee "$out/phase3_train.log"
+  else
+    # Tau2 / SWE: tau2-specific FSDP2 + FA2 training wrapper.
+    TRAINING_DATA="$out/training_data.jsonl" \
+    TRAIN_OUTPUT_DIR="$out/llm_adapter" \
+    RUN_CONFIG="$MODEL_SWEEP" \
+    BUNDLE_ROOT="$BUNDLE_ROOT" \
+    MODE="${TAU2_TRAIN_MODE:-scaling_traces}" \
+      bash "$REPO_ROOT/experiments/scaling/tau2_train_wrapper.sh" \
+      2>&1 | tee "$out/phase3_train.log"
+  fi
+}
+
+phase3b_grpo_train() {
+  local cycle=$1
+  local out="$RESULTS_DIR/cycle_$cycle"
+
+  if [[ "$SKIP_GRPO" -eq 1 ]]; then
+    echo "  [Phase 3b] GRPO — SKIPPED (SKIP_GRPO=1 or non-HumanEval bench)"
+    return
+  fi
+
+  echo "  [Phase 3b] GRPO — cycle=$cycle algo=$GRPO_ALGO K=$GRPO_N_GENERATIONS epochs=$GRPO_EPOCHS lr=$GRPO_LR"
+
+  # Warm-start from Phase 3a SFT checkpoint if available.
+  local grpo_base="$SMALL_MODEL"
+  local sft_ckpt="$out/llm_adapter/checkpoint-best"
+  [[ -d "$sft_ckpt" ]] && grpo_base="$sft_ckpt"
+
+  SKILLBOOK_ARG=""
+  [[ -f "$out/skillbook.json" ]] && SKILLBOOK_ARG="--skillbook $out/skillbook.json"
+
+  $DRY_RUN && { echo "  DRY: grpo_train --algo $GRPO_ALGO --model $grpo_base --output-dir $out/grpo_adapter K=$GRPO_N_GENERATIONS"; return; }
+  GRPO_N_GENERATIONS="$GRPO_N_GENERATIONS" \
+  GRPO_EPOCHS="$GRPO_EPOCHS" \
+  GRPO_LR="$GRPO_LR" \
+  GRPO_BETA="$GRPO_BETA" \
+  GRPO_ALGO="$GRPO_ALGO" \
+  DAPO_CLIP_LOW="$DAPO_CLIP_LOW" \
+  DAPO_CLIP_HIGH="$DAPO_CLIP_HIGH" \
+    "$PYTHON" "$REPO_ROOT/experiments/scaling/grpo_train_simple.py" \
+    --model "$grpo_base" \
+    --bench-data "${HE_DATA:-$REPO_ROOT/data/HumanEval.jsonl}" \
+    --output-dir "$out/grpo_adapter" \
+    --algo "$GRPO_ALGO" \
+    --n-generations "$GRPO_N_GENERATIONS" \
+    --epochs "$GRPO_EPOCHS" \
+    --lr "$GRPO_LR" \
+    --beta "$GRPO_BETA" \
+    --clip-low "$DAPO_CLIP_LOW" \
+    --clip-high "$DAPO_CLIP_HIGH" \
+    --prompt-style "${HE_PROMPT_STYLE:-qwen-chat}" \
+    $SKILLBOOK_ARG \
+    2>&1 | tee "$out/phase3b_grpo.log"
 }
 
 phase4_router_train() {
@@ -562,7 +633,7 @@ run_cycle() {
   for stage in $(echo "$SCHEDULE" | grep -o .); do
     case "$stage" in
       S) phase2_skills_evolve "$cycle" ;;
-      L) phase3_llm_train     "$cycle" ;;
+      L) phase3_llm_train "$cycle"; phase3b_grpo_train "$cycle" ;;
       R) phase4_router_train  "$cycle" ;;
       *) echo "[FATAL] Unknown schedule stage: $stage"; exit 4 ;;
     esac
@@ -583,7 +654,9 @@ phase6_heldout_eval() {
   mkdir -p "$out"
   echo "═══ Held-out eval — split=eval cycle=$cycle ═══"
 
-  local final_ckpt="$RESULTS_DIR/cycle_$cycle/llm_adapter/checkpoint-best"
+  # Prefer GRPO adapter over SFT checkpoint.
+  local final_ckpt="$RESULTS_DIR/cycle_$cycle/grpo_adapter"
+  [[ ! -d "$final_ckpt" ]] && final_ckpt="$RESULTS_DIR/cycle_$cycle/llm_adapter/checkpoint-best"
   local final_router="$RESULTS_DIR/cycle_$cycle/router/router.joblib"
   local final_skillbook="$RESULTS_DIR/cycle_$cycle/skillbook.json"
   local small_arg="$SMALL_MODEL"

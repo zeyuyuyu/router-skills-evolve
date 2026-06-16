@@ -8,16 +8,18 @@ write one trace row per task. Output schema is the same one consumed by
 
 Closed-loop routing (added per review 2026-05-21)
 -------------------------------------------------
-In a multi-cycle run, cycle k should make its routing decisions using the
-LATEST artifacts produced by cycle k-1: the trained router AND the carried-over
-SkillBook (the LLM adapter is already wired via --small-model). Pass
+In a multi-cycle run, cycle k makes its routing decisions using the trained
+router from cycle k-1 (the LLM adapter is wired via --small-model; the
+carried-over SkillBook supplies the procedure prefix to the small model, but
+NOT routing — see _policy_decision). Pass
 ``--router cycle_{k-1}/router/router.joblib`` and
 ``--skillbook cycle_{k-1}/skillbook.json`` and each trace row gains the policy
 decision the current system *would* make:
 
-    policy_route          "small" | "large"
+    policy_route          "small" | "large"  (from the learned router alone)
     policy_router_prob    P(needs large) from the trained router, or null
-    policy_skill_verdict  True/False/None from the SkillBook signature
+    policy_skill_verdict  True/False/None from the SkillBook — DIAGNOSTIC ONLY,
+                          does not affect policy_route (single global skill)
     policy_final_model    model the policy would have billed
     policy_total_cost     cost under the policy decision (small, or small+large
                           if the policy probes small then falls back)
@@ -154,12 +156,15 @@ def _load_skillbook(path: str | None):
 
 def _policy_decision(prompt, router_pipe, skillbook, small_model,
                      router_threshold=0.5, min_rate=0.8, min_samples=1):
-    """Decide route ('small'/'large') from the trained router + SkillBook.
+    """Decide route ('small'/'large') from the learned router alone.
 
-    Router gives P(needs large); SkillBook gives a hard verdict per signature.
-    The SkillBook verdict, when confident, overrides the router (it is grounded
-    in observed success counts for that exact cluster). Returns
-    (route, router_prob, skill_verdict).
+    The learned router owns routing (per-task P(needs large)). The SkillBook is
+    NOT consulted for routing: with a single global skill its verdict is the same
+    for every task and would steamroll the router's per-task signal. We keep the
+    SkillBook's role to procedure distillation only (the adapter prepends
+    get_procedure() to the small model). `skill_verdict` is still computed and
+    returned as a diagnostic field, but it no longer overrides `route`.
+    Returns (route, router_prob, skill_verdict).
     """
     router_prob = None
     route = "small"
@@ -171,6 +176,7 @@ def _policy_decision(prompt, router_pipe, skillbook, small_model,
         except Exception:  # noqa: BLE001
             pass
 
+    # Diagnostic only — recorded in policy_skill_verdict, does NOT affect routing.
     skill_verdict = None
     if skillbook is not None and prompt:
         try:
@@ -178,13 +184,7 @@ def _policy_decision(prompt, router_pipe, skillbook, small_model,
             sig = extract_signature(prompt)
             skill = skillbook.skills.get(sig)
             if skill is not None:
-                # SkillBook stats are keyed by canonical role "small" (tofix.md
-                # #2), not by the raw adapter path in `small_model`.
                 skill_verdict = skill.can_downgrade_to_small("small", min_rate, min_samples)
-                if skill_verdict is False:
-                    route = "large"          # cluster historically needs large
-                elif skill_verdict is True and (router_prob is None or router_prob < 0.7):
-                    route = "small"          # cluster historically fine on small
         except Exception:  # noqa: BLE001
             pass
 

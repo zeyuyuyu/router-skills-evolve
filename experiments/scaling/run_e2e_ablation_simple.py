@@ -8,11 +8,14 @@ Why this exists: `experiments/run_e2e_ablation.py` is hard-coupled to
 schema the main-branch ablation uses (so aggregate_cycles.py just works).
 
 Variants:
-    base    always-small (no skills, no router)
     large   always-large baseline
-    skills  SkillBook-style signature routing (no learned router)
-    router  + learned router
-    full    + LLM training (LLM column populated only if --llm-eval given;
+    skills  always-small WITH the distilled skill procedure prefix (no learned
+            router). Single global skill → no signature routing, so this is also
+            the always-small baseline; task_pass reads `small_success` (the small
+            model as actually run, i.e. procedure-augmented when a skillbook was
+            present). The no-procedure counterfactual is intentionally not run.
+    router  + learned router (routes raw prompts to small/large)
+    full    + LLM training (LLM column populated only if --llm-task-pass given;
             otherwise full == router for routing metrics, and task_pass uses
             small_success/large_success from traces)
 """
@@ -88,60 +91,17 @@ def predict_large(traces: list[dict]) -> list[int]:
     return [1 for _ in traces]
 
 
-def predict_skills(traces: list[dict], skillbook_path: Path | None) -> list[int]:
-    """SkillBook signature-based routing.
+def predict_skills(traces: list[dict]) -> list[int]:
+    """+skill arm routing.
 
-    Predict large (1) if the signature has historical large-success rate
-    above threshold; else small (0). Falls back to always-small if no skillbook.
+    With a single global skill there is no signature to route on, so the skill
+    arm does NOT route — it is always-small, same routing as base. The skill's
+    contribution (the distilled procedure prepended to the small model) shows up
+    in task_pass: skill reads `small_success` (procedure-augmented) while base
+    reads `small_raw_success` (no procedure). Routing is delegated entirely to
+    the learned router (`router`/`full` arms).
     """
-    if skillbook_path is None or not skillbook_path.exists():
-        return predict_base(traces)
-    try:
-        sb_data = json.loads(skillbook_path.read_text())
-    except Exception:  # noqa: BLE001
-        return predict_base(traces)
-
-    # tofix.md #5: SkillBook.save() writes {"skills": [{"signature", "stats":
-    # {model_or_role: [successes, total]}, ...}]}. The old code did
-    # sb_data.get(sig) on the top-level dict (which only has key "skills"), so
-    # every lookup missed and `skills` silently degraded to always-small.
-    # Build sig -> stats from the real schema. Stats are keyed by canonical role
-    # "small"/"large" (tofix.md #2); we also tolerate legacy model-name keys.
-    by_sig: dict[str, dict] = {}
-    skills_list = sb_data.get("skills") if isinstance(sb_data, dict) else None
-    if isinstance(skills_list, list):
-        for sk in skills_list:
-            if isinstance(sk, dict) and sk.get("signature"):
-                by_sig[sk["signature"]] = sk.get("stats", {}) or {}
-    elif isinstance(sb_data, dict):
-        # legacy flat {sig: {...}} fallback
-        for sig, entry in sb_data.items():
-            if isinstance(entry, dict):
-                by_sig[sig] = entry.get("stats", entry)
-
-    def _rate(stat) -> float:
-        # stat is [successes, total] or a dict with success_rate
-        if isinstance(stat, (list, tuple)) and len(stat) == 2 and stat[1]:
-            return stat[0] / stat[1]
-        if isinstance(stat, dict):
-            return float(stat.get("success_rate", 0) or 0)
-        return 0.0
-
-    def needs_large(sig: str) -> bool:
-        stats = by_sig.get(sig)
-        if not isinstance(stats, dict) or not stats:
-            return False
-        small_score = large_score = 0.0
-        for key, stat in stats.items():
-            r = _rate(stat)
-            k = key.lower()
-            if k == "small" or "deepseek" in k or "qwen" in k:
-                small_score = max(small_score, r)
-            elif k == "large" or "gpt" in k or "claude" in k:
-                large_score = max(large_score, r)
-        return large_score > small_score + 0.2
-
-    return [1 if needs_large(t.get("signature", "")) else 0 for t in traces]
+    return predict_base(traces)
 
 
 def predict_router(traces: list[dict], router_dir: Path, threshold: float) -> list[int]:
@@ -164,7 +124,8 @@ def predict_router(traces: list[dict], router_dir: Path, threshold: float) -> li
 def task_pass_rate(traces: list[dict], predictions: list[int]) -> float:
     """Simulated task pass rate under a given routing decision.
 
-    If routed to small: success = small_success
+    If routed to small: success = small_success (the small model as actually run,
+        i.e. WITH the skill procedure prefix when a skillbook was present).
     If routed to large: success = large_success (or final_success as fallback)
     """
     n_ok = 0
@@ -185,7 +146,9 @@ def task_pass_rate(traces: list[dict], predictions: list[int]) -> float:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--traces", required=True)
-    ap.add_argument("--skillbook", default="")
+    ap.add_argument("--skillbook", default="",
+                    help="accepted for pipeline CLI compat; unused — the skill "
+                         "arm no longer routes by signature (single global skill)")
     ap.add_argument("--router-dir", default="")
     ap.add_argument("--router-threshold", type=float, default=0.5)
     ap.add_argument("--llm-task-pass", type=float, default=None,
@@ -207,16 +170,13 @@ def main() -> int:
     print(f"[ablation] {len(traces)} rows, {len(traces_kept)} with labels", file=sys.stderr)
 
     variants = {}
-    # base
-    p_base = predict_base(traces_kept)
-    variants["base"] = score_routing(labels_kept, p_base)
-    variants["base"]["task_pass"] = task_pass_rate(traces_kept, p_base)
     # always-large baseline
     p_large = predict_large(traces_kept)
     variants["large"] = score_routing(labels_kept, p_large)
     variants["large"]["task_pass"] = task_pass_rate(traces_kept, p_large)
-    # skills
-    p_sk = predict_skills(traces_kept, Path(args.skillbook) if args.skillbook else None)
+    # skills: always-small WITH procedure. Single global skill → no routing, so
+    # this doubles as the always-small baseline.
+    p_sk = predict_skills(traces_kept)
     variants["skills"] = score_routing(labels_kept, p_sk)
     variants["skills"]["task_pass"] = task_pass_rate(traces_kept, p_sk)
     # router
@@ -246,7 +206,7 @@ def main() -> int:
     if args.markdown_output:
         lines = ["| Variant | Routing Acc | Large F1 | Fallback | Cost vs Large | Task Pass |",
                  "|---|---:|---:|---:|---:|---:|"]
-        for v in ["base", "skills", "router", "full"]:
+        for v in ["large", "skills", "router", "full"]:
             m = variants[v]
             lines.append(f"| {v} | {m['routing_acc']:.2%} | {m['large_f1']:.2%} "
                          f"| {m['fallback']:.2%} | {m['cost_vs_large']:.2%} | {m['task_pass']:.2%} |")

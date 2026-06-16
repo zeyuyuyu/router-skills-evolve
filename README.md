@@ -6,41 +6,97 @@
 
 ---
 
-## 核心 Pipeline（`scaling/run_full_pipeline.sh`）
+## 系统设计（升级版）
+
+本系统是一个带 Router 做课程采样、带 Skills 做 scaffold 增强的 **on-policy iterative distillation** 系统。大模型是 Teacher，小模型是 Student，每个 cycle 更新三件套（Skills + LLM + Router），越迭代越省钱。
+
+### 核心 Pipeline（`scaling/run_full_pipeline.sh`）
 
 ```
 Cycle N:
 
   Phase 1: Trace 收集（闭环入口）
-    → 跑所有 bench 任务，记 (task, small_pass, large_pass, cost)
+    → 小模型：多轮 ReAct 修复（最多 HE_MAX_REPAIR_TURNS 次，error feedback loop）
+              procedure prefix 注入（与 SFT 训练格式对齐）
+    → 大模型：同样多轮修复，更高 oracle 质量 → 更好的 teacher 数据
     → Cycle ≥ 1：用上一轮产物闭环：
-        small_model = cycle_{N-1}/llm_adapter/checkpoint-best（vLLM serve）
+        small_model = cycle_{N-1}/grpo_adapter（优先）或 llm_adapter/checkpoint-best
         --router    = cycle_{N-1}/router/router.joblib
         --skillbook = cycle_{N-1}/skillbook.json
 
   Phase 2: Skills Evolve
     → carry over 上一轮 SkillBook，从当前 traces 增量更新
-    → 统计 key 用规范化角色名 "small"/"large"（不是原始 model ID，否则每轮都变）
-    → 对每个 signature cluster 提炼 procedure（成功轨迹 → 可复用代码片段/tool序列）
+    → 统计 key 用规范化角色名 "small"/"large"
+    → LLM distiller（DISTILLER_MODEL）对每个 cluster 提炼真正的解题 procedure：
+        problem type / key algorithm / step-by-step template / reusable snippet / pitfalls
 
-  Phase 3: LLM 训练（SFT）
-    → traces_to_sft.py 从当前 traces 提难题（small 失败 + large 成功）→ training_data.jsonl
-    → 若 skillbook 已有，把 distilled procedure 前置到 SFT prompt（procedure → 小模型）
-    → tau2_train_wrapper.sh（FSDP2 + FA2）→ cycle_N/llm_adapter/checkpoint-best
+  Phase 3a: LLM SFT
+    → traces_to_sft.py 提取两类训练数据：
+        teacher pairs: small 全轮失败 + large 成功 → 以大模型解为 target
+        self-repair pairs: small 第1轮失败、后续轮自修成功 → 多轮对话链为 target
+    → procedure 前置到 SFT prompt（推理格式与训练格式对齐）
+    → HumanEval: train_small_model.py（LoRA SFT）
+      Tau-2: tau2_train_wrapper.sh（FSDP2 + FA2）
+    → cycle_N/llm_adapter/checkpoint-best
+
+  Phase 3b: on-policy RL（HumanEval 专用，SKIP_GRPO=0）
+    → 从 SFT checkpoint warm-start
+    → K=GRPO_N_GENERATIONS 个 completion/prompt，test 执行 → 二值 reward（pass=1/fail=0）
+    → advantage = (r - group_mean) / (group_std + ε)，无需 value network
+    → 算法 GRPO_ALGO 可切：grpo（对称 clip）| dapo（非对称 clip + 动态采样）
+    → cycle_N/grpo_adapter/（Phase 1 下一 cycle 优先读这个）
 
   Phase 4: Router 训练
-    → train_router_simple.py：当前 traces → TF-IDF + LightGBM 二分类器
+    → train_router_simple.py：当前 traces → TF-IDF + LogReg 二分类器
     → cycle_N/router/router.joblib
 
-  Phase 5: E2E Ablation 评估
+  Phase 5: E2E Ablation
     → 4 路对比：Base / +Skills / +Router / Full（+LLM）
 
-  → 下一轮 Phase 1 直接读以上三件产物（真闭环）
+  → 下一轮 Phase 1 读 grpo_adapter + router + skillbook（真闭环）
 ```
 
-**顺序 Skills → LLM → Router（SLR）经 8-cycle 实验验证为最优**（MERA 论文 + main 分支 5/20 实验）。
+**顺序 Skills → LLM → Router（SLR）经 8-cycle 实验验证为最优**。
 
-> **注意**：`experiments/run_joint_evolver.py` 是早期原型，每 cycle 重置 SkillBook、不加载上一轮 router/LLM、LLM 训的是固定 MBPP 数据，**不是真闭环**，不用于正式实验。
+### 训练数据来源（on-policy distillation）
+
+| 数据类型 | 来源 | 训练目标 |
+|---------|------|---------|
+| teacher pairs | small 全败，large 成功 | 学大模型解法 |
+| self-repair pairs | small 第N轮自修成功（N≥2） | 学 error→fix 对话链 |
+| GRPO on-policy | 实时生成 K 条，test 打分 | 直接优化 pass rate |
+
+### 关键设计决策
+
+- **大小模型都走多轮修复**：减少不必要的大模型调用；大模型多轮也提升 oracle 数据质量
+- **procedure 推理/训练格式对齐**：SFT 和推理都前置 procedure，消除 train/inference mismatch
+- **RL 在 SFT 之后**：SFT warm-start 避免 RL 从随机策略开始的不稳定性
+- **checkpoint 优先级**：grpo_adapter > llm_adapter/checkpoint-best > base model
+
+### Phase 3b 算法：GRPO vs DAPO
+
+Phase 3b 支持两种 on-policy RL 算法，用 `GRPO_ALGO` 一键切换。两者都基于 TRL 1.6 原生 `GRPOConfig`，无自定义 Trainer。
+
+| | `GRPO_ALGO=grpo`（默认） | `GRPO_ALGO=dapo` |
+|--|--|--|
+| TRL `loss_type` | `grpo` | `dapo` |
+| PPO clip | 对称 `clip(r, 1-ε, 1+ε)` | 非对称 `clip(r, 1-ε_low, 1+ε_high)` |
+| loss normalization | 序列级 mean | token 级全局（梯度信号更稠密） |
+| 动态采样 | 无 | 有：K 条 reward 全同的 group 置零（零方差→零梯度） |
+
+**为什么 DAPO**（DeepSeek/ByteDance 2025）：HumanEval 里大量简单题（小模型必过）和极难题（必失败）会让整个 group 的 advantage=0，梯度浪费——动态采样跳过它们；非对称 clip 的高上界（ε_high）防止 entropy collapse，让模型能放大正确解的概率而不被小上界惩罚。
+
+切换参数（env var）：
+
+| 变量 | 默认 | 说明 |
+|------|------|------|
+| `GRPO_ALGO` | `grpo` | `grpo` \| `dapo` |
+| `DAPO_CLIP_LOW` | `0.2` | PPO ε 下界（两算法通用） |
+| `DAPO_CLIP_HIGH` | `0.5` | DAPO ε 上界（仅 dapo 生效；grpo 时强制 = 下界） |
+
+每次跑的 `cycle_N/grpo_adapter/grpo_info.json` 记录 `algo` / `trl_loss_type` / `epsilon_low` / `epsilon_high` / `dapo_dynamic_sampling`，可直接对比。
+
+> **注意**：`experiments/run_joint_evolver.py` 是早期原型，每 cycle 重置 SkillBook，**不是真闭环**，不用于正式实验。
 
 ---
 
@@ -173,9 +229,11 @@ results/$EXPERIMENT_NAME/
 ├── MANIFEST.json                  # 各 phase 耗时 + 状态
 ├── config_snapshot.json           # 复现用环境变量快照
 ├── cycle_0/
-│   ├── traces.jsonl               # Phase 1: oracle small+large 结果
-│   ├── skillbook.json             # Phase 2: SkillBook
-│   ├── llm_adapter/               # Phase 3: LoRA 权重
+│   ├── traces.jsonl               # Phase 1: oracle small+large 多轮 traces
+│   ├── skillbook.json             # Phase 2: SkillBook（含 LLM-distilled procedure）
+│   ├── training_data.jsonl        # Phase 3a: SFT 数据（teacher + self-repair pairs）
+│   ├── llm_adapter/               # Phase 3a: SFT LoRA 权重
+│   ├── grpo_adapter/              # Phase 3b: GRPO LoRA 权重（优先于 llm_adapter）
 │   ├── router/router.joblib       # Phase 4: 分类器
 │   └── e2e_ablation_summary.json  # Phase 5: 4 路指标
 ├── cycle_1/ ... cycle_N/
@@ -266,13 +324,27 @@ export N_CYCLES=4
 bash scaling/run_full_pipeline.sh --bench humaneval --smoke --mock
 ```
 
-### 真实跑（4 cycle）
+### 真实跑（4 cycle，SFT + GRPO）
 
 ```bash
+# 完整跑：SFT + GRPO（需 GPU，~4–8 小时/cycle）
 bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4
-```
 
-> `--skip-llm` 可跳过 Phase 3 只跑 Skills + Router，无需 GPU。
+# 只跑 Skills + Router（无需 GPU）
+SKIP_LLM=1 SKIP_GRPO=1 bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4
+
+# 只跑 SFT，跳过 GRPO
+SKIP_GRPO=1 bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4
+
+# 调整 GRPO 超参
+GRPO_N_GENERATIONS=4 GRPO_EPOCHS=2 bash scaling/run_full_pipeline.sh --bench humaneval
+
+# 切换 RL 算法：GRPO（默认）vs DAPO
+GRPO_ALGO=grpo bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 1
+GRPO_ALGO=dapo DAPO_CLIP_HIGH=0.5 bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 1
+# 对比：diff 两次跑的 cycle_*/grpo_adapter/grpo_info.json，
+#       看 phase3b_grpo.log 里 [dapo] dynamic_sampling 行过滤了多少零方差 group
+```
 
 ---
 
@@ -344,9 +416,10 @@ router-skills-evolve/
 │   ├── evaluate_finetuned_model.py
 │   │
 │   ├── scaling/                  # Scaling pipeline（bench-agnostic）
-│   │   ├── collect_traces.py     # Phase 1: 并行收 traces
-│   │   ├── traces_to_sft.py      # Phase 3 helper: traces → LLM 训练数据
-│   │   ├── tau2_train_wrapper.sh # Phase 3: 调 tau2_stage2 SFT 框架
+│   │   ├── collect_traces.py     # Phase 1: 多轮 ReAct 收 traces
+│   │   ├── traces_to_sft.py      # Phase 3a helper: traces → teacher + self-repair SFT 数据
+│   │   ├── tau2_train_wrapper.sh # Phase 3a: tau2 SFT 框架（FSDP2+FA2）
+│   │   ├── grpo_train_simple.py  # Phase 3b: on-policy RL（GRPO/DAPO 可切，HumanEval test reward）
 │   │   ├── train_router_simple.py # Phase 4: bench-agnostic Router 训练
 │   │   ├── run_e2e_ablation_simple.py # Phase 5: bench-agnostic 4 路评估
 │   │   ├── aggregate_cycles.py   # Phase 6: 多 cycle 曲线 + 汇总表
