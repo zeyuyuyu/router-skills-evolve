@@ -325,3 +325,9 @@ Next shepherd run will retry. If this persists, check A800 network/firewall or V
     This confirms the port/host is not routable from this cloud execution environment — likely a firewall or network policy block, not A800 being down per se.
   Actions taken: none (conservative policy).
   DONE: FAILED: A800 unreachable (day ~33, outage ongoing)
+[2026-06-16T18:04:00Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out after 15s (paramiko + sshpass both installed; port not routable from cloud execution env).
+  Outage: ~33 days continuous since ~2026-05-14. All steps A-E skipped. EMNLP abstract deadline 2026-06-19 in 3 days.
+  Context: Consecutive failures logged all day 2026-06-16 (02:04, 04:05, 08:04, 12:05, 14:04, 16:04, now 18:04). Pattern confirms the cloud execution environment cannot route to port 50507. A800 may be up but inaccessible from here.
+  Actions taken: none (conservative policy — cannot act without state).
+  DONE: FAILED: A800 unreachable (day ~33, EMNLP deadline T-3 days)
