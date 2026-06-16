@@ -235,7 +235,7 @@ def main() -> int:
     ap.add_argument("--output", required=True)
     ap.add_argument("--skillbook", default=None,
                     help="optional skillbook.json; prepend the matched cluster's "
-                         "distilled procedure to each SFT prompt (tofix.md #3)")
+                         "distilled procedure to each SFT prompt")
     args = ap.parse_args()
 
     traces_path = Path(args.traces)

@@ -213,7 +213,7 @@ while IFS=' ' read -r RID CFG; do
         OUT_DIR_ABS="$BUNDLE_ROOT/$OUT_DIR"
     fi
     STATUS_FILE="$OUT_DIR_ABS/STATUS"
-    # tofix.md #1: in the scaling closed loop the same RUN_CONFIG is retrained
+    # In the scaling closed loop the same RUN_CONFIG is retrained
     # every cycle on fresh per-cycle data (SCALING_TRAIN_FILE_STAGE2). The
     # STATUS=done idempotence skip would wrongly skip cycles k>=1. When the
     # scaling override is active, force a retrain (clear the stale STATUS).

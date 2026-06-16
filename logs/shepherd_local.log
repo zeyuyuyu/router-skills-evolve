@@ -1,7 +1,0 @@
-[2026-05-24T08:06:28Z] SHEPHERD RUN — A800 UNREACHABLE
-  Target: zeyuwang@117.74.66.181:50507
-  Diagnostics: port 22 timed out, port 50507 timed out, port 80 reachable (host alive)
-  Conclusion: SSH port 50507 is firewalled/blocked from this cloud execution environment.
-  Actions taken: none (cannot reach A800).
-  Recommendation: Check A800 firewall rules or add an SSH tunnel/jump host accessible from cloud egress IPs.
-[2026-06-07T16:02:16Z] SHEPHERD FAILED: SSH binary not present in container (no sshpass, no ssh); nc probe to 117.74.66.181:50507 returned port closed/filtered. Could not read state.json, check running PIDs, or write to shepherd.log on A800. No actions taken. Manual intervention required.

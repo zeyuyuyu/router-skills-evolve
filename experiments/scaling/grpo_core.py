@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+"""Shared trajectory-level GRPO / DAPO machinery.
+
+Both bench trainers reduce their (multi-turn) rollouts to the same three
+ingredients, so the RL math lives here once:
+
+  * compute_advantages  group-normalise rewards -> per-rollout advantage,
+                        with DAPO dynamic sampling (drop zero-variance groups).
+  * grpo_update         GRPO/DAPO policy-gradient update over per-step examples
+                        ``{input_ids, completion_mask, advantage}`` — only the
+                        completion (response) tokens are scored.
+
+A "group" is one task's K rollouts; every rollout carries a scalar ``reward``.
+Every rollout is decomposed by the caller into one-or-more per-step examples
+(tau-2: agent turns; HumanEval: repair turns) that all share the rollout's
+advantage. This is the standard reduction of trajectory-level GRPO to a weighted
+token loss.
+
+GRPO  : symmetric clip (e_hi == e_lo), sequence-level mean.
+DAPO  : clip-higher (e_hi > e_lo), token-level global mean, + dynamic sampling.
+
+``grpo_update`` reads these attributes off the ``args`` object (an argparse
+Namespace works): batch_size, lr, epochs, algo, clip_low, clip_high, beta,
+logging_steps.
+"""
+from __future__ import annotations
+
+
+def compute_advantages(groups, *, dynamic_sampling: bool, eps: float = 1e-6):
+    """Attach group-normalised advantage to each rollout.
+
+    ``groups`` is a list of ``{"task_id"/"key": ..., "rollouts": [{"reward": float, ...}]}``.
+    Returns (kept_rollouts, stats). When ``dynamic_sampling`` (DAPO), groups whose
+    rewards are all equal (zero std) are dropped entirely (their advantage is
+    identically 0 → no gradient, so they only dilute the batch).
+    """
+    kept, n_groups, n_dropped = [], 0, 0
+    for g in groups:
+        rollouts = g.get("rollouts") or []
+        if not rollouts:
+            continue
+        n_groups += 1
+        rewards = [float(r.get("reward", 0.0)) for r in rollouts]
+        mean = sum(rewards) / len(rewards)
+        var = sum((r - mean) ** 2 for r in rewards) / len(rewards)
+        std = var ** 0.5
+        if std <= eps and dynamic_sampling:
+            n_dropped += 1
+            continue
+        key = g.get("task_id") or g.get("key")
+        for r, rew in zip(rollouts, rewards):
+            kept.append({**r, "advantage": (rew - mean) / (std + eps), "task_id": key})
+    stats = {
+        "n_groups": n_groups,
+        "n_dropped_zero_variance": n_dropped,
+        "n_informative_groups": n_groups - n_dropped,
+        "n_rollouts_kept": len(kept),
+    }
+    return kept, stats
+
+
+def _per_token_logp(model, input_ids, attn_mask, completion_mask):
+    """Log-prob of each completion token under ``model``.
+
+    Returns (tok_logp, cmask) aligned to predicted positions 1..T (next-token).
+    """
+    import torch  # local import: core stays importable without torch (dry-run)
+
+    out = model(input_ids=input_ids, attention_mask=attn_mask)
+    logits = out.logits[:, :-1, :]                     # predict token t+1
+    targets = input_ids[:, 1:]
+    logp = torch.log_softmax(logits.float(), dim=-1)
+    tok_logp = torch.gather(logp, 2, targets.unsqueeze(-1)).squeeze(-1)
+    cmask = completion_mask[:, 1:].float()             # shift to align with targets
+    return tok_logp, cmask
+
+
+def grpo_update(model, tok, examples, args):
+    """Run GRPO/DAPO updates over per-step examples. Returns the #optimiser steps.
+
+    ``examples`` items: ``{"input_ids": [int], "completion_mask": [0/1], "advantage": float}``.
+    """
+    import torch
+    from torch.utils.data import DataLoader
+
+    device = next(model.parameters()).device
+    pad_id = tok.pad_token_id
+
+    def collate(batch):
+        maxlen = max(len(b["input_ids"]) for b in batch)
+        ids, attn, cmask, adv = [], [], [], []
+        for b in batch:
+            n = len(b["input_ids"])
+            pad = maxlen - n
+            ids.append(b["input_ids"] + [pad_id] * pad)
+            attn.append([1] * n + [0] * pad)
+            cmask.append(b["completion_mask"] + [0] * pad)
+            adv.append(b["advantage"])
+        return (torch.tensor(ids), torch.tensor(attn),
+                torch.tensor(cmask), torch.tensor(adv, dtype=torch.float32))
+
+    loader = DataLoader(examples, batch_size=args.batch_size, shuffle=True,
+                        collate_fn=collate)
+    optim = torch.optim.AdamW(
+        [p for p in model.parameters() if p.requires_grad], lr=args.lr)
+
+    eps_low = args.clip_low
+    eps_high = args.clip_high if args.algo == "dapo" else args.clip_low
+    token_level = args.algo == "dapo"
+
+    model.train()
+    step = 0
+    for epoch in range(args.epochs):
+        for ids, attn, cmask, adv in loader:
+            ids, attn, cmask, adv = (ids.to(device), attn.to(device),
+                                     cmask.to(device), adv.to(device))
+            # Old log-probs: recomputed from the current (pre-update) policy —
+            # the rollouts were generated by these same weights, so this is the
+            # on-policy behaviour distribution.
+            with torch.no_grad():
+                old_logp, m = _per_token_logp(model, ids, attn, cmask)
+                old_logp = old_logp.detach()
+                ref_logp = None
+                if args.beta > 0 and hasattr(model, "disable_adapter"):
+                    with model.disable_adapter():
+                        ref_logp, _ = _per_token_logp(model, ids, attn, cmask)
+                        ref_logp = ref_logp.detach()
+
+            new_logp, _ = _per_token_logp(model, ids, attn, cmask)
+            ratio = torch.exp(new_logp - old_logp)
+            adv_t = adv.unsqueeze(1)                       # broadcast over tokens
+            per_tok = -torch.min(ratio * adv_t,
+                                 torch.clamp(ratio, 1 - eps_low, 1 + eps_high) * adv_t)
+
+            if args.beta > 0 and ref_logp is not None:
+                # k3 KL estimator (unbiased, non-negative): exp(d) - d - 1.
+                d = ref_logp - new_logp
+                per_tok = per_tok + args.beta * (torch.exp(d) - d - 1)
+
+            if token_level:
+                loss = (per_tok * m).sum() / m.sum().clamp(min=1.0)
+            else:  # sequence-level: mean over a seq's tokens, then over seqs
+                seq = (per_tok * m).sum(dim=1) / m.sum(dim=1).clamp(min=1.0)
+                loss = seq.mean()
+
+            optim.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                [p for p in model.parameters() if p.requires_grad], 1.0)
+            optim.step()
+            step += 1
+            if step % args.logging_steps == 0:
+                print(f"[grpo] epoch={epoch} step={step} loss={loss.item():.4f} "
+                      f"mean_adv={adv.mean().item():+.3f}", flush=True)
+    return step

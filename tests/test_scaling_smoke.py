@@ -76,28 +76,19 @@ def test_skillbook_update_backward_compatible():
     assert sb.skills[sig].exemplars == []
 
 
-def test_predict_skills_reads_real_schema(tmp_path):
-    """tofix.md #5: predict_skills must parse {'skills':[...]} with stats roles."""
-    from src.skills import SkillBook
+def test_predict_skills_is_always_small():
+    """Single global skill -> the skills ablation arm does NOT route; predict_skills
+    returns always-small (routing is owned by the learned router)."""
     import importlib.util
-    sb = SkillBook()
-    # cluster where large clearly beats small -> needs_large True
-    for _ in range(5):
-        sb.update("translate this regex pattern please", "large", True)
-    sb.update("translate this regex pattern please", "small", False)
-    p = tmp_path / "skillbook.json"
-    sb.save(p)
-    # import the ablation module
     spec = importlib.util.spec_from_file_location(
         "rea", REPO / "experiments/scaling/run_e2e_ablation_simple.py")
     rea = importlib.util.module_from_spec(spec); spec.loader.exec_module(rea)
-    sig = next(iter(sb.skills))
-    preds = rea.predict_skills([{"signature": sig}], p)
-    assert preds == [1], "large-dominant cluster should route large (not silently always-small)"
+    preds = rea.predict_skills([{"signature": "coding"}, {"signature": "coding"}])
+    assert preds == [0, 0], "skills arm must be always-small (no signature routing)"
 
 
 def test_skillbook_canonical_roles():
-    """tofix.md #2: stats keyed by role survive across 'adapter path' changes."""
+    """stats keyed by role survive across 'adapter path' changes."""
     from src.skills import SkillBook
     sb = SkillBook()
     # cycle 0 + cycle 1 both record under canonical 'small'
@@ -108,7 +99,7 @@ def test_skillbook_canonical_roles():
 
 
 def test_traces_to_sft_injects_procedure(tmp_path):
-    """tofix.md #3: a cluster procedure is prepended to the SFT prompt."""
+    """a cluster procedure is prepended to the SFT prompt."""
     import subprocess
     from src.skills import SkillBook
     # build a skillbook with a procedure for the cluster of our hard task

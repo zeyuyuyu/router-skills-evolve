@@ -444,7 +444,7 @@ with open("$out/traces.jsonl") as fh:
         if not prompt:
             continue
         tid = t.get("task_id", "")
-        # Build the REAL capability table from BOTH oracle
+        # tofix.md #2 + #4: build the REAL capability table from BOTH oracle
         # outcomes, keyed by CANONICAL ROLES ("small"/"large") rather than raw
         # model ids / adapter paths (which change each cycle and break
         # can_downgrade_to_small). The policy/deployment outcome stays in the
@@ -609,9 +609,8 @@ phase3b_grpo_train() {
   $DRY_RUN && { echo "  DRY: ${grpo_args[*]}"; return; }
 
   if $MOCK; then
-    # Mock rollouts need no served policy and no GPU; --dry-run stops after the
-    # rollout -> advantage -> example pipeline (before any model load).
-    GRPO_ALGO="$GRPO_ALGO" "${grpo_args[@]}" --dry-run 2>&1 | tee "$out/phase3b_grpo.log"
+    # Mock rollouts need no served policy; run the trainer directly.
+    GRPO_ALGO="$GRPO_ALGO" "${grpo_args[@]}" 2>&1 | tee "$out/phase3b_grpo.log"
     return
   fi
 
