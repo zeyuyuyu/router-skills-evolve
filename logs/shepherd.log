@@ -306,3 +306,4 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Actions taken: none — cannot read state.json or act safely without A800 access. All steps (A/B/C/D/E) skipped.
   DONE: FAILED: A800 unreachable (day ~32)
 [2026-06-16T02:04:36Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable. SSH connection timed out after 30s (port 50507 not responding). No state read, no actions taken. All steps skipped. Manual check required.
+[2026-06-16T04:05:33Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Manual investigation required.
