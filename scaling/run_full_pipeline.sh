@@ -25,6 +25,9 @@
 #                     Alternatives: LSR LRS SRL RSL RLS
 #   SMALL_MODEL       default: deepseek/deepseek-v3.2
 #   LARGE_MODEL       default: openai/gpt-5.4-2026-03-05
+#   DISTILLER_MODEL   LLM used to distill skill procedures (Phase 2).
+#                     default: deepseek/deepseek-v3.2  (cheap, good enough)
+#                     set to "" or "heuristic" to skip LLM distillation
 #   TAU2_DOMAIN       airline | retail | telecom (default: retail)
 #   TAU2_DOMAINS      comma-separated domains; overrides TAU2_DOMAIN for tau2
 #                     task loading (e.g. retail,telecom,airline)
@@ -70,6 +73,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${SCHEDULE:=SLR}"
 : "${SMALL_MODEL:=deepseek/deepseek-v3.2}"
 : "${LARGE_MODEL:=openai/gpt-5.4-2026-03-05}"
+: "${DISTILLER_MODEL:=deepseek/deepseek-v3.2}"
 : "${TAU2_DOMAIN:=retail}"
 : "${TAU2_DOMAINS:=$TAU2_DOMAIN}"
 : "${SKIP_LLM:=0}"
@@ -121,6 +125,9 @@ preflight() {
   echo "  MODEL_SWEEP     = $MODEL_SWEEP"
   echo "  N_CYCLES        = $N_CYCLES"
   echo "  SCHEDULE        = $SCHEDULE  (Skills→LLM→Router default)"
+  echo "  SMALL_MODEL     = $SMALL_MODEL"
+  echo "  LARGE_MODEL     = $LARGE_MODEL"
+  echo "  DISTILLER_MODEL = ${DISTILLER_MODEL:-heuristic (no LLM)}"
   echo "  TAU2_DOMAIN     = $TAU2_DOMAIN"
   echo "  TAU2_DOMAINS    = $TAU2_DOMAINS"
   echo "  RUN_HELDOUT_EVAL= $RUN_HELDOUT_EVAL"
@@ -217,6 +224,7 @@ PY
   "tau2_domains": "$TAU2_DOMAINS",
   "small_model": "$SMALL_MODEL",
   "large_model": "$LARGE_MODEL",
+  "distiller_model": "${DISTILLER_MODEL:-heuristic}",
   "smoke": $SMOKE,
   "mock": $MOCK,
   "skip_llm": $([ "$SKIP_LLM" -eq 1 ] && echo true || echo false),
@@ -418,15 +426,24 @@ with open("$out/traces.jsonl") as fh:
             n += 1
 
 # Distill a reusable procedure per cluster from the accumulated exemplars.
-# Heuristic (no-API) by default; an LLM distiller can be wired here later for
-# the full "agent sub-workflow" induction (tool-use steps / domain policy).
-n_proc = sb.distill_all()
+# If DISTILLER_MODEL is set (and not "heuristic"), use the LLM distiller;
+# otherwise fall back to the no-API heuristic.
+distiller_model = "$DISTILLER_MODEL"
+if distiller_model and distiller_model != "heuristic":
+    from src.skills import make_llm_distiller
+    distiller = make_llm_distiller(distiller_model)
+    distiller_tag = distiller_model
+else:
+    distiller = None
+    distiller_tag = "heuristic"
+
+n_proc = sb.distill_all(distiller=distiller)
 
 out_path = Path("$out/skillbook.json")
 sb.save(out_path)
 size = len(getattr(sb, "skills", {}))
 print(f"[skills_evolve] ingested {n} traces  SkillBook size={size}  "
-      f"procedures_distilled={n_proc}  wrote {out_path}")
+      f"procedures_distilled={n_proc}  distiller={distiller_tag}  wrote {out_path}")
 PY
 }
 

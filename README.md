@@ -74,9 +74,9 @@ python3 -m uncommon_route.cli serve --port 8403 &
 
 ---
 
-## HumanEval 单次跑法（无闭环迭代）
+## HumanEval 跑法
 
-HumanEval 没有对应的闭环 pipeline，只有单次的 trace 收集 + 手动训练：
+HumanEval 现已支持端到端闭环迭代，可直接用 `scaling/run_full_pipeline.sh`（见下节"HumanEval 端到端跑法"）。下面是手动分步跑法，便于 debug 或单次实验：
 
 ```bash
 # 收集 traces（内部 rounds 间 SkillBook 有效果，但不跨 cycle 闭环）
@@ -110,7 +110,7 @@ python3 experiments/run_e2e_ablation.py \
     --router src/learned_router/router.joblib
 ```
 
-**多轮闭环迭代请用 `scaling/run_full_pipeline.sh`**（见下节）。注意：该 pipeline 目前只有 tau2_bench adapter 实现了，HumanEval 需要先写 `experiments/scaling/benches/humaneval/adapter.py`（实现 `load_tasks` + `run_task_pair` 两个方法，逻辑可从 `run_evolve.py` 搬）。
+**多轮闭环迭代请用 `scaling/run_full_pipeline.sh`**（见下节"HumanEval 端到端跑法"）。HumanEval adapter（`experiments/scaling/benches/humaneval/adapter.py`）已实现，可直接接入闭环 pipeline。
 
 ---
 
@@ -247,6 +247,35 @@ python3 experiments/scaling/aggregate_cycles.py \
 
 ---
 
+## HumanEval 端到端跑法（闭环）
+
+HumanEval adapter 已实现（`experiments/scaling/benches/humaneval/adapter.py`），可直接用主 pipeline 跑多轮闭环迭代。
+
+### 环境变量
+
+```bash
+export OPENAI_API_KEY=sk-...          # large model API key
+export EXPERIMENT_NAME=humaneval_$(date -u +%Y%m%d_%H%M%S)
+export BENCH=humaneval
+export N_CYCLES=4
+```
+
+### Smoke 测试（无 GPU，~5 分钟）
+
+```bash
+bash scaling/run_full_pipeline.sh --bench humaneval --smoke --mock
+```
+
+### 真实跑（4 cycle）
+
+```bash
+bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4
+```
+
+> `--skip-llm` 可跳过 Phase 3 只跑 Skills + Router，无需 GPU。
+
+---
+
 ## 踩坑预警
 
 1. **Phase 2 统计 key 必须是规范角色名**：SkillBook 的 `stats` 用 `"small"/"large"` 做 key，不能用原始 model ID（每轮 model ID 会变，会导致 `can_downgrade_to_small` 永远查不到数据）。`run_full_pipeline.sh` 已经处理好了，手动跑时注意。
@@ -323,6 +352,7 @@ router-skills-evolve/
 │   │   ├── aggregate_cycles.py   # Phase 6: 多 cycle 曲线 + 汇总表
 │   │   └── benches/
 │   │       ├── tau2_bench/adapter.py  # τ²-bench 接口（已接通）
+│   │       ├── humaneval/adapter.py   # HumanEval 接口（已接通）
 │   │       └── swe_bench/adapter.py   # SWE-Bench 接口（stub，待实现）
 │   │
 │   └── tau2_stage2/              # Colleague 的 LLM SFT 框架（FSDP2 + FA2）
@@ -363,6 +393,7 @@ router-skills-evolve/
 | Learnable Router 训练 | Zeyu | `experiments/scaling/train_router_simple.py` |
 | Scaling Pipeline 编排 | Zeyu | `scaling/run_full_pipeline.sh` |
 | τ²-bench Adapter | Zeyu | `experiments/scaling/benches/tau2_bench/` |
+| HumanEval Adapter | Zeyu | `experiments/scaling/benches/humaneval/` |
 | **LLM SFT 框架** | 白（colleague） | `experiments/tau2_stage2/` |
 | SWE-Bench Adapter | Teammate（待做） | `experiments/scaling/benches/swe_bench/` |
 
@@ -381,7 +412,7 @@ router-skills-evolve/
 ## FAQ
 
 **Q: HumanEval 有没有完整的闭环 pipeline？**  
-A: 目前没有。`scaling/run_full_pipeline.sh` 是闭环主文件，但它走 bench adapter 机制，现在只有 tau2_bench 实现了，HumanEval 没有 adapter。要接上需要新建 `experiments/scaling/benches/humaneval/adapter.py`，实现 `load_tasks()` 和 `run_task_pair()` 两个方法（逻辑从 `run_evolve.py` 搬，大约半天工作量）。
+A: 有。`experiments/scaling/benches/humaneval/adapter.py` 已实现 `load_tasks()` 和 `run_task_pair()`，可直接用 `bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4` 跑端到端闭环迭代。
 
 **Q: 不训 LLM 只跑 Skills + Router 可以吗？**  
 A: 可以，加 `--skip-llm` 或设 `SKIP_LLM=1` 跳过 Phase 3。Router 准确率 93%，cost 节省也显著（见上方 ablation 表）。

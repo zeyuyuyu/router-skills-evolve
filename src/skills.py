@@ -119,6 +119,79 @@ def _heuristic_procedure(signature: str, exemplars: List[Dict], max_chars: int =
     return "\n".join(lines)[:max_chars]
 
 
+def make_llm_distiller(model_id: str, use_proxy: bool = False):
+    """Return a (signature, exemplars) -> str callable backed by an LLM.
+
+    Falls back silently to the heuristic if the API call fails, so the pipeline
+    never hard-crashes on a missing key or rate-limit.
+
+    Usage::
+        distiller = make_llm_distiller("deepseek/deepseek-v3.2")
+        sb.distill_all(distiller=distiller)
+    """
+    def _distiller(signature: str, exemplars: List[Dict]) -> str:
+        # lazy import to avoid pulling in openai at module load time
+        try:
+            from .models import call_llm  # noqa: PLC0415
+        except ImportError:
+            return _heuristic_procedure(signature, exemplars)
+
+        # Build a compact multi-example block (stay within ~3k tokens)
+        examples_text = []
+        for i, ex in enumerate(exemplars[:6], 1):
+            prompt_snip = (ex.get("prompt") or "").strip()[:400]
+            completion_snip = (ex.get("completion") or "").strip()[:500]
+            examples_text.append(
+                f"### Example {i}  (task_id={ex.get('task_id', '?')})\n"
+                f"**Problem**:\n```python\n{prompt_snip}\n```\n"
+                f"**Solution**:\n```python\n{completion_snip}\n```"
+            )
+
+        system_prompt = (
+            "You are an expert coding-skills curator. "
+            "Given a cluster of similar coding problems and their solutions, "
+            "write a concise, reusable **Procedure** that teaches a weaker model "
+            "how to solve any problem in this cluster. "
+            "Format the output in plain Markdown (no preamble). "
+            "Include:\n"
+            "1. **Problem type** — what makes this cluster distinct (1-2 sentences)\n"
+            "2. **Key algorithm / pattern** — the core approach (e.g. two-pointer, "
+            "sliding window, math identity, regex, …)\n"
+            "3. **Step-by-step template** — numbered steps a model should follow\n"
+            "4. **Reusable snippet** — the most transferable 3-10 lines of code "
+            "from the solutions (with a brief comment)\n"
+            "5. **Common pitfalls** — 1-3 things that trip up weaker models on "
+            "this cluster\n"
+            "Keep the total response under 400 words."
+        )
+
+        user_prompt = (
+            f"Cluster signature: `{signature}`\n\n"
+            + "\n\n".join(examples_text)
+            + "\n\n---\nNow write the Procedure for this cluster."
+        )
+
+        result = call_llm(
+            model_id=model_id,
+            prompt=f"{system_prompt}\n\n{user_prompt}",
+            use_proxy=use_proxy,
+            temperature=0.3,
+            max_tokens=600,
+        )
+
+        if result.get("error") or not result.get("response"):
+            # graceful fallback
+            return _heuristic_procedure(signature, exemplars)
+
+        header = (
+            f"# Procedure for cluster `{signature}`\n"
+            f"# distilled by {model_id} from {len(exemplars)} exemplar(s)\n\n"
+        )
+        return (header + result["response"].strip())[:2400]
+
+    return _distiller
+
+
 # ============================================================================
 # Skill (一个 cluster 的统计)
 # ============================================================================

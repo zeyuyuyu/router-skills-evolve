@@ -61,11 +61,13 @@ class FatalTraceCollectionError(RuntimeError):
 
 
 _TRACE_WORKER_ADAPTER = None
+_TRACE_WORKER_SKILLBOOK = None
 
 
-def _init_trace_worker(bench: str) -> None:
-    global _TRACE_WORKER_ADAPTER
+def _init_trace_worker(bench: str, skillbook_path: str | None = None) -> None:
+    global _TRACE_WORKER_ADAPTER, _TRACE_WORKER_SKILLBOOK
     _TRACE_WORKER_ADAPTER = load_adapter(bench)
+    _TRACE_WORKER_SKILLBOOK = _load_skillbook(skillbook_path)
 
 
 def _run_trace_worker(payload: tuple[str, dict, str, str, int, bool]) -> dict:
@@ -77,6 +79,7 @@ def _run_trace_worker(payload: tuple[str, dict, str, str, int, bool]) -> dict:
         large_model=large_model,
         cycle=cycle,
         force_both=force_both,
+        skillbook=_TRACE_WORKER_SKILLBOOK,
     )
 
 
@@ -352,6 +355,7 @@ def main() -> int:
                         large_model=args.large_model,
                         cycle=args.cycle,
                         force_both=(closed_loop or args.force_both),
+                        skillbook=skillbook,
                     )
                     handle_trace(fh, i, task, trace, completed)
                 except FatalTraceCollectionError:
@@ -380,7 +384,7 @@ def main() -> int:
             with ProcessPoolExecutor(
                 max_workers=max(1, args.workers),
                 initializer=_init_trace_worker,
-                initargs=(args.bench,),
+                initargs=(args.bench, args.skillbook),
             ) as pool:
                 futures = {
                     pool.submit(
