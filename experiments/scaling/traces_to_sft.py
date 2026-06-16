@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -160,13 +161,25 @@ def _load_procedures(skillbook_path):
         return lambda _p: ""
 
 
-def convert(traces_path: Path, out_path: Path, skillbook_path=None) -> dict:
+def convert(traces_path: Path, out_path: Path, skillbook_path=None,
+            include_success: bool = False) -> dict:
+    """Build SFT pairs from traces.
+
+    Path A (always): self-repair — small fixed its own error across turns.
+    Path B (always): teacher-forcing — small failed all turns, large succeeded.
+    Path C (include_success): success-clone — small ALREADY solved it; clone its
+        own correct solution. Expands the set beyond just hard tasks so SFT also
+        reinforces what the model gets right (more volume, less forgetting). The
+        target is the small model's own first correct completion (on-policy), so
+        this is behaviour cloning, not teacher distillation.
+    """
     n_total = 0
     n_hard = 0
     n_written = 0
     n_no_completion = 0
     n_with_procedure = 0
     n_repair = 0
+    n_success = 0
     out_path.parent.mkdir(parents=True, exist_ok=True)
     get_procedure = _load_procedures(skillbook_path)
 
@@ -182,6 +195,7 @@ def convert(traces_path: Path, out_path: Path, skillbook_path=None) -> dict:
             n_total += 1
             prompt = trace.get("prompt") or ""
             procedure = get_procedure(prompt) if prompt else ""
+            sft_prompt = f"{procedure}\n\n---\n\n{prompt}" if procedure else prompt
 
             # ── Path A: self-repair samples (small fixed itself after turn 1) ──
             for repair_row in _extract_repair_samples(trace, procedure=procedure):
@@ -189,17 +203,41 @@ def convert(traces_path: Path, out_path: Path, skillbook_path=None) -> dict:
                 n_repair += 1
                 n_written += 1
 
-            # ── Path B: teacher-forcing (small failed all turns, large succeeded) ──
             if not _is_hard_task(trace):
+                # ── Path C: success-clone (opt-in) — small solved it itself ──
+                if include_success and trace.get("small_success") and prompt:
+                    small_code = trace.get("small_completion") or ""
+                    # Skip if the win came purely from a repair turn (Path A already
+                    # captured that conversation) and there is no single-shot code.
+                    if small_code:
+                        if procedure:
+                            n_with_procedure += 1
+                        row = {
+                            "task_id": trace.get("task_id", ""),
+                            "original_task_id": trace.get("original_task_id", trace.get("task_id", "")),
+                            "domain": trace.get("domain", ""),
+                            "signature": trace.get("signature", ""),
+                            "sft_type": "success",
+                            "prompt": sft_prompt,
+                            "completion": small_code,
+                            "source_model": "small",
+                            "has_procedure": bool(procedure),
+                            "instruction": sft_prompt,
+                            "input": "",
+                            "output": small_code,
+                        }
+                        out.write(json.dumps(row, ensure_ascii=False) + "\n")
+                        n_success += 1
+                        n_written += 1
                 continue
+
+            # ── Path B: teacher-forcing (small failed all turns, large succeeded) ──
             n_hard += 1
             completion = _completion_for_large(trace)
             if not prompt or not completion:
                 n_no_completion += 1
                 continue
-            sft_prompt = prompt
             if procedure:
-                sft_prompt = f"{procedure}\n\n---\n\n{prompt}"
                 n_with_procedure += 1
             row = {
                 "task_id": trace.get("task_id", ""),
@@ -224,6 +262,7 @@ def convert(traces_path: Path, out_path: Path, skillbook_path=None) -> dict:
         "written": n_written,
         "teacher_pairs": n_hard - n_no_completion,
         "repair_pairs": n_repair,
+        "success_pairs": n_success,
         "hard_without_completion": n_no_completion,
         "with_procedure": n_with_procedure,
     }
@@ -236,6 +275,11 @@ def main() -> int:
     ap.add_argument("--skillbook", default=None,
                     help="optional skillbook.json; prepend the matched cluster's "
                          "distilled procedure to each SFT prompt")
+    ap.add_argument("--include-success", action="store_true",
+                    default=os.environ.get("SFT_INCLUDE_SUCCESS", "0") == "1",
+                    help="also emit behaviour-clone pairs for tasks the small "
+                         "model already solved (Path C) — not just hard tasks. "
+                         "Env: SFT_INCLUDE_SUCCESS=1")
     args = ap.parse_args()
 
     traces_path = Path(args.traces)
@@ -243,11 +287,13 @@ def main() -> int:
         print(f"[traces_to_sft] ERROR: traces not found at {traces_path}", file=sys.stderr)
         return 2
 
-    stats = convert(traces_path, Path(args.output), skillbook_path=args.skillbook)
+    stats = convert(traces_path, Path(args.output), skillbook_path=args.skillbook,
+                    include_success=args.include_success)
     print(f"[traces_to_sft] {stats['traces_total']} traces -> "
           f"{stats['written']} SFT pairs total  "
           f"(teacher={stats.get('teacher_pairs', 0)}  "
           f"repair={stats.get('repair_pairs', 0)}  "
+          f"success={stats.get('success_pairs', 0)}  "
           f"with_procedure={stats.get('with_procedure', 0)}  "
           f"skipped={stats['hard_without_completion']})  "
           f"out={args.output}", file=sys.stderr)

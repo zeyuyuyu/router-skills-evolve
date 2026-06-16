@@ -529,6 +529,7 @@ def main() -> int:
     tok.save_pretrained(str(out_dir))
     print(f"[grpo] saved to {out_dir}", flush=True)
 
+    log_history = list(getattr(trainer.state, "log_history", []) or [])
     json.dump({
         "algo": args.algo,
         "trl_loss_type": loss_type,
@@ -545,7 +546,16 @@ def main() -> int:
         "n_tasks": len(tasks),
         "skillbook": args.skillbook,
         "prompt_style": args.prompt_style,
+        "log_history": log_history,  # per-step reward/kl/loss for inspection
     }, open(out_dir / "grpo_info.json", "w"), indent=2)
+
+    # Training curve (reward / kl / loss vs step) for eyeballing.
+    try:
+        from src.train_plots import plot_training_curves
+        plot_training_curves(log_history, out_dir / "training_curve.png",
+                             title=f"{args.algo.upper()} — {Path(str(out_dir)).name}")
+    except Exception as e:  # noqa: BLE001
+        print(f"[grpo] WARN could not plot training curve: {e}", flush=True)
     return 0
 
 

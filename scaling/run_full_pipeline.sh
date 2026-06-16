@@ -582,10 +582,14 @@ phase3_llm_train() {
 
   SKILLBOOK_ARG=""
   [[ -f "$out/skillbook.json" ]] && SKILLBOOK_ARG="--skillbook $out/skillbook.json"
+  # SFT_INCLUDE_SUCCESS=1 → also behaviour-clone tasks the small model already
+  # solved (not just hard tasks), expanding the tiny SFT set.
+  INCLUDE_SUCCESS_ARG=""
+  [[ "${SFT_INCLUDE_SUCCESS:-0}" == "1" ]] && INCLUDE_SUCCESS_ARG="--include-success"
   $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/scaling/traces_to_sft.py" \
     --traces "$out/traces.jsonl" \
     --output "$out/training_data.jsonl" \
-    $SKILLBOOK_ARG \
+    $SKILLBOOK_ARG $INCLUDE_SUCCESS_ARG \
     2>&1 | tee "$out/phase3_extract.log"
 
   if [[ "$BENCH" == "humaneval" ]]; then
@@ -597,7 +601,10 @@ phase3_llm_train() {
     if   (( cycle > 0 )) && [[ -d "$prev_grpo" ]]; then warmstart_model="$prev_grpo"
     elif (( cycle > 0 )) && [[ -d "$prev_sft"  ]]; then warmstart_model="$prev_sft"
     fi
-    $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/train_small_model.py" \
+    # SFT_LOGGING_STEPS=1 → capture per-step loss so training_curve.png is useful
+    # (HumanEval SFT sets are tiny; default logging_steps=10 would log nothing).
+    $DRY_RUN || SFT_LOGGING_STEPS="${SFT_LOGGING_STEPS:-1}" \
+      "$PYTHON" "$REPO_ROOT/experiments/train_small_model.py" \
       --data "$out/training_data.jsonl" \
       --base-model "$warmstart_model" \
       --output "$out/llm_adapter" \

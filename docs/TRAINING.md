@@ -1,288 +1,99 @@
-# 训练指南（白看这个）
+# LLM 训练指南（Phase 3）
 
-> **给白**: 这份文档解释清楚**在训什么**、**为什么要训**、**怎么训**。  
-> **预计时间**: 读懂 10 分钟，跑通 PoC 半天。
-
----
-
-## 1. 我们在训什么？为什么要训？
-
-### 背景（一句话）
-
-> 我们有个 **Router + Skills** 系统：自动把简单题路由到便宜模型（deepseek），难题路由到贵模型（gpt-5.4）。
-
-已经跑了 HumanEval 164 题实验，结果很好：**99% 准确率 + 省 83% 成本**。
-
-### 但还有改进空间
-
-Skills 分析后发现：**有 9 类题（signature）**小模型做不到，必须升级到大模型。
-比如：
-- 多项式计算（poly）
-- 密码学（decode_cyclic, decode_shift）
-- 布尔字符串（bool/str）
-
-### 训练目标
-
-**让小模型学会这些"难题"**！训完后：
-- 原本要用 gpt-5.4 的题 → 小模型也能做
-- 省更多钱（从省 83% → 省 90%+）
-- 准确率保持 99%+
-
-### 怎么训？
-
-**用大模型的正确答案当老师**，教小模型做这些题：
-
-```
-训练数据:
-  - Instruction: "Write a function to decode_cyclic..."
-  - Output:      大模型生成的正确代码  <- 老师的答案
-  
-训练后的小模型:
-  学会了这类题的解法 → 自己也能做对
-```
-
-这叫**知识蒸馏 (Knowledge Distillation) + 监督微调 (SFT)**。
+> 这份文档讲 pipeline 里**小模型怎么训**：训什么、数据哪来、怎么跑、怎么调。
+> LLM 训练是 `scaling/run_full_pipeline.sh` 的 **Phase 3a（SFT）+ Phase 3b（GRPO/DAPO）**，
+> 不是独立脚本——下面命令都通过主入口跑。
 
 ---
 
-## 2. 具体步骤（走一遍）
+## 1. 训什么、为什么
 
-### Step 1: 收集 traces (已完成)
+每个 cycle 里小模型（Student）从大模型（Teacher）和自己的成功轨迹学习，目标是把
+原本必须升级到大模型的难题也学会，让 router 能更多地走小模型 → 省钱、保质量。
 
-之前的 `run_evolve.py` 已经产生了 traces，存在：
-```
-router_skills_evolve/data/traces/traces_*.jsonl
-```
+- **Phase 3a SFT**：模仿正确答案（teacher 蒸馏 + 自修复）。快、稳、数据少也能用。
+- **Phase 3b GRPO/DAPO**：on-policy RL，用**可验证 reward**（HumanEval 跑 pytest / tau2 看 env passed）
+  直接优化通过率。在 SFT checkpoint 之上 warm-start。
 
-每条 trace 记录了：
-- 哪道题
-- 小模型 / 大模型 分别 成功还是失败
-- 花了多少钱
-
-### Step 2: 提取训练数据
-
-跑一个脚本，筛"小模型做不到但大模型能做"的题：
-
-```bash
-cd router_skills_evolve
-
-python3 experiments/extract_training_data.py \
-    --traces "data/traces/traces_*.jsonl" \
-    --output data/training_data.jsonl \
-    --include-test-cases
-```
-
-这会：
-1. 扫描所有 trace 文件
-2. 筛 hard tasks（小模型失败 + 大模型成功）
-3. **重跑一次大模型**获取完整代码（ground truth）
-4. 输出 JSONL 格式（Alpaca 风格）
-
-输出示例：
-```json
-{
-  "task_id": "HumanEval/32",
-  "instruction": "def poly(xs, x): ... (完整 prompt)",
-  "input": "",
-  "output": "def poly(xs, x):\n    return sum(...)\n\ndef find_zero(xs):\n    ...",
-  "signature": "L|advanced/list/num",
-  "source_model": "openai/gpt-5.4-2026-03-05"
-}
-```
-
-### Step 3: 准备训练环境
-
-**推荐第一次用 MiniMax-M2**（小模型，容易跑通）：
-
-```bash
-# 系统要求:
-#   GPU: 1-2 × A100 80GB (MiniMax-M2 ~20B)
-#   Disk: 50GB+
-#   CUDA: 12.1+
-
-# 装依赖:
-pip install torch transformers peft datasets accelerate bitsandbytes trl
-
-# 可选: 装 flash-attention 加速 (需要 CUDA)
-pip install flash-attn --no-build-isolation
-```
-
-### Step 4: 训练！
-
-```bash
-python3 experiments/train_small_model.py \
-    --data data/training_data.jsonl \
-    --base-model "MiniMaxAI/MiniMax-M2" \
-    --output outputs/minimax-m2-finetuned \
-    --lora-r 16 \
-    --epochs 3 \
-    --batch-size 4 \
-    --use-4bit
-```
-
-**解释**:
-- `--base-model`: 要微调的底模（MiniMax-M2 = 20B, 适合 PoC）
-- `--lora-r 16`: LoRA 秩，越大越强但越慢
-- `--epochs 3`: 训 3 轮（数据少时多训几轮）
-- `--batch-size 4`: 每次处理 4 条
-- `--use-4bit`: 4-bit 量化，省显存（QLoRA）
-
-**预计时间**: 30-60 分钟（~100 条样本）
-
-### Step 5: 评估训练效果
-
-训完后，用 finetuned 模型跑一遍 HumanEval 看效果：
-
-```bash
-# TODO (Franklin 会加这个脚本):
-python3 experiments/evaluate_finetuned.py \
-    --model outputs/minimax-m2-finetuned \
-    --base-model "MiniMaxAI/MiniMax-M2"
-```
-
-看指标：
-- Small 模型 HumanEval success rate: 88% → ? (目标 >= 92%)
-- Skills 中"必须升级"的数: 9 → ? (目标 <= 5)
+两阶段的 prompt 都前置 procedure：`f"{procedure}\n\n---\n\n{problem}"`，和推理时一致。
 
 ---
 
-## 3. 不同模型的资源需求
+## 2. 数据从哪来（无需手动准备）
 
-| 模型 | 参数量 | 最小 GPU | 训练时长 (~100 样本) |
-|------|-------|---------|---------------------|
-| **MiniMaxAI/MiniMax-M2** ⭐ | ~20B | 1 × A100 80G (用 4bit) | ~30 分钟 |
-| zai-org/GLM-4.5-Air | ~12B MoE | 1 × A100 40G | ~20 分钟 |
-| xiaomi/mimo-v2-omni | ~10B | 1 × A100 40G | ~15 分钟 |
-| MiniMaxAI/MiniMax-M2.5 | ~20B | 1 × A100 80G | ~30 分钟 |
-| Qwen/Qwen3-Coder-480B | 35B activate | 8 × A100 80G | ~4 小时 |
-| deepseek-ai/DeepSeek-V3.2 | 37B activate | 8 × A100 80G | ~6 小时 |
+Phase 1 收的 `traces.jsonl` → `traces_to_sft.py` 自动产出两类 SFT 样本：
 
-**强烈推荐先用 MiniMax-M2 跑 PoC**，验证 pipeline 通了再扩大。
+| 类型 | 选择规则 | target |
+|------|---------|--------|
+| teacher pairs | 小模型全轮失败 **且** 大模型成功 | 大模型的正确代码 |
+| self-repair pairs | 小模型第 1 轮失败、后续轮自修成功 | 多轮"错误→修正"对话链 |
+
+GRPO（Phase 3b）不需要标签代码，只需可验证 reward，所以直接在 bench 任务上 rollout。
 
 ---
 
-## 4. 具体参数说明
-
-### `--lora-r` (LoRA rank)
-
-| 值 | 效果 | 建议 |
-|----|------|------|
-| 8 | 参数最少，学习能力弱 | 数据量 <100 条 |
-| 16 | **平衡** | **默认推荐** |
-| 32 | 更强学习力 | 数据 >500 条时用 |
-| 64 | 接近全量微调 | 数据很多时用 |
-
-### `--epochs`
-
-- 数据少（<100）: **3-5 epochs**
-- 数据中（100-1000）: 2-3 epochs  
-- 数据多（>1000）: 1-2 epochs
-
-**警告**: 过多 epochs 会过拟合（模型只记住训练集，泛化差）。
-
-### `--batch-size + --grad-accum`
-
-**有效 batch size = batch_size × grad_accum**
-- 小 GPU: `--batch-size 2 --grad-accum 8` (effective 16)
-- 大 GPU: `--batch-size 4 --grad-accum 4` (effective 16)
-
-### `--use-4bit` (QLoRA)
-
-**打开** = 节省 4 倍显存，但速度慢 20%。单卡时必开。
-
----
-
-## 5. 常见问题
-
-### Q: 训练数据太少怎么办？
-
-我们 HumanEval 164 题里只有 ~20 条 hard samples 不够。
-
-**扩充方法**:
-```bash
-# 1. 用更多 benchmark 产生 traces:
-python3 experiments/run_evolve.py --n 164 --rounds 4  # HumanEval
-
-# 2. (TODO Franklin) 加 MBPP 支持:
-python3 experiments/run_evolve_mbpp.py --n 500
-
-# 3. 混入公开 code dataset:
-# - CodeAlpaca-20k
-# - CodeContests
-# - APPS
-```
-
-### Q: GPU OOM (out of memory)
+## 3. 怎么跑
 
 ```bash
-# 方案 1: 用 4bit 量化
---use-4bit
+# 完整：Phase 3a SFT + Phase 3b GRPO（需要 GPU）
+bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4
 
-# 方案 2: 减小 batch
---batch-size 1 --grad-accum 16
+# 只 SFT、跳过 GRPO
+SKIP_GRPO=1 bash scaling/run_full_pipeline.sh --bench humaneval
 
-# 方案 3: 减少 max seq length
---max-seq-len 1024
+# 完全跳过 LLM 训练（只跑 Skills + Router，无需 GPU）
+SKIP_LLM=1 SKIP_GRPO=1 bash scaling/run_full_pipeline.sh --bench humaneval
 
-# 方案 4: 用更小的模型
---base-model "MiniMaxAI/MiniMax-M2"  # 不用 DeepSeek-V3.2
+# tau2（SFT 走 tau2_train_wrapper.sh / FSDP2+FA2；GRPO 默认关，SKIP_GRPO=0 开启）
+bash scaling/run_full_pipeline.sh --bench tau2_bench --n-cycles 4
 ```
 
-### Q: 训完模型怎么用？
-
-训完只有 **LoRA adapter**（几百 MB），需要：
-1. 上传到 HuggingFace Hub 或本地
-2. 部署到 inference 服务（vLLM, TGI）
-3. 注册到 CommonStack（需要平台团队帮忙）
-4. 在 UncommonRoute 配置里加这个新模型
-
-### Q: 如何知道训得好不好？
-
-**客观指标**:
-- Training loss 持续下降 → 正在学
-- Eval loss 先降后升 → 过拟合了，早停
-
-**业务指标**:
-- Small 模型在 HumanEval 上 success rate ↑
-- Skills 中"必须升级"的 cluster 数 ↓
-- Pipeline 总成本 ↓
+产物：`cycle_N/llm_adapter/checkpoint-best`（SFT）、`cycle_N/grpo_adapter/`（GRPO）。
+下一轮 Phase 1 的小模型按 **`grpo_adapter/` > `llm_adapter/checkpoint-best` > 基座** 优先级加载。
 
 ---
 
-## 6. 完整快速跑通 (30 分钟)
+## 4. 默认模型与资源
 
-```bash
-# 0. 进目录
-cd router_skills_evolve
+| bench | small（被训） | large（teacher） | 训练 GPU |
+|-------|--------------|------------------|---------|
+| humaneval | Qwen2.5-Coder-1.5B-Instruct | Qwen2.5-Coder-3B-Instruct | 1.5B：1–2×A100/A800 |
+| tau2_bench | Qwen3 系列（见 `MODEL_SWEEP` YAML） | gpt-5.4（API） | 4B：2×；9B：4×；35B-A3B：8× |
 
-# 1. (如果 traces 不够, 先跑 evolve 产生数据)
-python3 experiments/run_evolve.py --n 60 --rounds 4
-
-# 2. 提取训练数据
-python3 experiments/extract_training_data.py \
-    --traces "data/traces/*.jsonl" \
-    --output data/training_data.jsonl
-
-# 3. 检查数据
-head -1 data/training_data.jsonl | python3 -m json.tool
-
-# 4. 训练 (需要 GPU)
-python3 experiments/train_small_model.py \
-    --data data/training_data.jsonl \
-    --base-model "MiniMaxAI/MiniMax-M2" \
-    --output outputs/minimax-m2-v1 \
-    --lora-r 16 --epochs 3 --use-4bit
-
-# 5. 查看 output
-ls outputs/minimax-m2-v1/
-```
+只跑 trace 收集 + Router 训练（`SKIP_LLM=1 SKIP_GRPO=1`）不需要 GPU。
 
 ---
 
-## 7. 联系人
+## 5. 关键超参（env var）
 
-- **数据准备 / Pipeline**: Franklin
-- **GPU 资源 / 部署**: （待分配）
-- **模型训练（这份文档）**: 白
+| 变量 | 默认 | 说明 |
+|------|------|------|
+| `SCALING_NUM_TRAIN_EPOCHS` | 2 | SFT epochs（数据少→3–5；多→1–2，防过拟合） |
+| `GRPO_N_GENERATIONS` | 8 | GRPO 每 prompt 采样数 K（组内算 advantage） |
+| `GRPO_EPOCHS` | 1 | GRPO epochs |
+| `GRPO_LR` | 5e-6 | GRPO 学习率 |
+| `GRPO_BETA` | 0.04 | KL 惩罚系数 |
+| `GRPO_ALGO` | grpo | `grpo` \| `dapo`（见 TRAINING_METHODS.md） |
+| `GRPO_TEMPERATURE` | 1.0 | **rollout 温度，必须 >0**（贪心会让 K 条坍缩、零梯度）；训练用 0.7–1.0，eval 用贪心 |
 
-有问题随时问。**先跑通 MiniMax-M2 的 PoC**，再考虑大模型。
+LoRA：SFT/GRPO 都用 LoRA（默认 r=16）。单卡显存紧→开 4-bit / 减 batch / 减 `max_seq_length`。
+
+---
+
+## 6. 常见问题
+
+**数据太少？** 多跑几个 cycle（闭环会持续积累 hard task），或多挑几个 tau2 domain（`TAU2_DOMAINS=retail,telecom,airline`）。
+
+**GPU OOM？** 减 `per_device_train_batch_size` + 加 grad-accum；开 4-bit；降 `max_seq_length`；flash-attn 编译用 `MAX_JOBS=4`。
+
+**怎么看训得好不好？** 看 `results/<exp>/curve.png`（`aggregate_cycles.py` 生成）的 task_pass 跨 cycle 走势，以及 `cycle_N/grpo_adapter/grpo_info.json`（algo/K/lr/beta 记录）。
+
+**训完怎么用？** 产出是 LoRA adapter；闭环里由 `vllm_serve.sh` 起成 OpenAI-compatible server（cycle≥1 的 Phase 1 自动 launch/kill），以 `openai/evol-llm-student` 作为小模型。
+
+---
+
+## 7. 历史结论
+
+Qwen2.5-Coder-1.5B + GRPO：47/100 → 49/100（+2pt）。3B/7B GRPO 出现退化，**单纯放大模型不够**——
+增益主要来自 Skills + Router 联合迭代，LLM 训练在小模型上提供边际收益。详见
+[E2E_ABLATION_RESULTS.md](E2E_ABLATION_RESULTS.md)。

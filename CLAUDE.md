@@ -71,6 +71,12 @@ Bench branches: `humaneval` (local models + pytest reward, GRPO on) vs `tau2_ben
    `llm_adapter/checkpoint-best` > base `SMALL_MODEL`.
 7. **SkillBook stats keys are canonical roles `"small"`/`"large"`,** never raw model IDs
    (IDs change every cycle and break `can_downgrade_to_small`).
+8. **GRPO rollout temperature must be > 0.** The tau2 litellm patch drops `seed` from every
+   completion, so sampling temperature is the ONLY source of intra-group divergence — greedy
+   (temp 0) collapses all K rollouts → zero advantage → no gradient. Use **0.7–1.0** for
+   training rollouts (default `GRPO_TEMPERATURE=1.0`; lower toward 0.7 if multi-turn
+   trajectories destabilize). Use **greedy (temp 0)** for held-out eval / deployed routing —
+   never reuse the training temperature there.
 
 ## Gotchas
 
@@ -85,8 +91,10 @@ Bench branches: `humaneval` (local models + pytest reward, GRPO on) vs `tau2_ben
 - **Qwen3 thinking mode off** (`enable_thinking=False`) — tau2 corpus has no CoT, enabling
   it goes OOD.
 - **flash-attn build:** `MAX_JOBS=4` max, else OOM.
-- `experiments/run_joint_evolver.py` resets the SkillBook each cycle — NOT a real closed
-  loop, not for formal experiments.
+- **Trimmed tree:** the only entrypoint is `scaling/run_full_pipeline.sh`. The old standalone
+  HumanEval scripts (`run_evolve.py`, `extract_training_data.py`, `train_small_model_grpo.py`,
+  `train_learnable_router.py`, `run_e2e_ablation.py`, the DPO/GRPO variants) and the BERT
+  `src/learned_router/` + `src/router.py` were removed — don't reintroduce them.
 
 ## Conventions
 

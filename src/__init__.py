@@ -6,14 +6,10 @@ from .config import (
 )
 from .models import call_llm, solve_task, extract_code, run_humaneval_test
 from .skills import Skill, SkillBook, extract_signature
-from .router import RouterWithSkills
-from .learned_router import BertRouter, BertRouterConfig, LearnedRouterPolicy, RouterWithLearnedPolicy
 
 __all__ = [
     "SMALL_MODEL", "LARGE_MODEL", "MODEL_POOL", "TRAINABLE_MODELS",
     "DYNAMIC_PRICES", "calc_cost", "get_model_hf_name",
     "call_llm", "solve_task", "extract_code", "run_humaneval_test",
     "Skill", "SkillBook", "extract_signature",
-    "RouterWithSkills",
-    "BertRouter", "BertRouterConfig", "LearnedRouterPolicy", "RouterWithLearnedPolicy",
 ]

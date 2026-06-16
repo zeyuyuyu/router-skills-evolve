@@ -1,5 +1,10 @@
 # End-to-End Ablation Results
 
+> ⚠️ **历史报告（2026-05-09，旧设计）**。下面的数字来自**多 cluster signature +
+> Skills 参与路由 + 独立 Base 臂**的版本。当前代码已改为**单一全局 skill + Router 独占路由**，
+> ablation 四臂变为 `large / skills(全 small+procedure) / router / full`，
+> `skills` 臂取代了原来的独立 `Base`。下表保留作历史记录；新设计的数字需重跑实验后更新。
+
 This report summarizes the first unified end-to-end ablation run for the
 evolver project. The goal is to avoid reporting isolated "skills evolve",
 "router training", and "LLM training" numbers, and instead compare the system
@@ -99,7 +104,7 @@ For a stronger EMNLP-style result, the next experiments should use the unified
 Evolver Dataset splits and report:
 
 - router ablations on router `test`;
-- code-model SFT/DPO/GRPO on code `test`;
+- code-model SFT + GRPO/DAPO on code `test` (DPO dropped);
 - end-to-end pass rate, fallback rate, cost, and small/large usage under the
-  same evaluation set.
+  same evaluation set, reported as the four-arm `large / skills / router / full`.
 

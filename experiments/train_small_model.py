@@ -28,6 +28,7 @@
     3. 满意后扩到更大模型
 """
 
+import os
 import sys
 import json
 import argparse
@@ -293,7 +294,7 @@ def main():
         learning_rate=args.lr,
         warmup_ratio=0.03,
         lr_scheduler_type="cosine",
-        logging_steps=10,
+        logging_steps=int(os.environ.get("SFT_LOGGING_STEPS", "10")),
         save_strategy="epoch",
         save_total_limit=2,
         bf16=True,
@@ -315,8 +316,9 @@ def main():
     trainer.save_model(str(output_dir))
 
     # ========================================================================
-    # 5. 保存配置
+    # 5. 保存配置 + 训练曲线图（肉眼观察 loss/accuracy 变化）
     # ========================================================================
+    log_history = list(getattr(trainer.state, "log_history", []) or [])
     with open(output_dir / "training_info.json", "w") as f:
         json.dump({
             "base_model": args.base_model,
@@ -326,7 +328,16 @@ def main():
             "epochs": args.epochs,
             "learning_rate": args.lr,
             "prompt_style": args.prompt_style,
+            "log_history": log_history,  # per-step loss/accuracy for later inspection
         }, f, indent=2)
+
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from src.train_plots import plot_training_curves
+        plot_training_curves(log_history, output_dir / "training_curve.png",
+                             title=f"SFT — {Path(str(output_dir)).name}")
+    except Exception as e:  # noqa: BLE001
+        print(f"[sft] WARN could not plot training curve: {e}")
 
     print(f"\n✅ 训练完成!")
     print(f"   Output: {output_dir}")

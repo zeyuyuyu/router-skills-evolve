@@ -262,6 +262,15 @@ class Adapter:
         on ``self.user_model`` (gpt-5.2 by default). ``temperature`` is forwarded
         to the agent so the K samples in a group actually differ.
         """
+        # Divergence guard: the litellm patch drops `seed`, so sampling
+        # temperature is the ONLY source of intra-group variance. With n>1 and
+        # temperature≈0 (greedy) all K rollouts collapse to one trajectory →
+        # zero advantage → no GRPO gradient. Surface that loudly rather than
+        # silently train on dead batches.
+        if n > 1 and temperature <= 0.0:
+            print(f"[tau2_adapter] WARN rollout n={n} with temperature={temperature}: "
+                  f"greedy decoding collapses the K-group (no GRPO signal). "
+                  f"Set GRPO_TEMPERATURE > 0.", file=sys.stderr)
         if self.mock:
             return [self._mock_rollout(task, model, i, temperature) for i in range(n)]
         return [self._rollout_one(task, model, temperature) for _ in range(n)]
@@ -281,8 +290,11 @@ class Adapter:
             self._lazy_import_tau2()
 
         agent_args = dict(self._llm_args("agent", model=model))
-        # Sampling temperature is forwarded verbatim to litellm so the K group
-        # samples diverge (GRPO needs intra-group reward variance).
+        # K-group divergence comes from sampling temperature ONLY: the litellm
+        # patch (_patch_tau2_litellm) drops `seed` from every completion call, so
+        # there is no per-call seed to vary. The GRPO trainer must therefore pass
+        # temperature > 0, else greedy decoding collapses all K rollouts to one
+        # trajectory (zero variance → zero advantage → no gradient).
         agent_args["temperature"] = float(temperature)
         config = RunTaskConfig(
             agent=LLMSpec(model=model, args=agent_args),
