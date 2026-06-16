@@ -106,9 +106,15 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${HE_USE_VLLM:=0}"
 : "${HE_VLLM_SMALL_PORT:=8100}"
 : "${HE_VLLM_LARGE_PORT:=8101}"
-: "${HE_VLLM_SMALL_GPU:=${HE_VLLM_GPU:-0}}"
-: "${HE_VLLM_LARGE_GPU:=${HE_VLLM_GPU:-0}}"
+: "${HE_VLLM_SMALL_GPU:=1}"   # Phase-1 small student served here
+: "${HE_VLLM_LARGE_GPU:=2}"   # Phase-1 large teacher served here
 : "${HE_VLLM_WORKERS:=8}"    # parallel trace workers when serving via vLLM/API
+# Phase-3b GRPO rollout via vLLM colocate on the TRAINING gpu (weight auto-sync).
+# Requires vllm importable in the training env → run pipeline with
+# PYTHON=$PWD/.vllm_venv/bin/python. Training gpu = the pipeline's
+# CUDA_VISIBLE_DEVICES (e.g. 3).
+: "${GRPO_USE_VLLM:=0}"
+: "${GRPO_VLLM_GPU_UTIL:=0.3}"
 
 export TAU2_DOMAIN
 export TAU2_DOMAINS
@@ -643,8 +649,16 @@ phase3b_grpo_train() {
   [[ -f "$out/skillbook.json" ]] && SKILLBOOK_ARG="--skillbook $out/skillbook.json"
 
   if [[ "$BENCH" == "humaneval" ]]; then
-    # ── HumanEval: single-turn GRPO/DAPO, reward = test execution ───────────
-    $DRY_RUN && { echo "  DRY: grpo_train_simple --algo $GRPO_ALGO --model $grpo_base --output-dir $out/grpo_adapter K=$GRPO_N_GENERATIONS"; return; }
+    # ── HumanEval: GRPO/DAPO, reward = test execution ───────────────────────
+    # GRPO_USE_VLLM=1 → single-shot rollout via vLLM colocate on the training
+    # GPU with TRL weight auto-sync (fast). Otherwise the default multi-turn
+    # repair rollout (in-process HF generate; weights are the live policy).
+    local rollout_args=()
+    if [[ "$GRPO_USE_VLLM" == "1" ]]; then
+      rollout_args=(--rollout single --use-vllm --vllm-gpu-util "$GRPO_VLLM_GPU_UTIL")
+      echo "  [Phase 3b] vLLM colocate rollout (weight auto-sync) gpu_util=$GRPO_VLLM_GPU_UTIL"
+    fi
+    $DRY_RUN && { echo "  DRY: grpo_train_simple --algo $GRPO_ALGO --model $grpo_base --output-dir $out/grpo_adapter K=$GRPO_N_GENERATIONS ${rollout_args[*]}"; return; }
     GRPO_N_GENERATIONS="$GRPO_N_GENERATIONS" \
     GRPO_EPOCHS="$GRPO_EPOCHS" \
     GRPO_LR="$GRPO_LR" \
@@ -663,6 +677,7 @@ phase3b_grpo_train() {
       --beta "$GRPO_BETA" \
       --clip-low "$DAPO_CLIP_LOW" \
       --clip-high "$DAPO_CLIP_HIGH" \
+      "${rollout_args[@]}" \
       --prompt-style "${HE_PROMPT_STYLE:-qwen-chat}" \
       $SKILLBOOK_ARG \
       2>&1 | tee "$out/phase3b_grpo.log"

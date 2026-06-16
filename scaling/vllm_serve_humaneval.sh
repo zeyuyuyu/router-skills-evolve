@@ -51,7 +51,10 @@ else
 fi
 
 echo "[vllm_serve] starting: model=$MODEL_TO_LOAD served=$SERVED port=$PORT gpu=$GPU"
+# Put the venv's bin first on PATH so vLLM's runtime subprocesses (ninja for
+# kernel compilation, etc.) resolve to the venv tools rather than failing.
 CUDA_VISIBLE_DEVICES="$GPU" \
+  PATH="$VLLM_VENV/bin:$PATH" \
   nohup "$VLLM_BIN" serve "$MODEL_TO_LOAD" \
     --served-model-name "$SERVED" \
     --port "$PORT" \

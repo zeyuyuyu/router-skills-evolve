@@ -401,6 +401,16 @@ def main() -> int:
     ap.add_argument("--clip-high", type=float,
                     default=float(os.environ.get("DAPO_CLIP_HIGH", "0.5")),
                     help="DAPO upper clip bound for positive-advantage tokens")
+    ap.add_argument("--use-vllm", action="store_true",
+                    default=os.environ.get("GRPO_USE_VLLM", "0") == "1",
+                    help="(single rollout only) use vLLM colocate for generation; "
+                         "TRL auto-syncs the training weights into the vLLM engine "
+                         "each step (the 'weight passing'). Needs vllm importable in "
+                         "THIS env (run under .vllm_venv). Env: GRPO_USE_VLLM=1")
+    ap.add_argument("--vllm-gpu-util", type=float,
+                    default=float(os.environ.get("GRPO_VLLM_GPU_UTIL", "0.3")),
+                    help="vLLM KV-cache fraction of the training GPU (colocate "
+                         "shares the GPU with the trainer, so keep this modest)")
     ap.add_argument(
         "--rollout", default=os.environ.get("HE_GRPO_ROLLOUT", "repair"),
         choices=["repair", "single"],
@@ -493,6 +503,19 @@ def main() -> int:
         epsilon_low  = args.clip_low
         epsilon_high = args.clip_low    # same as low → symmetric clip
 
+    # vLLM colocate rollout: TRL spins up an in-process vLLM engine on the
+    # training GPU and re-syncs the policy weights into it every step (the
+    # "weight passing"). Big speedup for generation; needs vllm importable here.
+    vllm_kwargs = {}
+    if args.use_vllm:
+        vllm_kwargs = {
+            "use_vllm": True,
+            "vllm_mode": "colocate",
+            "vllm_gpu_memory_utilization": args.vllm_gpu_util,
+        }
+        print(f"[grpo] vLLM colocate rollout ON  gpu_util={args.vllm_gpu_util} "
+              f"(weights auto-synced to engine each step)", flush=True)
+
     grpo_cfg = GRPOConfig(
         output_dir=str(out_dir),
         num_train_epochs=args.epochs,
@@ -509,6 +532,7 @@ def main() -> int:
         logging_steps=5,
         save_strategy="epoch",
         report_to="none",
+        **vllm_kwargs,
     )
 
     trainer = GRPOTrainer(
@@ -542,6 +566,9 @@ def main() -> int:
         "epsilon_low": epsilon_low,
         "epsilon_high": epsilon_high,
         "dapo_dynamic_sampling": is_dapo,
+        "rollout": "single",
+        "use_vllm": args.use_vllm,
+        "vllm_gpu_util": args.vllm_gpu_util if args.use_vllm else None,
         "split": args.split,
         "n_tasks": len(tasks),
         "skillbook": args.skillbook,
