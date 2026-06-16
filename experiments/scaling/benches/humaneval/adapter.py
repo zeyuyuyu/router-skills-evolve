@@ -79,6 +79,68 @@ def _format_multiturn_prompt(messages: list[dict], style: str) -> str:
     return "".join(parts)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Backend resolution: a model_id is served by one of three backends.
+#   "api"  → CommonStack OpenAI-compatible API (concurrent, e.g. openai/*,
+#            deepseek/*). Used for teacher models that are frontier/hosted.
+#   "vllm" → local vLLM server (OpenAI-compatible HTTP), if a URL is registered
+#            for this model in HE_VLLM_MAP. Continuous batching → concurrent.
+#   "hf"   → in-process transformers generate (default fallback, single request).
+#
+# This keeps the pipeline backward compatible: with no HE_VLLM_MAP set and a
+# local HF model id, behaviour is identical to the original adapter.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _is_api_model(model_id: str) -> bool:
+    """True if model_id is a CommonStack hosted model (→ API backend).
+
+    Distinguishes lowercase provider-prefixed CommonStack ids (openai/gpt-…,
+    deepseek/deepseek-v3.2) from HuggingFace repos / local paths
+    (Qwen/Qwen2.5-…, deepseek-ai/…, /abs/path/to/adapter).
+    """
+    if not model_id or model_id.startswith(("/", "./", "../")):
+        return False
+    try:
+        sys.path.insert(0, str(REPO_ROOT))
+        from src.config import DYNAMIC_PRICES
+        if model_id in DYNAMIC_PRICES:
+            return True
+    except Exception:  # noqa: BLE001
+        pass
+    # Known CommonStack provider prefixes (lowercase). HF repos use different
+    # casing/orgs (Qwen/, deepseek-ai/) and won't match.
+    api_prefixes = (
+        "openai/", "deepseek/", "anthropic/", "google/", "minimax/",
+        "zai-org/", "qwen/", "moonshotai/", "x-ai/", "xiaomi/",
+    )
+    return model_id.startswith(api_prefixes)
+
+
+def _vllm_url_for(model_id: str) -> str:
+    """Return the local vLLM base_url serving model_id, or '' if none.
+
+    HE_VLLM_MAP is a JSON object {model_id: base_url}. Set by the pipeline when
+    it starts local vLLM servers for the small/large models.
+    """
+    raw = os.environ.get("HE_VLLM_MAP", "")
+    if not raw:
+        return ""
+    try:
+        import json as _json
+        return _json.loads(raw).get(model_id, "") or ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _resolve_backend(model_id: str) -> str:
+    """Pick the backend for a model id: 'api' | 'vllm' | 'hf'."""
+    if _is_api_model(model_id):
+        return "api"
+    if _vllm_url_for(model_id):
+        return "vllm"
+    return "hf"
+
+
 class Adapter:
     """HumanEval adapter — local code models + pytest."""
 
@@ -203,22 +265,47 @@ class Adapter:
         self._cache[model_id] = (model, tok)
         return model, tok
 
-    def _gen_and_test(self, model_id: str, task: dict,
-                      procedure: str = "") -> tuple[bool, str, list]:
-        """Generate code and test it, retrying with error feedback (ReAct repair).
+    # System instruction shared by all chat backends (api / vllm). The hf
+    # backend embeds the same text in _format_multiturn_prompt.
+    _CHAT_SYSTEM = (
+        "You are a Python coding assistant. Return only valid Python code. "
+        "Do not include Markdown fences, explanations, examples, or tests."
+    )
 
-        Returns (ok, final_code, turns) where turns is a list of
-        {turn, code, ok, error} dicts — one per attempt. The small model uses
-        `procedure` as a prefix on the first turn; the large model gets the raw
-        prompt (procedure="" by default). Repair turns are capped at
-        self.max_repair_turns; the model escalates if still failing after that.
-        """
+    def _openai_client_for(self, model_id: str, backend: str):
+        """Build (and cache) an OpenAI-compatible client for api/vllm backends."""
+        cache_key = f"_client::{backend}::{model_id}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+        from openai import OpenAI
+        if backend == "api":
+            sys.path.insert(0, str(REPO_ROOT))
+            from src.config import COMMONSTACK_API_KEY, COMMONSTACK_BASE_URL
+            client = OpenAI(api_key=COMMONSTACK_API_KEY, base_url=COMMONSTACK_BASE_URL)
+        else:  # vllm
+            base_url = _vllm_url_for(model_id)
+            client = OpenAI(api_key=os.environ.get("HE_VLLM_API_KEY", "EMPTY"),
+                            base_url=base_url)
+        self._cache[cache_key] = client
+        return client
+
+    def _generate_completion(self, model_id: str, messages: list[dict],
+                             backend: str) -> str:
+        """Generate one completion for a multi-turn message list via `backend`."""
+        if backend in ("api", "vllm"):
+            client = self._openai_client_for(model_id, backend)
+            chat = [{"role": "system", "content": self._CHAT_SYSTEM}, *messages]
+            resp = client.chat.completions.create(
+                model=model_id,
+                messages=chat,
+                temperature=self.temperature,
+                max_tokens=self.max_new_tokens,
+            )
+            return resp.choices[0].message.content or ""
+
+        # hf backend (default): in-process transformers generate
         import torch
-        sys.path.insert(0, str(REPO_ROOT))
-        from src.models import extract_code, run_humaneval_test
-
         model, tok = self._get_model(model_id)
-
         gen_kwargs = {
             "max_new_tokens": self.max_new_tokens,
             "do_sample": self.temperature > 0,
@@ -231,6 +318,30 @@ class Adapter:
                 gen_kwargs["eos_token_id"] = qend
         if self.temperature > 0:
             gen_kwargs["temperature"] = self.temperature
+        prompt_str = _format_multiturn_prompt(messages, self.prompt_style)
+        inputs = tok(prompt_str, return_tensors="pt").to(model.device)
+        with torch.no_grad():
+            out = model.generate(**inputs, **gen_kwargs)
+        new_tokens = out[0][inputs["input_ids"].shape[-1]:]
+        return tok.decode(new_tokens, skip_special_tokens=True)
+
+    def _gen_and_test(self, model_id: str, task: dict,
+                      procedure: str = "") -> tuple[bool, str, list]:
+        """Generate code and test it, retrying with error feedback (ReAct repair).
+
+        Returns (ok, final_code, turns) where turns is a list of
+        {turn, code, ok, error} dicts — one per attempt. The small model uses
+        `procedure` as a prefix on the first turn; the large model gets the raw
+        prompt (procedure="" by default). Repair turns are capped at
+        self.max_repair_turns; the model escalates if still failing after that.
+
+        Generation backend is resolved per model_id: api (CommonStack), vllm
+        (local server), or hf (in-process). See _resolve_backend.
+        """
+        sys.path.insert(0, str(REPO_ROOT))
+        from src.models import extract_code, run_humaneval_test
+
+        backend = _resolve_backend(model_id)
 
         raw_problem = task["prompt"]
         first_user_content = f"{procedure}\n\n---\n\n{raw_problem}" if procedure else raw_problem
@@ -238,12 +349,7 @@ class Adapter:
         turns = []
 
         for turn_idx in range(self.max_repair_turns):
-            prompt_str = _format_multiturn_prompt(messages, self.prompt_style)
-            inputs = tok(prompt_str, return_tensors="pt").to(model.device)
-            with torch.no_grad():
-                out = model.generate(**inputs, **gen_kwargs)
-            new_tokens = out[0][inputs["input_ids"].shape[-1]:]
-            completion = tok.decode(new_tokens, skip_special_tokens=True)
+            completion = self._generate_completion(model_id, messages, backend)
             code = extract_code(completion, task["entry_point"], task["prompt"])
             ok, error = run_humaneval_test(task, code)
 

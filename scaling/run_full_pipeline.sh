@@ -98,6 +98,17 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${GRPO_ALGO:=grpo}"       # grpo | dapo  (DAPO = dynamic-sampling + clip-higher + token-loss)
 : "${DAPO_CLIP_LOW:=0.2}"    # PPO ε lower bound (both algos)
 : "${DAPO_CLIP_HIGH:=0.5}"   # DAPO ε upper bound for positive-advantage tokens
+# HumanEval Phase-1 inference backend. HE_USE_VLLM=1 serves LOCAL models
+# (small student, large teacher if local) via the isolated .vllm_venv as
+# OpenAI-compatible servers → continuous batching + concurrency. API teacher
+# models (openai/*, deepseek/*) are called directly via CommonStack regardless.
+# Default 0 = in-process transformers generate (original behaviour).
+: "${HE_USE_VLLM:=0}"
+: "${HE_VLLM_SMALL_PORT:=8100}"
+: "${HE_VLLM_LARGE_PORT:=8101}"
+: "${HE_VLLM_SMALL_GPU:=${HE_VLLM_GPU:-0}}"
+: "${HE_VLLM_LARGE_GPU:=${HE_VLLM_GPU:-0}}"
+: "${HE_VLLM_WORKERS:=8}"    # parallel trace workers when serving via vLLM/API
 
 export TAU2_DOMAIN
 export TAU2_DOMAINS
@@ -286,6 +297,62 @@ stop_local_vllm() {
   rm -f "$pid_file"
 }
 
+# Mirror of adapter._is_api_model: is this a CommonStack hosted (API) model?
+_he_is_api_model() {
+  local m="$1"
+  case "$m" in
+    /*|./*|../*) return 1 ;;  # local path
+    openai/*|deepseek/*|anthropic/*|google/*|minimax/*|zai-org/*|qwen/*|moonshotai/*|x-ai/*|xiaomi/*)
+      return 0 ;;
+    *) return 1 ;;            # HF repo (Qwen/, deepseek-ai/, …) → local
+  esac
+}
+
+# Globals populated by start_he_vllm_servers / consumed by stop_he_vllm_servers.
+_HE_VLLM_PIDFILES=()
+_HE_VLLM_MAP_JSON="{}"
+
+# Start a vLLM server for each LOCAL model among the args; build HE_VLLM_MAP.
+# API models are skipped (adapter calls CommonStack directly). Echoes nothing;
+# sets _HE_VLLM_MAP_JSON and _HE_VLLM_PIDFILES.
+start_he_vllm_servers() {
+  local logdir="$1"; shift
+  local entries=()
+  _HE_VLLM_PIDFILES=()
+  # Args come as triples: model port gpu
+  while [[ $# -ge 3 ]]; do
+    local model="$1" port="$2" gpu="$3"; shift 3
+    if _he_is_api_model "$model"; then
+      echo "  [Phase 1/vLLM] $model is an API model → CommonStack (no local server)"
+      continue
+    fi
+    echo "  [Phase 1/vLLM] serving local model $model on port $port gpu $gpu"
+    HE_VLLM_LOG_DIR="$logdir" \
+      bash "$REPO_ROOT/scaling/vllm_serve_humaneval.sh" "$model" "$port" "$gpu" "$model"
+    local safe; safe="$(echo "$model" | tr '/' '_')"
+    _HE_VLLM_PIDFILES+=("$logdir/vllm_${safe}_${port}.pid")
+    entries+=("\"$model\": \"http://127.0.0.1:$port/v1\"")
+  done
+  # Join entries into a JSON object.
+  local IFS=,
+  _HE_VLLM_MAP_JSON="{${entries[*]}}"
+}
+
+stop_he_vllm_servers() {
+  local pf pid
+  for pf in "${_HE_VLLM_PIDFILES[@]:-}"; do
+    [[ -f "$pf" ]] || continue
+    pid=$(sed -n 's/.*PID=\([0-9][0-9]*\).*/\1/p' "$pf" | head -1)
+    if [[ -n "$pid" ]]; then
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+    rm -f "$pf"
+  done
+  _HE_VLLM_PIDFILES=()
+}
+
 phase1_collect_traces() {
   local cycle=$1
   local out="$RESULTS_DIR/cycle_$cycle"
@@ -408,6 +475,22 @@ PY
     kill "$vllm_start_pid" 2>/dev/null || true
     wait "$vllm_start_pid" 2>/dev/null || true
     return "$rc"
+  fi
+
+  # HumanEval + HE_USE_VLLM=1: serve local models via isolated .vllm_venv, route
+  # the adapter to them via HE_VLLM_MAP, and run trace collection concurrently.
+  if [[ "$BENCH" == "humaneval" && "$HE_USE_VLLM" == "1" && "$MOCK" != "true" ]]; then
+    echo "  [Phase 1] HumanEval vLLM mode (small/large local → server, API teacher → CommonStack)"
+    start_he_vllm_servers "$out/_vllm" \
+      "$small_arg"   "$HE_VLLM_SMALL_PORT" "$HE_VLLM_SMALL_GPU" \
+      "$LARGE_MODEL" "$HE_VLLM_LARGE_PORT" "$HE_VLLM_LARGE_GPU"
+    echo "  [Phase 1] HE_VLLM_MAP=$_HE_VLLM_MAP_JSON  workers=$HE_VLLM_WORKERS"
+    local he_rc=0
+    HE_VLLM_MAP="$_HE_VLLM_MAP_JSON" \
+    SCALING_TRACE_WORKERS="$HE_VLLM_WORKERS" \
+      "${cmd[@]}" --workers "$HE_VLLM_WORKERS" 2>&1 | tee "$out/phase1.log" || he_rc=${PIPESTATUS[0]}
+    stop_he_vllm_servers
+    return "$he_rc"
   fi
 
   "${cmd[@]}" 2>&1 | tee "$out/phase1.log"

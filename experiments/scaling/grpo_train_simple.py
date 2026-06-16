@@ -215,6 +215,145 @@ def _load_model_and_tok(model_path: str):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Multi-turn repair rollout (ReAct) GRPO/DAPO — aligned with the benchmark
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _repair_rollout(model, tok, task, procedure, *, style, max_turns,
+                    temperature, max_new_tokens):
+    """One multi-turn repair trajectory, on-policy with ``model``.
+
+    Mirrors the benchmark's HumanEval adapter ReAct repair: generate code, run
+    the tests, and on failure feed the error back as the next user turn. Returns
+    ``{"reward": 1.0/0.0, "turns": [{"prompt_ids", "completion_ids"}]}`` — the
+    captured token ids feed the GRPO token loss directly (no re-tokenisation).
+    """
+    import torch
+    from experiments.scaling.benches.humaneval.adapter import _format_multiturn_prompt
+    from src.models import extract_code, run_humaneval_test
+
+    gen_kwargs = {"max_new_tokens": max_new_tokens, "do_sample": temperature > 0,
+                  "pad_token_id": tok.pad_token_id, "eos_token_id": tok.eos_token_id}
+    if temperature > 0:
+        gen_kwargs["temperature"] = temperature
+    if style == "qwen-chat":
+        qend = tok.convert_tokens_to_ids("<|im_end|>")
+        if isinstance(qend, int) and qend >= 0:
+            gen_kwargs["eos_token_id"] = qend
+
+    raw_problem = task["prompt"]
+    first = f"{procedure}\n\n---\n\n{raw_problem}" if procedure else raw_problem
+    messages = [{"role": "user", "content": first}]
+    turns, ok = [], False
+    for turn_idx in range(max_turns):
+        prompt_str = _format_multiturn_prompt(messages, style)
+        enc = tok(prompt_str, return_tensors="pt").to(model.device)
+        with torch.no_grad():
+            out = model.generate(**enc, **gen_kwargs)
+        new_ids = out[0][enc["input_ids"].shape[-1]:]
+        completion = tok.decode(new_ids, skip_special_tokens=True)
+        turns.append({"prompt_ids": enc["input_ids"][0].tolist(),
+                      "completion_ids": new_ids.tolist()})
+        code = extract_code(completion, task["entry_point"], task["prompt"])
+        ok, error = run_humaneval_test(task, code)
+        if ok:
+            break
+        if turn_idx < max_turns - 1:
+            messages.append({"role": "assistant", "content": code})
+            messages.append({"role": "user", "content": (
+                f"Your code failed with the following error:\n\n{error}\n\n"
+                "Analyze the error and return a corrected version of the complete function.")})
+    return {"reward": 1.0 if ok else 0.0, "turns": turns}
+
+
+def _run_repair_grpo(args, tasks, get_procedure) -> int:
+    from experiments.scaling.grpo_core import compute_advantages, grpo_update
+
+    is_dapo = args.algo == "dapo"
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    max_new_tokens = int(os.environ.get("HE_MAX_NEW_TOKENS", "768"))
+    print(f"[grpo] repair rollout: algo={args.algo} K={args.n_generations} "
+          f"max_turns={args.max_repair_turns} temp={args.temperature} "
+          f"dynamic_sampling={is_dapo}", flush=True)
+
+    if args.dry_run:
+        # Repair rollouts need the policy (GPU); preview config + a sample prompt.
+        from experiments.scaling.benches.humaneval.adapter import _format_multiturn_prompt
+        proc = get_procedure(tasks[0]["prompt"]) if tasks else ""
+        first = f"{proc}\n\n---\n\n{tasks[0]['prompt']}" if proc and tasks else (
+            tasks[0]["prompt"] if tasks else "")
+        sample = _format_multiturn_prompt([{"role": "user", "content": first}], args.prompt_style)
+        print(f"[grpo] dry-run ({args.algo}, repair): {len(tasks)} tasks × K={args.n_generations} "
+              f"× ≤{args.max_repair_turns} turns. Sample turn-1 prompt[:300]:\n{sample[:300]}",
+              flush=True)
+        json.dump({"algo": args.algo, "rollout": "repair", "dry_run": True,
+                   "n_tasks": len(tasks), "k": args.n_generations,
+                   "max_turns": args.max_repair_turns},
+                  open(out_dir / "grpo_info.json", "w"), indent=2)
+        return 0
+
+    from peft import LoraConfig, TaskType, get_peft_model
+    model, tok = _load_model_and_tok(args.model)
+    model = get_peft_model(model, LoraConfig(
+        task_type=TaskType.CAUSAL_LM, r=args.lora_r, lora_alpha=args.lora_alpha,
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        lora_dropout=0.05, bias="none"))
+    model.eval()
+
+    # ── ROLLOUT: K on-policy repair trajectories per task ────────────────────
+    groups = []
+    for i, task in enumerate(tasks, 1):
+        proc = get_procedure(task["prompt"]) or ""
+        rollouts = [
+            _repair_rollout(model, tok, task, proc, style=args.prompt_style,
+                            max_turns=args.max_repair_turns, temperature=args.temperature,
+                            max_new_tokens=max_new_tokens)
+            for _ in range(args.n_generations)
+        ]
+        n_pass = sum(1 for r in rollouts if r["reward"] > 0)
+        print(f"[grpo] task {i}/{len(tasks)} {task['task_id']}  "
+              f"pass={n_pass}/{len(rollouts)}  "
+              f"avg_turns={sum(len(r['turns']) for r in rollouts)/len(rollouts):.1f}", flush=True)
+        groups.append({"task_id": task["task_id"], "rollouts": rollouts})
+
+    kept, adv_stats = compute_advantages(groups, dynamic_sampling=is_dapo)
+    print(f"[grpo] advantage: {adv_stats}", flush=True)
+    if not kept:
+        print("[grpo] no informative groups; nothing to train.", flush=True)
+        (out_dir / "STATUS").write_text("no_informative_rollouts\n")
+        json.dump({"algo": args.algo, "rollout": "repair", **adv_stats},
+                  open(out_dir / "grpo_info.json", "w"), indent=2)
+        return 0
+
+    # ── EXAMPLES: each repair turn → advantage-weighted token-loss example ───
+    examples = []
+    for r in kept:
+        adv = float(r["advantage"])
+        for turn in r["turns"]:
+            ids = turn["prompt_ids"] + turn["completion_ids"]
+            mask = [0] * len(turn["prompt_ids"]) + [1] * len(turn["completion_ids"])
+            if sum(mask) == 0:
+                continue
+            if len(ids) > args.max_len:          # keep the completion, drop prompt head
+                ids, mask = ids[-args.max_len:], mask[-args.max_len:]
+            examples.append({"input_ids": ids, "completion_mask": mask, "advantage": adv})
+    print(f"[grpo] {len(examples)} repair-turn examples", flush=True)
+
+    n_steps = grpo_update(model, tok, examples, args)
+    model.save_pretrained(str(out_dir))
+    tok.save_pretrained(str(out_dir))
+    print(f"[grpo] saved LoRA to {out_dir} (update steps={n_steps})", flush=True)
+    json.dump({"algo": args.algo, "rollout": "repair", "model": args.model,
+               "n_generations": args.n_generations, "max_turns": args.max_repair_turns,
+               "epochs": args.epochs, "lr": args.lr, "beta": args.beta,
+               "clip_low": args.clip_low, "clip_high": args.clip_high if is_dapo else args.clip_low,
+               "dapo_dynamic_sampling": is_dapo, "update_steps": n_steps,
+               "n_examples": len(examples), **adv_stats},
+              open(out_dir / "grpo_info.json", "w"), indent=2)
+    return 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -262,11 +401,36 @@ def main() -> int:
     ap.add_argument("--clip-high", type=float,
                     default=float(os.environ.get("DAPO_CLIP_HIGH", "0.5")),
                     help="DAPO upper clip bound for positive-advantage tokens")
+    ap.add_argument(
+        "--rollout", default=os.environ.get("HE_GRPO_ROLLOUT", "repair"),
+        choices=["repair", "single"],
+        help=(
+            "Rollout style. 'repair' (default) matches the benchmark: multi-turn "
+            "ReAct repair — generate code, run tests, feed the error back, retry "
+            "(K trajectories/task, reward = final pass); trajectory advantage is "
+            "shared across the turn's tokens (uses grpo_core). 'single' is the "
+            "legacy one-shot TRL path (one completion/sample, no repair loop)."
+        ),
+    )
+    ap.add_argument("--max-repair-turns", type=int,
+                    default=int(os.environ.get("HE_MAX_REPAIR_TURNS", "3")),
+                    help="repair rollout: max attempts before giving up (turn 1 = first try)")
+    ap.add_argument("--temperature", type=float,
+                    default=float(os.environ.get("GRPO_TEMPERATURE", "0.8")),
+                    help="repair rollout sampling temperature (needs >0 for intra-group variance)")
+    ap.add_argument("--max-len", type=int, default=int(os.environ.get("GRPO_MAX_LEN", "4096")),
+                    help="repair rollout: per-example token cap")
+    ap.add_argument("--logging-steps", type=int, default=5,
+                    help="repair rollout: GRPO update log interval")
     args = ap.parse_args()
 
     get_procedure = _load_procedures(args.skillbook)
     tasks = _load_humaneval_tasks(args.bench_data, split=args.split)
-    print(f"[grpo] {len(tasks)} tasks (split={args.split})", flush=True)
+    print(f"[grpo] {len(tasks)} tasks (split={args.split})  rollout={args.rollout}", flush=True)
+
+    if args.rollout == "repair":
+        # Multi-turn repair GRPO/DAPO — aligned with the benchmark's ReAct repair.
+        return _run_repair_grpo(args, tasks, get_procedure)
 
     dataset = _build_dataset(tasks, get_procedure, args.prompt_style)
     print(f"[grpo] dataset built: {len(dataset)} prompts", flush=True)
