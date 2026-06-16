@@ -159,8 +159,17 @@ class Adapter:
         large_model: str,
         cycle: int,
         force_both: bool = False,
+        skillbook=None,
     ) -> dict:
         """Run small (and large) on a task.
+
+        ``skillbook`` is accepted for parity with the HumanEval adapter (and
+        because collect_traces always forwards it). For tau-2 the agent's system
+        prompt + tools are owned by the env (built inside tau2's orchestrator),
+        so there is no clean hook to prepend a distilled procedure to the live
+        agent context here — the SkillBook still drives routing (collect_traces
+        `_policy_decision`) and SFT (traces_to_sft). We surface the looked-up
+        procedure in the trace row for downstream use rather than dropping it.
 
         force_both=False (deployment / cost-control default): run small, and
         only run large if small fails. `large_*` is then a SKIP placeholder
@@ -174,6 +183,12 @@ class Adapter:
         policy outcome would be billed against a fake skip placeholder.
         """
         sig = _extract_signature(task.get("prompt", ""))
+        procedure = ""
+        if skillbook is not None:
+            try:
+                procedure = skillbook.get_procedure(task.get("prompt", "")) or ""
+            except Exception:  # noqa: BLE001
+                pass
         if self.mock:
             return self._mock_run(task, small_model, large_model, sig, cycle,
                                   force_both=force_both)
@@ -222,7 +237,113 @@ class Adapter:
             # (review 2026-05-21: per-cycle traces must feed LLM training).
             "small_completion": small_res.get("completion", ""),
             "large_completion": large_res.get("completion", ""),
+            "skill_procedure": procedure,
         }
+
+    # ----------------------------------------------------------- GRPO rollout
+    def rollout(
+        self,
+        task: dict,
+        model: str,
+        *,
+        n: int = 1,
+        temperature: float = 1.0,
+    ) -> list[dict]:
+        """Return ``n`` full tau-2 rollouts for trajectory-level GRPO/DAPO.
+
+        Each rollout is ``{"passed": bool, "reward": float, "steps": [...]}``
+        where every step is ``{"input_messages": [...], "functions": [...],
+        "response": {...}}`` — exactly the per-agent-turn (context → response)
+        pairs the GRPO trainer tokenises into advantage-weighted examples.
+
+        The agent model is whatever ``model`` resolves to; for on-policy GRPO
+        that is the policy under training, served via vLLM and addressed through
+        ``TAU2_LOCAL_*`` (see ``_llm_args``). The user simulator + NL judge stay
+        on ``self.user_model`` (gpt-5.2 by default). ``temperature`` is forwarded
+        to the agent so the K samples in a group actually differ.
+        """
+        if self.mock:
+            return [self._mock_rollout(task, model, i, temperature) for i in range(n)]
+        return [self._rollout_one(task, model, temperature) for _ in range(n)]
+
+    def _rollout_one(self, task: dict, model: str, temperature: float) -> dict:
+        """Single tau-2 rollout that preserves the structured per-step trajectory.
+
+        Mirrors ``_run_one`` but keeps ``steps`` (StepData) instead of collapsing
+        them to a completion string, and surfaces the continuous ``reward``.
+        """
+        try:
+            from core.schemas.artifacts import LLMSpec, RunTaskConfig  # type: ignore
+        except ImportError as e:  # pragma: no cover - live-only path
+            return {"passed": False, "reward": 0.0, "steps": [], "error": str(e)}
+
+        if self._tau2_adapter is None:
+            self._lazy_import_tau2()
+
+        agent_args = dict(self._llm_args("agent", model=model))
+        # Sampling temperature is forwarded verbatim to litellm so the K group
+        # samples diverge (GRPO needs intra-group reward variance).
+        agent_args["temperature"] = float(temperature)
+        config = RunTaskConfig(
+            agent=LLMSpec(model=model, args=agent_args),
+            user=LLMSpec(model=self.user_model, args=self._llm_args("user")),
+            seed=self.seed,
+            max_steps=self.max_steps,
+            max_errors=self.max_errors,
+        )
+        try:
+            res = self._tau2_adapter.run_task(
+                task["_raw"], config, domain=task.get("domain", self.domain)
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"[tau2_adapter] rollout model={model} task_id={task.get('task_id')} "
+                  f"failed: {e}", file=sys.stderr)
+            return {"passed": False, "reward": 0.0, "steps": [], "error": str(e)}
+
+        steps = []
+        for s in getattr(res, "steps", None) or []:
+            resp = getattr(s, "response", None)
+            if resp is None and isinstance(s, dict):
+                resp = s.get("response")
+            in_msgs = getattr(s, "input_messages", None)
+            if in_msgs is None and isinstance(s, dict):
+                in_msgs = s.get("input_messages")
+            fns = getattr(s, "functions", None)
+            if fns is None and isinstance(s, dict):
+                fns = s.get("functions")
+            if not isinstance(resp, dict) or not isinstance(in_msgs, list):
+                continue
+            steps.append({
+                "input_messages": in_msgs,
+                "functions": fns or [],
+                "response": resp,
+            })
+        return {
+            "passed": bool(getattr(res, "passed", False)),
+            "reward": float(getattr(res, "reward", 0.0) or 0.0),
+            "steps": steps,
+        }
+
+    def _mock_rollout(self, task: dict, model: str, idx: int, temperature: float) -> dict:
+        """Deterministic synthetic rollout for wiring smoke tests (no API/GPU)."""
+        h = int(hashlib.md5(f"{task['task_id']}|{model}|{idx}".encode()).hexdigest(), 16)
+        passed = (h % 10) < 5  # ~50% pass so groups have reward variance
+        prompt = task.get("prompt", "")
+        n_steps = 1 + (h % 3)
+        steps = []
+        for k in range(n_steps):
+            steps.append({
+                "input_messages": [
+                    {"role": "system", "content": f"[{task.get('domain')}] policy"},
+                    {"role": "user", "content": prompt or f"mock task {task['task_id']}"},
+                ],
+                "functions": [],
+                "response": {
+                    "content": f"[mock agent turn {k} for {task['task_id']} sample {idx}]",
+                    "tool_calls": [],
+                },
+            })
+        return {"passed": passed, "reward": 1.0 if passed else 0.0, "steps": steps}
 
     # ----------------------------------------------------------- internals
     def _run_one_with_retries(self, task: dict, model: str) -> dict:

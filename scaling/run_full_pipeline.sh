@@ -37,6 +37,18 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 0a. Load .env (COMMONSTACK_API_KEY etc.) if present — does not override vars
+#     already exported in the environment.
+# ─────────────────────────────────────────────────────────────────────────────
+_ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
+if [[ -f "$_ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$_ENV_FILE"
+  set +a
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 0. Argument parsing
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -98,9 +110,13 @@ if [[ "$BENCH" == "humaneval" ]]; then
   SMALL_MODEL="${HE_SMALL_MODEL:-Qwen/Qwen2.5-Coder-1.5B-Instruct}"
   LARGE_MODEL="${HE_LARGE_MODEL:-Qwen/Qwen2.5-Coder-3B-Instruct}"
   SKIP_LLM=0     # use bench-agnostic SFT path inside phase3_llm_train
-  : "${SKIP_GRPO:=0}"   # GRPO enabled for HumanEval (has test executor)
+  : "${SKIP_GRPO:=0}"   # GRPO enabled for HumanEval (single-turn test-exec reward)
 else
-  : "${SKIP_GRPO:=1}"   # GRPO disabled for tau2/SWE (no test executor yet)
+  # tau2: trajectory-level GRPO/DAPO via grpo_tau2_train.py (reward = env passed)
+  # is now implemented, but stays OPT-IN — default skip so a plain benchmark /
+  # SFT run does not trigger expensive on-policy rollouts. Set SKIP_GRPO=0 to
+  # enable. (SWE-Bench has no rollout reward yet → phase3b no-ops for it.)
+  : "${SKIP_GRPO:=1}"
 fi
 
 if $SMOKE; then
@@ -522,11 +538,11 @@ phase3b_grpo_train() {
   local out="$RESULTS_DIR/cycle_$cycle"
 
   if [[ "$SKIP_GRPO" -eq 1 ]]; then
-    echo "  [Phase 3b] GRPO — SKIPPED (SKIP_GRPO=1 or non-HumanEval bench)"
+    echo "  [Phase 3b] GRPO — SKIPPED (SKIP_GRPO=1)"
     return
   fi
 
-  echo "  [Phase 3b] GRPO — cycle=$cycle algo=$GRPO_ALGO K=$GRPO_N_GENERATIONS epochs=$GRPO_EPOCHS lr=$GRPO_LR"
+  echo "  [Phase 3b] GRPO — bench=$BENCH cycle=$cycle algo=$GRPO_ALGO K=$GRPO_N_GENERATIONS epochs=$GRPO_EPOCHS lr=$GRPO_LR"
 
   # Warm-start from Phase 3a SFT checkpoint if available.
   local grpo_base="$SMALL_MODEL"
@@ -536,28 +552,102 @@ phase3b_grpo_train() {
   SKILLBOOK_ARG=""
   [[ -f "$out/skillbook.json" ]] && SKILLBOOK_ARG="--skillbook $out/skillbook.json"
 
-  $DRY_RUN && { echo "  DRY: grpo_train --algo $GRPO_ALGO --model $grpo_base --output-dir $out/grpo_adapter K=$GRPO_N_GENERATIONS"; return; }
-  GRPO_N_GENERATIONS="$GRPO_N_GENERATIONS" \
-  GRPO_EPOCHS="$GRPO_EPOCHS" \
-  GRPO_LR="$GRPO_LR" \
-  GRPO_BETA="$GRPO_BETA" \
-  GRPO_ALGO="$GRPO_ALGO" \
-  DAPO_CLIP_LOW="$DAPO_CLIP_LOW" \
-  DAPO_CLIP_HIGH="$DAPO_CLIP_HIGH" \
-    "$PYTHON" "$REPO_ROOT/experiments/scaling/grpo_train_simple.py" \
-    --model "$grpo_base" \
-    --bench-data "${HE_DATA:-$REPO_ROOT/data/HumanEval.jsonl}" \
-    --output-dir "$out/grpo_adapter" \
-    --algo "$GRPO_ALGO" \
-    --n-generations "$GRPO_N_GENERATIONS" \
-    --epochs "$GRPO_EPOCHS" \
-    --lr "$GRPO_LR" \
-    --beta "$GRPO_BETA" \
-    --clip-low "$DAPO_CLIP_LOW" \
-    --clip-high "$DAPO_CLIP_HIGH" \
-    --prompt-style "${HE_PROMPT_STYLE:-qwen-chat}" \
-    $SKILLBOOK_ARG \
-    2>&1 | tee "$out/phase3b_grpo.log"
+  if [[ "$BENCH" == "humaneval" ]]; then
+    # ── HumanEval: single-turn GRPO/DAPO, reward = test execution ───────────
+    $DRY_RUN && { echo "  DRY: grpo_train_simple --algo $GRPO_ALGO --model $grpo_base --output-dir $out/grpo_adapter K=$GRPO_N_GENERATIONS"; return; }
+    GRPO_N_GENERATIONS="$GRPO_N_GENERATIONS" \
+    GRPO_EPOCHS="$GRPO_EPOCHS" \
+    GRPO_LR="$GRPO_LR" \
+    GRPO_BETA="$GRPO_BETA" \
+    GRPO_ALGO="$GRPO_ALGO" \
+    DAPO_CLIP_LOW="$DAPO_CLIP_LOW" \
+    DAPO_CLIP_HIGH="$DAPO_CLIP_HIGH" \
+      "$PYTHON" "$REPO_ROOT/experiments/scaling/grpo_train_simple.py" \
+      --model "$grpo_base" \
+      --bench-data "${HE_DATA:-$REPO_ROOT/data/HumanEval.jsonl}" \
+      --output-dir "$out/grpo_adapter" \
+      --algo "$GRPO_ALGO" \
+      --n-generations "$GRPO_N_GENERATIONS" \
+      --epochs "$GRPO_EPOCHS" \
+      --lr "$GRPO_LR" \
+      --beta "$GRPO_BETA" \
+      --clip-low "$DAPO_CLIP_LOW" \
+      --clip-high "$DAPO_CLIP_HIGH" \
+      --prompt-style "${HE_PROMPT_STYLE:-qwen-chat}" \
+      $SKILLBOOK_ARG \
+      2>&1 | tee "$out/phase3b_grpo.log"
+    return
+  fi
+
+  if [[ "$BENCH" != "tau2_bench" ]]; then
+    echo "  [Phase 3b] GRPO not implemented for bench=$BENCH; skipping."
+    return
+  fi
+
+  # ── tau-2: trajectory-level GRPO/DAPO, reward = env `passed` ──────────────
+  # The agent under training must be served so the adapter can roll it out
+  # (agent=policy via vLLM; user-sim + NL judge = $TAU2_USER_MODEL / gpt-5.2).
+  local served="${TAU2_LOCAL_SERVED_MODEL:-evol-llm-student}"
+  local port="${TAU2_LOCAL_PORT:-8050}"
+  local rollout_model="openai/$served"
+  local grpo_args=(
+    "$PYTHON" "$REPO_ROOT/experiments/scaling/grpo_tau2_train.py"
+    --model "$grpo_base"
+    --output-dir "$out/grpo_adapter"
+    --rollout-model "$rollout_model"
+    --n-tasks "$N_TASKS"
+    --split train
+    --algo "$GRPO_ALGO"
+    --n-generations "$GRPO_N_GENERATIONS"
+    --epochs "$GRPO_EPOCHS"
+    --lr "$GRPO_LR"
+    --beta "$GRPO_BETA"
+    --clip-low "$DAPO_CLIP_LOW"
+    --clip-high "$DAPO_CLIP_HIGH"
+  )
+  [[ -n "$SKILLBOOK_ARG" ]] && grpo_args+=($SKILLBOOK_ARG)
+  $DRY_RUN && { echo "  DRY: ${grpo_args[*]}"; return; }
+
+  if $MOCK; then
+    # Mock rollouts need no served policy and no GPU; --dry-run stops after the
+    # rollout -> advantage -> example pipeline (before any model load).
+    GRPO_ALGO="$GRPO_ALGO" "${grpo_args[@]}" --dry-run 2>&1 | tee "$out/phase3b_grpo.log"
+    return
+  fi
+
+  echo "  [Phase 3b] Serving GRPO policy ($grpo_base) on port $port for rollouts"
+  stop_local_vllm "$grpo_base"
+  rm -f "$out/phase3b_vllm_start.log"
+  TP_SIZE="${TAU2_LOCAL_TP_SIZE:-8}" \
+    NUM_GPUS="${NUM_GPUS:-8}" \
+    bash "$BUNDLE_ROOT/code/training/eval/vllm_serve.sh" "$grpo_base" "$port" "${TAU2_LOCAL_GPU:-0}" \
+    2>&1 | tee "$out/phase3b_vllm_start.log" &
+  local vllm_start_pid=$!
+  for _ in $(seq 1 120); do
+    curl -sf "http://127.0.0.1:$port/v1/models" >/dev/null 2>&1 && break
+    if ! kill -0 "$vllm_start_pid" 2>/dev/null; then
+      wait "$vllm_start_pid" || true
+      echo "[FATAL] GRPO policy vLLM exited before ready; see $out/phase3b_vllm_start.log" >&2
+      return 1
+    fi
+    sleep 5
+  done
+  if ! curl -sf "http://127.0.0.1:$port/v1/models" >/dev/null 2>&1; then
+    echo "[FATAL] GRPO policy vLLM failed to become ready on port $port" >&2
+    kill "$vllm_start_pid" 2>/dev/null || true
+    stop_local_vllm "$grpo_base"
+    return 1
+  fi
+  local rc=0
+  TAU2_LOCAL_API_BASE="http://127.0.0.1:$port/v1" \
+    TAU2_LOCAL_API_KEY="${TAU2_LOCAL_API_KEY:-EMPTY}" \
+    TAU2_LOCAL_SERVED_MODEL="$served" \
+    GRPO_ALGO="$GRPO_ALGO" \
+    "${grpo_args[@]}" 2>&1 | tee "$out/phase3b_grpo.log" || rc=${PIPESTATUS[0]}
+  stop_local_vllm "$grpo_base"
+  kill "$vllm_start_pid" 2>/dev/null || true
+  wait "$vllm_start_pid" 2>/dev/null || true
+  return "$rc"
 }
 
 phase4_router_train() {

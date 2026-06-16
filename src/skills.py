@@ -130,13 +130,18 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
             + "\n\n---\nNow write the Procedure for this cluster."
         )
 
-        result = call_llm(
-            model_id=model_id,
-            prompt=f"{system_prompt}\n\n{user_prompt}",
-            use_proxy=use_proxy,
-            temperature=0.3,
-            max_tokens=600,
-        )
+        try:
+            result = call_llm(
+                model_id=model_id,
+                prompt=f"{system_prompt}\n\n{user_prompt}",
+                use_proxy=use_proxy,
+                temperature=0.3,
+                max_tokens=600,
+            )
+        except Exception:  # noqa: BLE001
+            # API key missing / network / provider error → heuristic fallback.
+            # (call_llm raises before returning when COMMONSTACK_API_KEY unset.)
+            return _heuristic_procedure(signature, exemplars)
 
         if result.get("error") or not result.get("response"):
             # graceful fallback

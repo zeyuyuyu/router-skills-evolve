@@ -1,6 +1,8 @@
 # Router + Skills Evolve
 
-> **一句话**: Router 把请求路由到合适的 LLM，Skills 通过历史 traces 学习"哪类题该用哪个模型"，三件套（Skills + LLM + Router）联合迭代自主进化，越用越省钱。
+> **一句话**: Router 决定每道题用大模型还是小模型，Skills 从历史 traces 提炼可复用解题 procedure（喂给小模型），LLM 用这些数据持续微调；三件套（Skills + LLM + Router）联合迭代自主进化，越用越省钱。
+
+> **职责划分（重要）**: **Router 独占路由**（per-prompt 决定 small/large）；**Skills 只负责提炼 procedure**（拼进小模型 prompt，不参与路由）。SkillBook 用单一全局 skill（`extract_signature` 恒返回 `"coding"`），不再按 cluster 细分。
 
 已验证：**99% 准确率 + 省 83% 成本**（HumanEval 164 题真实实验）
 
@@ -26,9 +28,10 @@ Cycle N:
 
   Phase 2: Skills Evolve
     → carry over 上一轮 SkillBook，从当前 traces 增量更新
-    → 统计 key 用规范化角色名 "small"/"large"
-    → LLM distiller（DISTILLER_MODEL）对每个 cluster 提炼真正的解题 procedure：
+    → 单一全局 skill "coding"（统计 key 用规范化角色名 "small"/"large"）
+    → LLM distiller（DISTILLER_MODEL）从所有成功轨迹提炼一份解题 procedure：
         problem type / key algorithm / step-by-step template / reusable snippet / pitfalls
+    → procedure 是 Skills 的唯一产物，路由完全交给 Phase 4 的 router
 
   Phase 3a: LLM SFT
     → traces_to_sft.py 提取两类训练数据：
@@ -46,12 +49,16 @@ Cycle N:
     → 算法 GRPO_ALGO 可切：grpo（对称 clip）| dapo（非对称 clip + 动态采样）
     → cycle_N/grpo_adapter/（Phase 1 下一 cycle 优先读这个）
 
-  Phase 4: Router 训练
-    → train_router_simple.py：当前 traces → TF-IDF + LogReg 二分类器
+  Phase 4: Router 训练（独占路由）
+    → train_router_simple.py：当前 traces 的【原始 prompt】→ TF-IDF + LogReg 二分类器
+    → 特征用原始 prompt 不拼 procedure（单 skill 下 procedure 是常数前缀，零区分力；
+      且 label small_success 已是带 procedure 跑出的结果，增益已隐式烘进 label）
     → cycle_N/router/router.joblib
 
-  Phase 5: E2E Ablation
-    → 4 路对比：Base / +Skills / +Router / Full（+LLM）
+  Phase 5: E2E Ablation（四臂）
+    → large（always-large）/ skills（always-small + procedure）/ router / full（+LLM）
+    → skills 臂不路由（单 skill），等价 always-small + procedure，是小模型基线；
+      路由对比看 router / full 臂
 
   → 下一轮 Phase 1 读 grpo_adapter + router + skillbook（真闭环）
 ```
@@ -68,8 +75,10 @@ Cycle N:
 
 ### 关键设计决策
 
+- **单一全局 skill**：`extract_signature` 恒返回 `"coding"`。早期按"长度桶+关键词"分 20-30 cluster，但每簇样本太少、统计不可靠；合成一个 bucket 后样本量最大，procedure 从全部成功轨迹提炼，覆盖最广。
+- **Router 独占路由，Skills 只管 procedure**：单 skill 下 `can_downgrade_to_small` 对所有题返回同一 verdict，会碾压 router 的 per-prompt 信号，故 `collect_traces._policy_decision` 不再用 skill verdict 覆盖路由（verdict 仅留作诊断字段 `policy_skill_verdict`）。路由全权交给学到的 router。
 - **大小模型都走多轮修复**：减少不必要的大模型调用；大模型多轮也提升 oracle 数据质量
-- **procedure 推理/训练格式对齐**：SFT 和推理都前置 procedure，消除 train/inference mismatch
+- **procedure 推理/训练格式对齐**：SFT、GRPO 和推理都前置 procedure（`procedure\n\n---\n\n{problem}`），消除 train/inference mismatch
 - **RL 在 SFT 之后**：SFT warm-start 避免 RL 从随机策略开始的不稳定性
 - **checkpoint 优先级**：grpo_adapter > llm_adapter/checkpoint-best > base model
 
@@ -377,7 +386,11 @@ GRPO_ALGO=dapo DAPO_CLIP_HIGH=0.5 bash scaling/run_full_pipeline.sh --bench huma
 
 ### E2E Ablation（HumanEval，4 路对比）
 
-| 系统 | Routing Acc | Large F1 | Fallback | Cost vs always-large | Code pass |
+> ⚠️ 下表是**旧设计**（多 cluster signature + Skills 参与路由 + 独立 Base 臂）的历史数字。
+> 当前代码已改为**单 skill + Router 独占路由**，四臂变为 `large / skills / router / full`，
+> 其中 `skills`（always-small + procedure）取代了原来的独立 `Base` 臂。新设计的数字需重跑实验后更新。
+
+| 系统（旧设计） | Routing Acc | Large F1 | Fallback | Cost vs always-large | Code pass |
 |------|---:|---:|---:|---:|---:|
 | Base (always-small + fallback) | 68.28% | 0% | 31.72% | 33.54% | 47/100 |
 | + Skills evolve | 69.46% | 24.93% | 26.65% | 37.27% | 47/100 |
@@ -474,6 +487,7 @@ router-skills-evolve/
 
 ## 进一步阅读
 
+- [notebooks/router_skills_walkthrough.ipynb](notebooks/router_skills_walkthrough.ipynb) - **动手拆解**：signature/skills/SFT/GRPO/router 逐步跑通（无需 GPU，模拟 trace）
 - [scaling/README.md](scaling/README.md) - Tau-2 / SWE-Bench scaling 完整文档
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - 架构详解
 - [docs/TRAINING.md](docs/TRAINING.md) - LLM 训练指南（白看这个）
