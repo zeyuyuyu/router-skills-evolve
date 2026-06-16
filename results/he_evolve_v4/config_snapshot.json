@@ -1,0 +1,19 @@
+{
+  "experiment_name": "he_evolve_v4",
+  "bench": "humaneval",
+  "model_sweep": "05_qwen3_5_4b_273",
+  "n_cycles": 2,
+  "schedule": "SLR",
+  "tau2_domain": "retail",
+  "tau2_domains": "retail",
+  "small_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+  "large_model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+  "smoke": false,
+  "mock": false,
+  "skip_llm": true,
+  "run_heldout_eval": false,
+  "scaling_num_train_epochs": "2",
+  "resume_from": 0,
+  "git_sha": "fe594b0",
+  "started_at": "2026-06-16T05:14:59Z"
+}

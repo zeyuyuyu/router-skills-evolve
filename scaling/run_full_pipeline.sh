@@ -80,11 +80,25 @@ export TAU2_DOMAIN
 export TAU2_DOMAINS
 export SCALING_NUM_TRAIN_EPOCHS
 
+# HumanEval bench: local code models + pytest, no remote agent API. The tau2
+# LLM-training wrapper (Phase 3) is tau2-specific, so for HumanEval the loop
+# evolves Skills (procedural) + Router + ablation; LLM training stays off
+# unless explicitly wired. small=1.5B, large=3B by default (real capability gap).
+if [[ "$BENCH" == "humaneval" ]]; then
+  # Force local code models (the deepseek/gpt defaults above are remote-API ids
+  # and would be wrong as HF model ids). Override via HE_SMALL_MODEL/HE_LARGE_MODEL.
+  SMALL_MODEL="${HE_SMALL_MODEL:-Qwen/Qwen2.5-Coder-1.5B-Instruct}"
+  LARGE_MODEL="${HE_LARGE_MODEL:-Qwen/Qwen2.5-Coder-3B-Instruct}"
+  SKIP_LLM=1   # tau2 train wrapper is tau2-only; HumanEval loop = Skills+Router
+fi
+
 if $SMOKE; then
   MODEL_SWEEP="smoke_2b"
   N_CYCLES=1
   N_TASKS=30
   SKIP_LLM=1   # smoke skips LLM training by default
+elif [[ "$BENCH" == "humaneval" ]]; then
+  N_TASKS=82   # HumanEval train split (even indices of the 164 tasks)
 else
   N_TASKS=848   # tau2-bench eval split size; SWE-Bench Lite ≈ 300
 fi
@@ -130,8 +144,9 @@ preflight() {
 
 
 
-  # Secret checks (skipped in mock mode)
-  if ! $MOCK && ! $DRY_RUN; then
+  # Secret checks (skipped in mock mode). HumanEval uses LOCAL models + pytest,
+  # so it needs no OPENAI_API_KEY (only HF for model download).
+  if ! $MOCK && ! $DRY_RUN && [[ "$BENCH" != "humaneval" ]]; then
     [[ -z "${OPENAI_API_KEY:-}" ]] && { echo "[FATAL] OPENAI_API_KEY not set (or run with --mock)"; exit 3; }
     [[ -z "${HF_TOKEN:-}" ]] && echo "[WARN] HF_TOKEN not set — large model download will be slow"
   fi

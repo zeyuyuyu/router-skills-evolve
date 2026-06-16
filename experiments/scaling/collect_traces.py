@@ -240,7 +240,7 @@ def _apply_policy(trace, route, router_prob, skill_verdict, small_model, large_m
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--bench", required=True, choices=["tau2_bench", "swe_bench"])
+    ap.add_argument("--bench", required=True, choices=["tau2_bench", "swe_bench", "humaneval"])
     ap.add_argument("--n-tasks", type=int, required=True)
     ap.add_argument("--small-model", required=True)
     ap.add_argument("--large-model", required=True)
