@@ -312,3 +312,9 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   Outage: ~33 days since 2026-05-14. All steps A-E skipped. EMNLP deadline 2026-06-19 in 3 days.
   Actions taken: none (conservative policy). DONE: FAILED: A800 unreachable (day ~33)
 [2026-06-16T12:05:25Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) is TCP-unreachable from this remote execution environment. TCP connect timed out (10s). SSH/sshpass not available in container; paramiko installed but connection timed out. No state read, no actions taken. Manual check required.
+
+[2026-06-16T14:04:30Z] SHEPHERD RUN - FAILED
+Action: A800 SSH connection failed (117.74.66.181:50507, timeout after 20s).
+sshpass installed successfully but TCP connection timed out — host unreachable from remote execution environment.
+No state read. No experiments checked. No actions taken.
+Next shepherd run will retry. If this persists, check A800 network/firewall or VPN requirements.
