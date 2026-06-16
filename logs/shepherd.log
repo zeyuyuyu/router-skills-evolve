@@ -307,3 +307,7 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after two attem
   DONE: FAILED: A800 unreachable (day ~32)
 [2026-06-16T02:04:36Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable. SSH connection timed out after 30s (port 50507 not responding). No state read, no actions taken. All steps skipped. Manual check required.
 [2026-06-16T04:05:33Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Manual investigation required.
+[2026-06-16T08:04:05Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP port 50507 not responding (nc -z -w 8 timed out). SSH not available in this cloud env.
+  Outage: ~33 days since 2026-05-14. All steps A-E skipped. EMNLP deadline 2026-06-19 in 3 days.
+  Actions taken: none (conservative policy). DONE: FAILED: A800 unreachable (day ~33)
