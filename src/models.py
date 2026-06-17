@@ -225,30 +225,33 @@ def run_humaneval_test(task: Dict, generated_code: str, timeout: int = 10) -> tu
 check({entry_point})
 """
 
-    # signal.alarm only works in the MAIN thread. When run from a worker thread
-    # (e.g. parallel eval via ThreadPoolExecutor against a vLLM server), guard it
-    # — otherwise signal.signal raises and every test spuriously "fails".
-    import threading
-    use_alarm = threading.current_thread() is threading.main_thread()
+    # Execute in a SUBPROCESS with a hard timeout. signal.alarm only fires on the
+    # main thread, so under parallel eval (ThreadPoolExecutor over a vLLM server)
+    # an infinite-loop solution would hang its worker thread forever. A subprocess
+    # can be killed on timeout regardless of which thread launched it, and isolates
+    # crashes (segfaults, sys.exit) from the eval process.
+    import subprocess as _sp
+    import sys as _sys
 
     try:
-        if use_alarm:
-            signal.signal(signal.SIGALRM, _timeout_handler)
-            signal.alarm(timeout)
-
-        namespace = {}
-        exec(full_code, namespace)
-
-        return True, ""
-    except AssertionError as e:
-        return False, f"AssertionError: {str(e)[:100]}"
-    except TimeoutError:
+        proc = _sp.run(
+            [_sys.executable, "-I", "-"],
+            input=full_code,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except _sp.TimeoutExpired:
         return False, "Timeout"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — launch failure
         return False, f"{type(e).__name__}: {str(e)[:100]}"
-    finally:
-        if use_alarm:
-            signal.alarm(0)
+
+    if proc.returncode == 0:
+        return True, ""
+    # Surface the last line of the traceback as the error message (used as repair
+    # feedback). stderr ends with e.g. "AssertionError: ..." / "NameError: ...".
+    err = (proc.stderr or "").strip().splitlines()
+    return False, (err[-1][:200] if err else f"exit {proc.returncode}")
 
 
 # ============================================================================
