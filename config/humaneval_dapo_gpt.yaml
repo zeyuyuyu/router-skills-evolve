@@ -27,7 +27,7 @@ GRPO_EPOCHS: 1
 GRPO_LR: 5e-6
 
 # 多轮 ReAct 修复轮数
-HE_MAX_REPAIR_TURNS: 2
+HE_MAX_REPAIR_TURNS: 3
 
 # 推理后端:默认 HF generate。
 # 注:本机驱动 575/CUDA 12.9 + vllm 0.22(cu13 构建)下,vLLM 需 workaround 才能起——
