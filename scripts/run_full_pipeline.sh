@@ -652,8 +652,11 @@ phase3_llm_train() {
     if   (( cycle > 0 )) && [[ -d "$prev_grpo" ]]; then warmstart_model="$prev_grpo"
     elif (( cycle > 0 )) && [[ -d "$prev_sft"  ]]; then warmstart_model="$prev_sft"
     fi
-    # SFT_LOGGING_STEPS=1 → capture per-step loss so training_curve.png is useful
-    # (HumanEval SFT sets are tiny; default logging_steps=10 would log nothing).
+    # SFT_LOGGING_STEPS=1 → capture per-step loss so training_curve.png is useful.
+    # batch-size 1 + grad-accum: TRL 1.6 + transformers 5.12 produce nan grads on
+    # PADDED multi-sequence batches in bf16 (verified: batch>1 → grad_norm=nan from
+    # step 1 → weights collapse; batch=1 → healthy loss 0.43→0.05). Single-sequence
+    # batches avoid the bad padding path; grad-accum keeps the effective batch.
     $DRY_RUN || SFT_LOGGING_STEPS="${SFT_LOGGING_STEPS:-1}" \
       "$PYTHON" "$REPO_ROOT/src/pipeline/train_small_model.py" \
       --data "$out/training_data.jsonl" \
@@ -661,6 +664,8 @@ phase3_llm_train() {
       --output "$out/llm_adapter" \
       --prompt-style "${HE_PROMPT_STYLE:-qwen-chat}" \
       --epochs "$SCALING_NUM_TRAIN_EPOCHS" \
+      --batch-size "${SFT_BATCH_SIZE:-1}" \
+      --grad-accum "${SFT_GRAD_ACCUM:-16}" \
       2>&1 | tee "$out/phase3_train.log"
   else
     # Tau2 / SWE: tau2-specific FSDP2 + FA2 training wrapper.
