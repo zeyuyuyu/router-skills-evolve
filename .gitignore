@@ -65,3 +65,6 @@ shepherd_local_fallback/
 # vLLM isolated venv (separate torch, avoids main-env conflict)
 .vllm_venv/
 .vllm_cu12_venv/
+
+# tau2-bench dedicated venv (sees main venv via --system-site-packages)
+.venv_tau2/

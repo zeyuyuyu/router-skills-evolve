@@ -57,6 +57,15 @@ echo "[vllm_serve] starting: model=$MODEL_TO_LOAD served=$SERVED port=$PORT gpu=
 # set HE_VLLM_ATTN_BACKEND=TRITON_ATTN and VLLM_USE_FLASHINFER_SAMPLER=0):
 EXTRA_ARGS=()
 [[ -n "${HE_VLLM_ATTN_BACKEND:-}" ]] && EXTRA_ARGS+=(--attention-backend "$HE_VLLM_ATTN_BACKEND")
+# vLLM 0.11 LoRA + CUDA-graph decode hits an illegal-memory-access crash under high
+# concurrency. --enforce-eager disables graph capture (continuous batching is kept,
+# so we keep the throughput) — auto-enable it whenever serving a LoRA adapter.
+# Override with HE_VLLM_ENFORCE_EAGER=0/1.
+if [[ "${HE_VLLM_ENFORCE_EAGER:-auto}" == "1" || \
+      ( "${HE_VLLM_ENFORCE_EAGER:-auto}" == "auto" && ${#LORA_ARGS[@]} -gt 0 ) ]]; then
+  EXTRA_ARGS+=(--enforce-eager)
+  echo "[vllm_serve] --enforce-eager ON (LoRA+cudagraph crash workaround)"
+fi
 # Put the venv's bin first on PATH so vLLM's runtime subprocesses resolve to it.
 CUDA_VISIBLE_DEVICES="$GPU" \
   PATH="$VLLM_VENV/bin:$PATH" \
