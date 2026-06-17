@@ -1,0 +1,35 @@
+{
+  "input": "/root/cwy/projects/evol/router-skills-evolve/results/ai4ai_4b_tau2/qwen3_4b_evolution_20260615/train_traces/qwen3_4b_gpt52_train100.raw.jsonl",
+  "output": "/root/cwy/projects/evol/router-skills-evolve/results/ai4ai_4b_tau2/qwen3_4b_evolution_20260615/train_traces/qwen3_4b_gpt52_train100.purified.jsonl",
+  "total": 100,
+  "kept": 72,
+  "dropped": {
+    "json_or_missing_task": 0,
+    "duplicate_task": 0,
+    "test_overlap": 0,
+    "teacher_failed_or_missing": 28,
+    "large_completion_empty": 0,
+    "small_completion_empty": 0,
+    "error_row": 0
+  },
+  "test_ids_loaded": 0,
+  "small_ok": 20,
+  "small_fail_teacher_ok": 52,
+  "by_domain": {
+    "airline": {
+      "n": 11,
+      "small_ok": 4,
+      "small_fail": 7
+    },
+    "retail": {
+      "n": 28,
+      "small_ok": 10,
+      "small_fail": 18
+    },
+    "telecom": {
+      "n": 33,
+      "small_ok": 6,
+      "small_fail": 27
+    }
+  }
+}
