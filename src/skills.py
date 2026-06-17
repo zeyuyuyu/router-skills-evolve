@@ -97,87 +97,131 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
         except ImportError:
             return _heuristic_procedure(signature, exemplars)
 
-        # Build a multi-example block. With one global "coding" skill ALL of the
-        # cycle's solved tasks accumulate here, so distill from as many as the cap
-        # allows (SKILL_DISTILL_N) — not just a handful. Each is truncated below
-        # to keep total tokens bounded.
-        n_distill = int(os.environ.get("SKILL_DISTILL_N", "50"))
-        examples_text = []
-        for i, ex in enumerate(exemplars[:n_distill], 1):
-            prompt_snip = (ex.get("prompt") or "").strip()[:400]
-            completion_snip = (ex.get("completion") or "").strip()[:500]
-            examples_text.append(
-                f"### Example {i}  (task_id={ex.get('task_id', '?')})\n"
-                f"**Problem**:\n```python\n{prompt_snip}\n```\n"
-                f"**Solution**:\n```python\n{completion_snip}\n```"
+        # ── Incremental / map-reduce distillation over ALL exemplars ──────────
+        # All solved tasks accumulate under the single global skill, so distil
+        # from EVERY one, in batches of ≤ SKILL_DISTILL_BATCH (default 100). The
+        # procedure is carried forward: batch 1 distils, batch 2..N refine the
+        # running procedure with their examples. If a batch overflows the model
+        # context, its size is halved and the chunk retried. Each example is
+        # truncated to bound tokens.
+        batch_size = max(1, int(os.environ.get("SKILL_DISTILL_BATCH", "100")))
+
+        def _fmt(batch: List[Dict], start: int) -> str:
+            blocks = []
+            for j, ex in enumerate(batch, start):
+                p = (ex.get("prompt") or "").strip()[:400]
+                c = (ex.get("completion") or "").strip()[:500]
+                blocks.append(
+                    f"### Example {j}  (task_id={ex.get('task_id', '?')})\n"
+                    f"**Problem**:\n```python\n{p}\n```\n"
+                    f"**Solution**:\n```python\n{c}\n```"
+                )
+            return "\n\n".join(blocks)
+
+        def _prompt(examples_text: str, prev: str) -> str:
+            refine = bool((prev or "").strip())
+            system = (
+                "You are an expert coding-skills curator. "
+                "Given a cluster of similar coding problems and their solutions"
+                + (", plus the CURRENT procedure so far, improve that procedure"
+                   if refine else ", write a concise, reusable **Procedure**")
+                + " that teaches a weaker model how to solve any problem in this cluster. "
+                + ("Keep the parts that already work, fix gaps the new examples reveal, "
+                   "and prune anything misleading. " if refine else "")
+                + "Format the output in plain Markdown (no preamble). Include:\n"
+                "1. **Problem type** (1-2 sentences)\n"
+                "2. **Key algorithm / pattern**\n"
+                "3. **Step-by-step template**\n"
+                "4. **Reusable snippet** (3-10 transferable lines)\n"
+                "5. **Common pitfalls** (1-3)\n"
+                "Keep the total response under 400 words."
             )
-
-        # Skill evolution: when a procedure from the previous cycle exists, ask the
-        # model to REFINE it with the new exemplars (keep what works, fix gaps),
-        # rather than regenerate from scratch — so the skill genuinely improves
-        # cycle over cycle.
-        refine = bool((prev_procedure or "").strip())
-        system_prompt = (
-            "You are an expert coding-skills curator. "
-            "Given a cluster of similar coding problems and their solutions"
-            + (", plus the CURRENT procedure from the previous cycle, "
-               "improve that procedure" if refine else
-               ", write a concise, reusable **Procedure**")
-            + " that teaches a weaker model how to solve any problem in this cluster. "
-            + ("Keep the parts that already work, fix gaps the new examples reveal, "
-               "and prune anything misleading. " if refine else "")
-            + "Format the output in plain Markdown (no preamble). "
-            "Include:\n"
-            "1. **Problem type** — what makes this cluster distinct (1-2 sentences)\n"
-            "2. **Key algorithm / pattern** — the core approach (e.g. two-pointer, "
-            "sliding window, math identity, regex, …)\n"
-            "3. **Step-by-step template** — numbered steps a model should follow\n"
-            "4. **Reusable snippet** — the most transferable 3-10 lines of code "
-            "from the solutions (with a brief comment)\n"
-            "5. **Common pitfalls** — 1-3 things that trip up weaker models on "
-            "this cluster\n"
-            "Keep the total response under 400 words."
-        )
-
-        prev_block = ""
-        if refine:
             prev_block = (
-                "## CURRENT procedure (previous cycle — refine this)\n"
-                + prev_procedure.strip()[:2000]
-                + "\n\n---\n"
+                "## CURRENT procedure so far (refine this)\n" + prev.strip()[:2000]
+                + "\n\n---\n" if refine else ""
             )
-        user_prompt = (
-            f"Cluster signature: `{signature}`\n\n"
-            + prev_block
-            + "## New solved examples this cycle\n"
-            + "\n\n".join(examples_text)
-            + ("\n\n---\nNow write the IMPROVED Procedure for this cluster."
-               if refine else
-               "\n\n---\nNow write the Procedure for this cluster.")
-        )
+            user = (
+                f"Cluster signature: `{signature}`\n\n" + prev_block
+                + "## Solved examples\n" + examples_text
+                + ("\n\n---\nNow write the IMPROVED Procedure." if refine
+                   else "\n\n---\nNow write the Procedure.")
+            )
+            return f"{system}\n\n{user}"
 
-        try:
-            result = call_llm(
-                model_id=model_id,
-                prompt=f"{system_prompt}\n\n{user_prompt}",
-                use_proxy=use_proxy,
-                temperature=0.3,
-                max_tokens=600,
-            )
-        except Exception:  # noqa: BLE001
-            # API key missing / network / provider error → heuristic fallback.
-            # (call_llm raises before returning when COMMONSTACK_API_KEY unset.)
+        def _is_ctx_err(msg: str) -> bool:
+            m = (msg or "").lower()
+            return any(k in m for k in
+                       ("context", "maximum", "too long", "max_tokens", "length",
+                        "token limit", "exceed"))
+
+        def _call(prompt: str):
+            try:
+                r = call_llm(model_id=model_id, prompt=prompt, use_proxy=use_proxy,
+                             temperature=0.3, max_tokens=600)
+            except Exception as e:  # noqa: BLE001 — missing key / network
+                return None, str(e)
+            return (r.get("response") or "").strip() or None, r.get("error")
+
+        def _distill_batch(args) -> Optional[str]:
+            """MAP: distil ONE batch independently; halve & retry on ctx overflow."""
+            start, batch = args
+            cur = len(batch)
+            while True:
+                sub = batch[:cur]
+                resp, err = _call(_prompt(_fmt(sub, start), ""))
+                if resp:
+                    return resp
+                if _is_ctx_err(err) and cur > 1:
+                    cur = max(1, cur // 2)
+                    continue
+                return None
+
+        # Split ALL exemplars into ≤batch_size chunks.
+        batches = [(i + 1, exemplars[i:i + batch_size])
+                   for i in range(0, len(exemplars), batch_size)]
+
+        # MAP — distil batches concurrently (CommonStack API handles concurrency).
+        if len(batches) <= 1:
+            partials = [_distill_batch(batches[0])] if batches else []
+        else:
+            workers = min(int(os.environ.get("SKILL_DISTILL_WORKERS", "8")), len(batches))
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                partials = list(pool.map(_distill_batch, batches))
+        partials = [p for p in partials if p]
+
+        if not partials:
             return _heuristic_procedure(signature, exemplars)
 
-        if result.get("error") or not result.get("response"):
-            # graceful fallback
-            return _heuristic_procedure(signature, exemplars)
+        # REDUCE — merge the partial procedures (+ previous cycle's, if any) into
+        # one. A single partial with no prior procedure needs no merge.
+        prev = (prev_procedure or "").strip()
+        if len(partials) == 1 and not prev:
+            procedure = partials[0]
+        else:
+            sources = ([("Previous-cycle procedure", prev)] if prev else []) + \
+                      [(f"Partial procedure {i+1}", p) for i, p in enumerate(partials)]
+            merge_sys = (
+                "You are an expert coding-skills curator. Several partial Procedures "
+                "were distilled from different batches of solved problems in the SAME "
+                "cluster. Merge them into ONE coherent, non-redundant **Procedure** "
+                "(plain Markdown, no preamble) with sections: Problem type / Key "
+                "algorithm / Step-by-step template / Reusable snippet / Common "
+                "pitfalls. Keep the union of useful content, drop duplicates, under "
+                "400 words."
+            )
+            merge_user = f"Cluster signature: `{signature}`\n\n" + "\n\n---\n".join(
+                f"## {name}\n{text.strip()[:1500]}" for name, text in sources
+            ) + "\n\n---\nNow output the single merged Procedure."
+            resp, _err = _call(f"{merge_sys}\n\n{merge_user}")
+            procedure = resp or max(partials, key=len)   # fall back to longest partial
 
         header = (
             f"# Procedure for cluster `{signature}`\n"
-            f"# distilled by {model_id} from {len(exemplars)} exemplar(s)\n\n"
+            f"# distilled by {model_id} from {len(exemplars)} exemplar(s) "
+            f"(parallel map-reduce, {len(batches)} batch(es)≤{batch_size})\n\n"
         )
-        return (header + result["response"].strip())[:2400]
+        return (header + procedure)[:2400]
 
     return _distiller
 
@@ -196,9 +240,10 @@ class Skill:
     - recommend_cheapest_viable_model(candidates, min_rate): 推荐最便宜可用模型
     """
 
-    # With a single global skill, all solved tasks this cycle land here; keep
-    # enough to distill a representative procedure (env SKILL_MAX_EXEMPLARS).
-    MAX_EXEMPLARS = int(os.environ.get("SKILL_MAX_EXEMPLARS", "50"))
+    # With a single global skill, ALL solved tasks accumulate here. Keep them all
+    # (distillation now batches over everything via map-reduce); env override for
+    # memory-constrained runs. (Was 8 — far too few, wasted most traces.)
+    MAX_EXEMPLARS = int(os.environ.get("SKILL_MAX_EXEMPLARS", "10000"))
 
     def __init__(self, signature: str):
         self.signature = signature
