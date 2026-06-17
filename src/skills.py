@@ -428,6 +428,59 @@ class SkillBook:
         skill = self.skills.get(extract_signature(prompt))
         return skill.procedure if skill else ""
 
+    def nearest_exemplars(self, prompt: str, k: int = 3,
+                          exclude_task_id: str = "") -> List[Dict]:
+        """Top-k solved exemplars most similar to `prompt` (TF-IDF cosine).
+
+        Concrete worked examples help a small model more than an abstract
+        procedure. Retrieval is over the cluster's accumulated exemplars; at
+        held-out eval time these come from TRAIN traces (no leakage). Falls back
+        to most-recent-k if scikit-learn is unavailable.
+        """
+        skill = self.skills.get(extract_signature(prompt))
+        if not skill or not skill.exemplars:
+            return []
+        pool = [e for e in skill.exemplars
+                if not (exclude_task_id and e.get("task_id") == exclude_task_id)
+                and (e.get("prompt") and e.get("completion"))]
+        if len(pool) <= k:
+            return pool
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
+            corpus = [e["prompt"] for e in pool] + [prompt]
+            tfidf = TfidfVectorizer().fit_transform(corpus)
+            sims = cosine_similarity(tfidf[-1], tfidf[:-1])[0]
+            order = sims.argsort()[::-1][:k]
+            return [pool[i] for i in order]
+        except Exception:  # noqa: BLE001
+            return pool[-k:]
+
+    def get_context(self, prompt: str, fewshot_k: int = 0,
+                    with_procedure: bool = True, exclude_task_id: str = "") -> str:
+        """Full skill context = distilled procedure + k nearest worked examples.
+
+        This is what the small model sees as its `procedure` prefix. fewshot_k=0
+        → procedure only (legacy). The abstract cheatsheet teaches the pattern;
+        the concrete examples show it applied to similar problems.
+        """
+        parts = []
+        if with_procedure:
+            proc = self.get_procedure(prompt)
+            if proc:
+                parts.append(proc)
+        if fewshot_k > 0:
+            exs = self.nearest_exemplars(prompt, k=fewshot_k, exclude_task_id=exclude_task_id)
+            if exs:
+                blocks = ["## Worked examples (similar solved problems — adapt, don't copy)"]
+                for i, e in enumerate(exs, 1):
+                    p = (e.get("prompt") or "").strip()[:500]
+                    c = (e.get("completion") or "").strip()[:600]
+                    blocks.append(f"### Example {i}\n```python\n{p}\n```\n"
+                                  f"Solution:\n```python\n{c}\n```")
+                parts.append("\n\n".join(blocks))
+        return "\n\n".join(parts)
+
     def distill_all(self, distiller=None) -> int:
         """(Re)distill procedures for every skill that has exemplars.
 

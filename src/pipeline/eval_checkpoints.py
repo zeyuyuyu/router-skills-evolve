@@ -40,23 +40,38 @@ def _eval_one(label: str, model_id: str, tasks: list[dict], procedure_fn,
     use_procedure=False forces the raw prompt even if a skillbook is loaded
     (used for the 'base' baseline so the skills Δ can be isolated).
     """
-    # Force in-process HF generate + chosen repair depth for a clean comparison.
     os.environ["HE_MAX_REPAIR_TURNS"] = str(repair_turns)
-    os.environ.pop("HE_VLLM_MAP", None)  # never route eval to a vllm server
-    from src.pipeline.benches.humaneval.adapter import Adapter
+    # Backend is resolved from model_id + HE_VLLM_MAP (set by caller). vllm/api
+    # backends are HTTP → fire tasks concurrently (vLLM continuous-batches them);
+    # the in-process HF backend stays sequential (one shared GPU model).
+    from src.pipeline.benches.humaneval.adapter import Adapter, _resolve_backend
 
     adapter = Adapter()
-    n_pass = 0
-    n_pass_turn1 = 0
-    for i, t in enumerate(tasks, 1):
+    backend = _resolve_backend(model_id)
+    workers = (int(os.environ.get("EVAL_WORKERS", "8"))
+               if backend in ("vllm", "api") else 1)
+
+    def _run(t):
         procedure = (procedure_fn(t["prompt"]) if (procedure_fn and use_procedure) else "")
         ok, _code, turns = adapter._gen_and_test(model_id, t, procedure=procedure)
-        if ok:
-            n_pass += 1
-        if turns and turns[0].get("ok"):
-            n_pass_turn1 += 1
-        if i % 20 == 0:
-            print(f"  [{label}] {i}/{len(tasks)}  pass={n_pass}", flush=True)
+        return bool(ok), bool(turns and turns[0].get("ok"))
+
+    flags = []
+    if workers > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        print(f"  [{label}] backend={backend} parallel workers={workers}", flush=True)
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            for i, r in enumerate(ex.map(_run, tasks), 1):
+                flags.append(r)
+                if i % 20 == 0:
+                    print(f"  [{label}] {i}/{len(tasks)}  pass={sum(f[0] for f in flags)}", flush=True)
+    else:
+        for i, t in enumerate(tasks, 1):
+            flags.append(_run(t))
+            if i % 20 == 0:
+                print(f"  [{label}] {i}/{len(tasks)}  pass={sum(f[0] for f in flags)}", flush=True)
+    n_pass = sum(1 for ok, _ in flags if ok)
+    n_pass_turn1 = sum(1 for _, t1 in flags if t1)
     return {
         "label": label,
         "model": model_id,
@@ -82,6 +97,9 @@ def main() -> int:
     ap.add_argument("--no-skills-stage", action="store_true",
                     help="skip the base+skills row; compare model weights only "
                          "(all stages use the procedure)")
+    ap.add_argument("--fewshot-k", type=int, default=int(os.environ.get("SKILL_FEWSHOT_K", "0")),
+                    help="skill = procedure + K nearest-neighbour worked examples "
+                         "(0 = procedure only). Few-shot is part of the skill.")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
@@ -100,8 +118,13 @@ def main() -> int:
         from src.skills import SkillBook
         sb = SkillBook()
         sb.load(Path(args.skillbook))
-        procedure_fn = sb.get_procedure
-        print(f"[eval] using skillbook procedures ({len(sb.skills)} clusters)", flush=True)
+        if args.fewshot_k > 0:
+            procedure_fn = lambda p: sb.get_context(p, fewshot_k=args.fewshot_k)
+            print(f"[eval] skill = procedure + {args.fewshot_k} few-shot exemplars "
+                  f"({len(sb.skills)} clusters)", flush=True)
+        else:
+            procedure_fn = sb.get_procedure
+            print(f"[eval] using skillbook procedures ({len(sb.skills)} clusters)", flush=True)
 
     # Build the waterfall stages: (label, model_id, use_procedure).
     have_skills = procedure_fn is not None and not args.no_skills_stage

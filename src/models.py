@@ -201,7 +201,23 @@ def run_humaneval_test(task: Dict, generated_code: str, timeout: int = 10) -> tu
     entry_point = task["entry_point"]
     test_code = task["test"]
 
+    # Chat/instruct models often regenerate the WHOLE function but drop the
+    # imports that lived in the HumanEval prompt (e.g. `from typing import List`)
+    # → NameError at test time even when the logic is correct. Prepend a safety
+    # header: typing + common stdlib + the original prompt's own import lines.
+    prompt = task.get("prompt", "") or ""
+    prompt_imports = "\n".join(
+        ln for ln in prompt.splitlines()
+        if ln.lstrip().startswith(("import ", "from "))
+    )
+    header = (
+        "from typing import *\n"
+        "import math, re, collections, itertools, functools, heapq, bisect, string\n"
+        f"{prompt_imports}\n"
+    )
+
     full_code = f"""
+{header}
 {generated_code}
 
 {test_code}
@@ -209,14 +225,20 @@ def run_humaneval_test(task: Dict, generated_code: str, timeout: int = 10) -> tu
 check({entry_point})
 """
 
+    # signal.alarm only works in the MAIN thread. When run from a worker thread
+    # (e.g. parallel eval via ThreadPoolExecutor against a vLLM server), guard it
+    # — otherwise signal.signal raises and every test spuriously "fails".
+    import threading
+    use_alarm = threading.current_thread() is threading.main_thread()
+
     try:
-        signal.signal(signal.SIGALRM, _timeout_handler)
-        signal.alarm(timeout)
+        if use_alarm:
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(timeout)
 
         namespace = {}
         exec(full_code, namespace)
 
-        signal.alarm(0)
         return True, ""
     except AssertionError as e:
         return False, f"AssertionError: {str(e)[:100]}"
@@ -225,7 +247,8 @@ check({entry_point})
     except Exception as e:
         return False, f"{type(e).__name__}: {str(e)[:100]}"
     finally:
-        signal.alarm(0)
+        if use_alarm:
+            signal.alarm(0)
 
 
 # ============================================================================
