@@ -14,7 +14,7 @@ default run reproduces this waterfall; pass --no-skills-stage to compare model
 weights only (all stages with procedure).
 
 Usage:
-    python experiments/scaling/eval_checkpoints.py \
+    python src/pipeline/eval_checkpoints.py \
         --base Qwen/Qwen2.5-Coder-1.5B-Instruct \
         --sft  results/.../cycle_0/llm_adapter \
         --rl   results/.../cycle_0/grpo_adapter \
@@ -43,7 +43,7 @@ def _eval_one(label: str, model_id: str, tasks: list[dict], procedure_fn,
     # Force in-process HF generate + chosen repair depth for a clean comparison.
     os.environ["HE_MAX_REPAIR_TURNS"] = str(repair_turns)
     os.environ.pop("HE_VLLM_MAP", None)  # never route eval to a vllm server
-    from experiments.scaling.benches.humaneval.adapter import Adapter
+    from src.pipeline.benches.humaneval.adapter import Adapter
 
     adapter = Adapter()
     n_pass = 0

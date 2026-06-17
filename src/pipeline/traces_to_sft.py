@@ -12,7 +12,7 @@ converter. (Review finding, 2026-05-21.)
 This converter reads the scaling trace schema directly and emits SFT pairs from
 the trajectories already collected in Phase 1 — no extra model calls, no
 HumanEval coupling, works for any bench whose adapter follows the trace schema
-in `experiments/scaling/benches/__init__.py`.
+in `src/pipeline/benches/__init__.py`.
 
 Selection rule (the "hard tasks worth distilling")
 --------------------------------------------------
@@ -32,7 +32,7 @@ in Alpaca-ish shape (also mirrored as instruction/output for compatibility with
 train_small_model.py).
 
 Usage:
-    python experiments/scaling/traces_to_sft.py \
+    python src/pipeline/traces_to_sft.py \
         --traces results/scaling_xxx/cycle_1/traces.jsonl \
         --output results/scaling_xxx/cycle_1/training_data.jsonl
 """

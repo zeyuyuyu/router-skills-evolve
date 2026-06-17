@@ -19,7 +19,7 @@ Key design choices
   handoff prefers grpo_adapter/ over llm_adapter/checkpoint-best.
 
 Usage:
-    python experiments/scaling/grpo_train_simple.py \\
+    python src/pipeline/grpo_train_simple.py \\
         --model results/.../cycle_N/llm_adapter \\
         --bench-data data/HumanEval.jsonl \\
         --output-dir results/.../cycle_N/grpo_adapter \\
@@ -93,7 +93,7 @@ def _build_dataset(tasks: list[dict], get_procedure, prompt_style: str):
     the reward function via TRL's automatic column forwarding.
     """
     from datasets import Dataset
-    from experiments.train_small_model import format_prompt
+    from src.pipeline.train_small_model import format_prompt
 
     rows = []
     for t in tasks:
@@ -228,7 +228,7 @@ def _repair_rollout(model, tok, task, procedure, *, style, max_turns,
     captured token ids feed the GRPO token loss directly (no re-tokenisation).
     """
     import torch
-    from experiments.scaling.benches.humaneval.adapter import _format_multiturn_prompt
+    from src.pipeline.benches.humaneval.adapter import _format_multiturn_prompt
     from src.models import extract_code, run_humaneval_test
 
     gen_kwargs = {"max_new_tokens": max_new_tokens, "do_sample": temperature > 0,
@@ -266,7 +266,7 @@ def _repair_rollout(model, tok, task, procedure, *, style, max_turns,
 
 
 def _run_repair_grpo(args, tasks, get_procedure) -> int:
-    from experiments.scaling.grpo_core import compute_advantages, grpo_update
+    from src.pipeline.grpo_core import compute_advantages, grpo_update
 
     is_dapo = args.algo == "dapo"
     out_dir = Path(args.output_dir)
@@ -278,7 +278,7 @@ def _run_repair_grpo(args, tasks, get_procedure) -> int:
 
     if args.dry_run:
         # Repair rollouts need the policy (GPU); preview config + a sample prompt.
-        from experiments.scaling.benches.humaneval.adapter import _format_multiturn_prompt
+        from src.pipeline.benches.humaneval.adapter import _format_multiturn_prompt
         proc = get_procedure(tasks[0]["prompt"]) if tasks else ""
         first = f"{proc}\n\n---\n\n{tasks[0]['prompt']}" if proc and tasks else (
             tasks[0]["prompt"] if tasks else "")

@@ -5,10 +5,10 @@
 # multi-cycle iteration. Default bench: tau2-bench. SWE-Bench adapter is a stub.
 #
 # Quick smoke (no GPU / no API key required — uses mock adapter):
-#   bash scaling/run_full_pipeline.sh --smoke --mock
+#   bash scripts/run_full_pipeline.sh --smoke --mock
 #
 # Real run (8× high-memory GPUs; OPENAI_API_KEY + HF_TOKEN required):
-#   bash scaling/run_full_pipeline.sh
+#   bash scripts/run_full_pipeline.sh
 #
 # Required env vars (for non-mock runs):
 #   OPENAI_API_KEY  Phase 1 large-model invocation + tau2 NL judge
@@ -17,7 +17,7 @@
 # Optional env vars:
 #   EXPERIMENT_NAME   default: scaling_$(date -u +%Y%m%d_%H%M%S)
 #   BENCH             tau2_bench (default) | swe_bench (NotImplemented stub)
-#   MODEL_SWEEP       one of experiments/tau2_stage2/code/training/configs/runs/*.yaml (basename)
+#   MODEL_SWEEP       one of tau2_stage2/code/training/configs/runs/*.yaml (basename)
 #                     default: 05_qwen3_5_4b_273
 #                     for smoke: smoke_2b
 #   N_CYCLES          MERA default 4; main-branch 5/20 ran 8
@@ -67,6 +67,7 @@ while [[ $# -gt 0 ]]; do
     --n-cycles) N_CYCLES="$2"; shift 2 ;;
     --schedule) SCHEDULE="$2"; shift 2 ;;
     --skip-llm) SKIP_LLM=1; shift ;;
+    --config) EXPERIMENT_CONFIG="$2"; shift 2 ;;
     -h|--help) sed -n '1,40p' "$0"; exit 0 ;;
     *) echo "[ERROR] Unknown flag: $1"; exit 2 ;;
   esac
@@ -77,7 +78,27 @@ done
 # ─────────────────────────────────────────────────────────────────────────────
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-: "${BUNDLE_ROOT:=$REPO_ROOT/experiments/tau2_stage2}"
+
+# Experiment config: a sourceable .env-style recipe in config/ that exports the
+# env vars below (SMALL_MODEL, DISTILLER_MODEL, GRPO_ALGO, HE_USE_VLLM, …). It is
+# sourced BEFORE the `: "${VAR:=default}"` defaults, so config values win over
+# defaults but env vars / CLI flags passed inline still win over the config.
+# Accepts a bare name (config/<name>.env), a path, or an absolute path.
+#   EXPERIMENT_CONFIG=humaneval_dapo_gpt bash scripts/run_full_pipeline.sh ...
+#   bash scripts/run_full_pipeline.sh --config humaneval_dapo_gpt ...
+if [[ -n "${EXPERIMENT_CONFIG:-}" ]]; then
+  _cfg="$EXPERIMENT_CONFIG"
+  [[ -f "$_cfg" ]] || _cfg="$REPO_ROOT/config/$EXPERIMENT_CONFIG"
+  [[ -f "$_cfg" ]] || _cfg="$REPO_ROOT/config/${EXPERIMENT_CONFIG}.env"
+  if [[ -f "$_cfg" ]]; then
+    echo "[config] loading experiment config: $_cfg"
+    set -a; # shellcheck disable=SC1090
+    source "$_cfg"; set +a
+  else
+    echo "[ERROR] EXPERIMENT_CONFIG='$EXPERIMENT_CONFIG' not found (looked in config/)"; exit 2
+  fi
+fi
+: "${BUNDLE_ROOT:=$REPO_ROOT/tau2_stage2}"
 : "${EXPERIMENT_NAME:=scaling_$(date -u +%Y%m%d_%H%M%S)}"
 : "${BENCH:=tau2_bench}"
 : "${MODEL_SWEEP:=05_qwen3_5_4b_273}"
@@ -169,6 +190,9 @@ preflight() {
   echo "  LARGE_MODEL     = $LARGE_MODEL"
   echo "  DISTILLER_MODEL = ${DISTILLER_MODEL:-heuristic (no LLM)}"
   echo "  SKIP_GRPO       = $SKIP_GRPO  (algo=$GRPO_ALGO K=$GRPO_N_GENERATIONS epochs=$GRPO_EPOCHS lr=$GRPO_LR  clip_low=$DAPO_CLIP_LOW clip_high=$DAPO_CLIP_HIGH)"
+  echo "  HE_USE_VLLM     = $HE_USE_VLLM  (Phase1 serve: small→gpu$HE_VLLM_SMALL_GPU large→gpu$HE_VLLM_LARGE_GPU; 0=in-process HF)"
+  echo "  GRPO_USE_VLLM   = $GRPO_USE_VLLM  (Phase3b rollout: vLLM colocate weight-sync; 0=HF/repair)"
+  echo "  SFT_INCLUDE_SUCCESS = ${SFT_INCLUDE_SUCCESS:-0}  (1=also clone solved tasks, not just hard)"
   echo "  TAU2_DOMAIN     = $TAU2_DOMAIN"
   echo "  TAU2_DOMAINS    = $TAU2_DOMAINS"
   echo "  RUN_HELDOUT_EVAL= $RUN_HELDOUT_EVAL"
@@ -229,7 +253,7 @@ from collections import Counter
 
 repo, bench, n_tasks = sys.argv[1], sys.argv[2], int(sys.argv[3])
 sys.path.insert(0, repo)
-from experiments.scaling.benches import load_adapter  # noqa: E402
+from src.pipeline.benches import load_adapter  # noqa: E402
 
 adapter = load_adapter(bench)
 train = adapter.load_tasks(n_tasks, split="train")
@@ -273,6 +297,11 @@ PY
   "grpo_lr": "$GRPO_LR",
   "dapo_clip_low": "$DAPO_CLIP_LOW",
   "dapo_clip_high": "$DAPO_CLIP_HIGH",
+  "he_use_vllm": $([ "$HE_USE_VLLM" = "1" ] && echo true || echo false),
+  "grpo_use_vllm": $([ "$GRPO_USE_VLLM" = "1" ] && echo true || echo false),
+  "he_vllm_small_gpu": $HE_VLLM_SMALL_GPU,
+  "he_vllm_large_gpu": $HE_VLLM_LARGE_GPU,
+  "sft_include_success": $([ "${SFT_INCLUDE_SUCCESS:-0}" = "1" ] && echo true || echo false),
   "smoke": $SMOKE,
   "mock": $MOCK,
   "skip_llm": $([ "$SKIP_LLM" -eq 1 ] && echo true || echo false),
@@ -334,7 +363,7 @@ start_he_vllm_servers() {
     fi
     echo "  [Phase 1/vLLM] serving local model $model on port $port gpu $gpu"
     HE_VLLM_LOG_DIR="$logdir" \
-      bash "$REPO_ROOT/scaling/vllm_serve_humaneval.sh" "$model" "$port" "$gpu" "$model"
+      bash "$REPO_ROOT/scripts/vllm_serve_humaneval.sh" "$model" "$port" "$gpu" "$model"
     local safe; safe="$(echo "$model" | tr '/' '_')"
     _HE_VLLM_PIDFILES+=("$logdir/vllm_${safe}_${port}.pid")
     entries+=("\"$model\": \"http://127.0.0.1:$port/v1\"")
@@ -393,7 +422,7 @@ phase1_collect_traces() {
   fi
 
   local cmd=(
-    "$PYTHON" "$REPO_ROOT/experiments/scaling/collect_traces.py"
+    "$PYTHON" "$REPO_ROOT/src/pipeline/collect_traces.py"
     --bench "$BENCH"
     --n-tasks "$N_TASKS"
     --small-model "$small_arg"
@@ -417,7 +446,7 @@ from pathlib import Path
 
 repo, bench, n_tasks, traces = sys.argv[1], sys.argv[2], int(sys.argv[3]), Path(sys.argv[4])
 sys.path.insert(0, repo)
-from experiments.scaling.benches import load_adapter  # noqa: E402
+from src.pipeline.benches import load_adapter  # noqa: E402
 
 
 def task_key(row):
@@ -592,7 +621,7 @@ phase3_llm_train() {
   # solved (not just hard tasks), expanding the tiny SFT set.
   INCLUDE_SUCCESS_ARG=""
   [[ "${SFT_INCLUDE_SUCCESS:-0}" == "1" ]] && INCLUDE_SUCCESS_ARG="--include-success"
-  $DRY_RUN || "$PYTHON" "$REPO_ROOT/experiments/scaling/traces_to_sft.py" \
+  $DRY_RUN || "$PYTHON" "$REPO_ROOT/src/pipeline/traces_to_sft.py" \
     --traces "$out/traces.jsonl" \
     --output "$out/training_data.jsonl" \
     $SKILLBOOK_ARG $INCLUDE_SUCCESS_ARG \
@@ -610,7 +639,7 @@ phase3_llm_train() {
     # SFT_LOGGING_STEPS=1 → capture per-step loss so training_curve.png is useful
     # (HumanEval SFT sets are tiny; default logging_steps=10 would log nothing).
     $DRY_RUN || SFT_LOGGING_STEPS="${SFT_LOGGING_STEPS:-1}" \
-      "$PYTHON" "$REPO_ROOT/experiments/train_small_model.py" \
+      "$PYTHON" "$REPO_ROOT/src/pipeline/train_small_model.py" \
       --data "$out/training_data.jsonl" \
       --base-model "$warmstart_model" \
       --output "$out/llm_adapter" \
@@ -624,7 +653,7 @@ phase3_llm_train() {
     RUN_CONFIG="$MODEL_SWEEP" \
     BUNDLE_ROOT="$BUNDLE_ROOT" \
     MODE="${TAU2_TRAIN_MODE:-scaling_traces}" \
-      bash "$REPO_ROOT/experiments/scaling/tau2_train_wrapper.sh" \
+      bash "$REPO_ROOT/src/pipeline/tau2_train_wrapper.sh" \
       2>&1 | tee "$out/phase3_train.log"
   fi
 }
@@ -666,7 +695,7 @@ phase3b_grpo_train() {
     GRPO_ALGO="$GRPO_ALGO" \
     DAPO_CLIP_LOW="$DAPO_CLIP_LOW" \
     DAPO_CLIP_HIGH="$DAPO_CLIP_HIGH" \
-      "$PYTHON" "$REPO_ROOT/experiments/scaling/grpo_train_simple.py" \
+      "$PYTHON" "$REPO_ROOT/src/pipeline/grpo_train_simple.py" \
       --model "$grpo_base" \
       --bench-data "${HE_DATA:-$REPO_ROOT/data/HumanEval.jsonl}" \
       --output-dir "$out/grpo_adapter" \
@@ -696,7 +725,7 @@ phase3b_grpo_train() {
   local port="${TAU2_LOCAL_PORT:-8050}"
   local rollout_model="openai/$served"
   local grpo_args=(
-    "$PYTHON" "$REPO_ROOT/experiments/scaling/grpo_tau2_train.py"
+    "$PYTHON" "$REPO_ROOT/src/pipeline/grpo_tau2_train.py"
     --model "$grpo_base"
     --output-dir "$out/grpo_adapter"
     --rollout-model "$rollout_model"
@@ -764,7 +793,7 @@ phase4_router_train() {
   # trace rows directly). main-branch experiments/train_learnable_router.py
   # is HumanEval-coupled and won't work on tau2 / SWE traces.
   local cmd=(
-    "$PYTHON" "$REPO_ROOT/experiments/scaling/train_router_simple.py"
+    "$PYTHON" "$REPO_ROOT/src/pipeline/train_router_simple.py"
     --traces "$out/traces.jsonl"
     --output-dir "$out/router"
   )
@@ -790,7 +819,7 @@ phase5_e2e_ablation() {
   # Use scaling/run_e2e_ablation_simple.py (bench-agnostic).
   # main-branch run_e2e_ablation.py is HumanEval-coupled and won't work on tau2 traces.
   local cmd=(
-    "$PYTHON" "$REPO_ROOT/experiments/scaling/run_e2e_ablation_simple.py"
+    "$PYTHON" "$REPO_ROOT/src/pipeline/run_e2e_ablation_simple.py"
     --traces "$out/traces.jsonl"
     --skillbook "$out/skillbook.json"
     --router-dir "$out/router"
@@ -864,7 +893,7 @@ phase6_heldout_eval() {
   fi
 
   local cmd=(
-    "$PYTHON" "$REPO_ROOT/experiments/scaling/collect_traces.py"
+    "$PYTHON" "$REPO_ROOT/src/pipeline/collect_traces.py"
     --bench "$BENCH"
     --n-tasks "$N_TASKS"
     --small-model "$small_arg"
@@ -922,7 +951,7 @@ phase6_heldout_eval() {
   if [[ -f "$RESULTS_DIR/cycle_$cycle/router_threshold.json" ]]; then
     thresh=$($PYTHON -c "import json; print(json.load(open('$RESULTS_DIR/cycle_$cycle/router_threshold.json')).get('threshold', 0.5))" 2>/dev/null || echo 0.5)
   fi
-  "$PYTHON" "$REPO_ROOT/experiments/scaling/run_e2e_ablation_simple.py" \
+  "$PYTHON" "$REPO_ROOT/src/pipeline/run_e2e_ablation_simple.py" \
     --traces "$out/traces.jsonl" \
     --skillbook "$final_skillbook" \
     --router-dir "$RESULTS_DIR/cycle_$cycle/router" \
@@ -951,7 +980,7 @@ aggregate() {
   echo "═══ Aggregation ═══"
   $DRY_RUN && { echo "  DRY: would aggregate cycles 0..$((N_CYCLES-1))"; return; }
 
-  "$PYTHON" "$REPO_ROOT/experiments/scaling/aggregate_cycles.py" \
+  "$PYTHON" "$REPO_ROOT/src/pipeline/aggregate_cycles.py" \
     --experiment-dir "$RESULTS_DIR" \
     --n-cycles "$N_CYCLES" \
     --output-md "$RESULTS_DIR/final_ablation_table.md" \

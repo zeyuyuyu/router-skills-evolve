@@ -9,7 +9,7 @@
     pip install transformers peft datasets accelerate bitsandbytes trl
 
     # 2. 训练
-    python3 experiments/train_small_model.py \\
+    python3 src/pipeline/train_small_model.py \\
         --data data/training_data.jsonl \\
         --base-model "MiniMaxAI/MiniMax-M2" \\
         --output outputs/minimax-m2-finetuned \\
@@ -332,7 +332,7 @@ def main():
         }, f, indent=2)
 
     try:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
         from src.train_plots import plot_training_curves
         plot_training_curves(log_history, output_dir / "training_curve.png",
                              title=f"SFT — {Path(str(output_dir)).name}")

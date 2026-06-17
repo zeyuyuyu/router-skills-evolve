@@ -9,21 +9,35 @@ list of non-obvious design decisions you must respect.
 On-policy iterative distillation: a **Router** sends each task to a small or large
 model, **Skills** distill a reusable solving procedure from past traces (fed to the
 small model's prompt), and the **LLM** is fine-tuned (SFT + GRPO) on the collected
-data. The three co-evolve over N cycles. Main entrypoint: `scaling/run_full_pipeline.sh`.
+data. The three co-evolve over N cycles. Main entrypoint: `scripts/run_full_pipeline.sh`.
+
+## Repo layout (post-2026-06 refactor)
+
+- `src/` — importable library. `src/skills.py`, `src/models.py`, `src/config.py`,
+  `src/train_plots.py`, and `src/pipeline/` (the pipeline stages: `collect_traces.py`,
+  `traces_to_sft.py`, `train_small_model.py`, `grpo_train_simple.py`,
+  `train_router_simple.py`, `run_e2e_ablation_simple.py`, `aggregate_cycles.py`,
+  `benches/`, `tau2_train_wrapper.sh`). Imported as `from src.pipeline.X import …`.
+- `scripts/` — shell orchestration (`run_full_pipeline.sh`, `vllm_serve_humaneval.sh`,
+  `setup_vllm_venv.sh`, `benchmark_tau2.sh`).
+- `config/` — experiment input recipes (`*.env`), loaded via `--config <name>` or
+  `EXPERIMENT_CONFIG=<name>`. See `config/README.md`.
+- `tau2_stage2/` — vendored tau2 SFT framework (`BUNDLE_ROOT`). `data/`, `results/`.
+- The old `experiments/` tree is gone; its contents moved to `src/pipeline/` and `tau2_stage2/`.
 
 ## Commands
 
 ```bash
 # Smoke test (no GPU / no API key — mock adapter). Fastest sanity check.
-bash scaling/run_full_pipeline.sh --bench humaneval --smoke --mock
-bash scaling/run_full_pipeline.sh --smoke --mock            # tau2 (default bench)
+bash scripts/run_full_pipeline.sh --bench humaneval --smoke --mock
+bash scripts/run_full_pipeline.sh --smoke --mock            # tau2 (default bench)
 
 # Unit tests — pytest is NOT in the venv by default; install it first.
 venv/bin/pip install pytest && venv/bin/python -m pytest tests/ -q
 
 # Real runs
-bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4   # SFT + GRPO (needs GPU)
-SKIP_LLM=1 SKIP_GRPO=1 bash scaling/run_full_pipeline.sh --bench humaneval  # Skills+Router only, no GPU
+bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4   # SFT + GRPO (needs GPU)
+SKIP_LLM=1 SKIP_GRPO=1 bash scripts/run_full_pipeline.sh --bench humaneval  # Skills+Router only, no GPU
 
 # Compile-check a python edit before claiming it works
 venv/bin/python -m py_compile <file.py>
@@ -37,13 +51,13 @@ venv/bin/python -m py_compile <file.py>
 
 | Phase | Script | Output |
 |---|---|---|
-| 1 collect traces | `experiments/scaling/collect_traces.py` | `traces.jsonl` (run-both oracle) |
+| 1 collect traces | `src/pipeline/collect_traces.py` | `traces.jsonl` (run-both oracle) |
 | 2 skills evolve | inline Python in the shell script → `src/skills.py` | `skillbook.json` |
 | 3a SFT | `traces_to_sft.py` + `train_small_model.py` (HE) / `tau2_train_wrapper.sh` (tau2) | `llm_adapter/checkpoint-best` |
-| 3b GRPO | `experiments/scaling/grpo_train_simple.py` (HumanEval) | `grpo_adapter/` |
-| 4 router | `experiments/scaling/train_router_simple.py` | `router/router.joblib` |
-| 5 ablation | `experiments/scaling/run_e2e_ablation_simple.py` | `e2e_ablation_summary.json` |
-| 6 aggregate | `experiments/scaling/aggregate_cycles.py` | `final_ablation_table.md`, `curve.png` |
+| 3b GRPO | `src/pipeline/grpo_train_simple.py` (HumanEval) | `grpo_adapter/` |
+| 4 router | `src/pipeline/train_router_simple.py` | `router/router.joblib` |
+| 5 ablation | `src/pipeline/run_e2e_ablation_simple.py` | `e2e_ablation_summary.json` |
+| 6 aggregate | `src/pipeline/aggregate_cycles.py` | `final_ablation_table.md`, `curve.png` |
 
 Bench branches: `humaneval` (local models + pytest reward, GRPO on) vs `tau2_bench`
 (remote agent API, FSDP2 SFT, GRPO off by default). `swe_bench` adapter is a stub.
@@ -91,7 +105,17 @@ Bench branches: `humaneval` (local models + pytest reward, GRPO on) vs `tau2_ben
 - **Qwen3 thinking mode off** (`enable_thinking=False`) — tau2 corpus has no CoT, enabling
   it goes OOD.
 - **flash-attn build:** `MAX_JOBS=4` max, else OOM.
-- **Trimmed tree:** the only entrypoint is `scaling/run_full_pipeline.sh`. The old standalone
+- **vLLM is gated behind a driver check.** Switches: `HE_USE_VLLM` (Phase 1 serving),
+  `GRPO_USE_VLLM` (Phase 3b colocate weight-sync). On the original box (driver 575.57.08,
+  CUDA 12.9 ceiling) they MUST stay 0: vllm 0.22 hard-requires flashinfer, and flashinfer
+  0.6 ships cu13 kernels → `cudaErrorInsufficientDriver`. On a new server, check
+  `nvidia-smi` CUDA version first; if it supports CUDA 13, set both to 1 (and run the
+  pipeline under a vllm-capable venv, e.g. `scripts/setup_vllm_venv.sh`). Otherwise the
+  pipeline runs fine on in-process HF generate (just slower).
+- **SFT on hard-tasks-only collapses the model.** With ~19 teacher pairs, grad_accum
+  produces nan-grad steps and pass@1 drops to ~0. Always run with `SFT_INCLUDE_SUCCESS=1`
+  (also behaviour-clones solved tasks → ~77 pairs, stable). See `config/humaneval_dapo_gpt.env`.
+- **Trimmed tree:** the only entrypoint is `scripts/run_full_pipeline.sh`. The old standalone
   HumanEval scripts (`run_evolve.py`, `extract_training_data.py`, `train_small_model_grpo.py`,
   `train_learnable_router.py`, `run_e2e_ablation.py`, the DPO/GRPO variants) and the BERT
   `src/learned_router/` + `src/router.py` were removed — don't reintroduce them.

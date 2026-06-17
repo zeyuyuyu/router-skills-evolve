@@ -1,12 +1,12 @@
 """tau2-bench adapter.
 
-Wraps colleague's `experiments/tau2_stage2/code/adapters/tau2_bench/Tau2BenchAdapter`
+Wraps colleague's `tau2_stage2/code/adapters/tau2_bench/Tau2BenchAdapter`
 so this scaling pipeline can drive tau2 tasks. Produces trace rows in the
 schema the main-branch scripts (run_evolve / train_learnable_router /
 run_e2e_ablation) already consume.
 
 Prerequisites — run BEFORE invoking this adapter:
-    cd experiments/tau2_stage2
+    cd tau2_stage2
     bash code/training/orchestration/setup_env_server.sh    # clones tau2-bench@17e07b1d under code/vendor/
     conda activate tau2-stage2
 
@@ -393,7 +393,7 @@ class Adapter:
         except ImportError as e:
             raise RuntimeError(
                 f"Could not import Tau2BenchAdapter. Did you run "
-                f"experiments/tau2_stage2/code/training/orchestration/setup_env_server.sh? "
+                f"tau2_stage2/code/training/orchestration/setup_env_server.sh? "
                 f"Original error: {e}"
             )
         self._patch_tau2_litellm()

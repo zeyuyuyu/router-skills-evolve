@@ -99,7 +99,7 @@ def collect_rollouts(adapter, tasks, rollout_model, k, temperature):
 # 2. Advantage + DAPO dynamic sampling  → shared with HumanEval in grpo_core
 # ─────────────────────────────────────────────────────────────────────────────
 
-from experiments.scaling.grpo_core import compute_advantages, grpo_update  # noqa: E402
+from src.pipeline.grpo_core import compute_advantages, grpo_update  # noqa: E402
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -267,7 +267,7 @@ def main() -> int:
                     help="stop after example building (validates rollout+advantage wiring)")
     args = ap.parse_args()
 
-    from experiments.scaling.benches import load_adapter
+    from src.pipeline.benches import load_adapter
     adapter = load_adapter("tau2_bench")
     is_dapo = args.algo == "dapo"
     print(f"[grpo-tau2] algo={args.algo}  K={args.n_generations}  "

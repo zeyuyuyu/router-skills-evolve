@@ -3,7 +3,7 @@
 
 Why this exists: `experiments/run_e2e_ablation.py` is hard-coupled to
 `data/HumanEval.jsonl`. This script consumes the bench-agnostic trace schema
-(see `experiments/scaling/benches/__init__.py`) plus a router artifact from
+(see `src/pipeline/benches/__init__.py`) plus a router artifact from
 `train_router_simple.py`, and produces four-variant numbers in the same
 schema the main-branch ablation uses (so aggregate_cycles.py just works).
 

@@ -29,7 +29,7 @@ def test_traces_to_sft_extracts_hard_tasks(tmp_path):
     traces.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
     out = tmp_path / "sft.jsonl"
     rc = subprocess.call([sys.executable,
-                          str(REPO / "experiments/scaling/traces_to_sft.py"),
+                          str(REPO / "src/pipeline/traces_to_sft.py"),
                           "--traces", str(traces), "--output", str(out)])
     assert rc == 0
     pairs = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
@@ -81,7 +81,7 @@ def test_predict_skills_is_always_small():
     returns always-small (routing is owned by the learned router)."""
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        "rea", REPO / "experiments/scaling/run_e2e_ablation_simple.py")
+        "rea", REPO / "src/pipeline/run_e2e_ablation_simple.py")
     rea = importlib.util.module_from_spec(spec); spec.loader.exec_module(rea)
     preds = rea.predict_skills([{"signature": "coding"}, {"signature": "coding"}])
     assert preds == [0, 0], "skills arm must be always-small (no signature routing)"
@@ -117,7 +117,7 @@ def test_traces_to_sft_injects_procedure(tmp_path):
         "large_completion": "def s(xs): return sorted(xs)", "final_model": "large",
     }) + "\n")
     out = tmp_path / "sft.jsonl"
-    rc = subprocess.call([sys.executable, str(REPO / "experiments/scaling/traces_to_sft.py"),
+    rc = subprocess.call([sys.executable, str(REPO / "src/pipeline/traces_to_sft.py"),
                           "--traces", str(traces), "--output", str(out), "--skillbook", str(skb)])
     assert rc == 0
     row = json.loads(out.read_text().splitlines()[0])
@@ -131,7 +131,7 @@ def test_completion_from_steps_uses_stepdata_response():
     (content + tool_calls), since TaskRunResult.messages is empty on live tau2."""
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        "tau2ad", REPO / "experiments/scaling/benches/tau2_bench/adapter.py")
+        "tau2ad", REPO / "src/pipeline/benches/tau2_bench/adapter.py")
     m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 
     class FakeStep:
@@ -158,7 +158,7 @@ def test_tau2_mock_multi_domain_tasks_are_namespaced(monkeypatch):
     """Multi-domain tau2 runs must keep domains separate and preserve domain in traces."""
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        "tau2ad", REPO / "experiments/scaling/benches/tau2_bench/adapter.py")
+        "tau2ad", REPO / "src/pipeline/benches/tau2_bench/adapter.py")
     m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 
     monkeypatch.setenv("SCALING_MOCK", "1")
@@ -179,7 +179,7 @@ def test_tau2_mock_multi_domain_tasks_are_namespaced(monkeypatch):
 def test_tau2_split_test_alias_uses_heldout_ids(monkeypatch, tmp_path):
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        "tau2ad", REPO / "experiments/scaling/benches/tau2_bench/adapter.py")
+        "tau2ad", REPO / "src/pipeline/benches/tau2_bench/adapter.py")
     m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 
     adapter = m.Adapter()
@@ -208,7 +208,7 @@ def test_ablation_reports_always_large_variant(tmp_path):
     md = tmp_path / "summary.md"
 
     rc = subprocess.call([sys.executable,
-                          str(REPO / "experiments/scaling/run_e2e_ablation_simple.py"),
+                          str(REPO / "src/pipeline/run_e2e_ablation_simple.py"),
                           "--traces", str(traces),
                           "--output", str(out),
                           "--markdown-output", str(md)])
@@ -226,7 +226,7 @@ def test_collect_traces_parallel_mock_force_both(tmp_path, monkeypatch):
 
     rc = subprocess.call([
         sys.executable,
-        str(REPO / "experiments/scaling/collect_traces.py"),
+        str(REPO / "src/pipeline/collect_traces.py"),
         "--bench", "tau2_bench",
         "--n-tasks", "3",
         "--small-model", "small",

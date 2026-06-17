@@ -8,7 +8,7 @@
 # avoiding the cu130 mismatch from a plain `pip install vllm`.
 #
 # Usage:
-#   scaling/setup_vllm_venv.sh [venv_dir]
+#   scripts/setup_vllm_venv.sh [venv_dir]
 # Env:
 #   MAIN_PYTHON   python of the env to clone   (default: <repo>/venv/bin/python)
 #   VLLM_VERSION  vLLM to install              (default: 0.22.0 — cu129-compatible)

@@ -41,5 +41,5 @@ class BenchAdapter(Protocol):
 
 def load_adapter(name: str) -> BenchAdapter:
     """Dynamically import bench by name."""
-    mod = import_module(f"experiments.scaling.benches.{name}.adapter")
+    mod = import_module(f"src.pipeline.benches.{name}.adapter")
     return mod.Adapter()

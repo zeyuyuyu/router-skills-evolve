@@ -2,7 +2,7 @@
 
 本仓库是一个 **on-policy 迭代蒸馏**研究系统：大模型当 Teacher，小模型当 Student，
 每个 cycle 联合更新三件套（Skills + LLM + Router），越迭代越省钱。唯一入口是
-`scaling/run_full_pipeline.sh`（bench：`tau2_bench` 默认 / `humaneval`）。
+`scripts/run_full_pipeline.sh`（bench：`tau2_bench` 默认 / `humaneval`）。
 
 ## 训练 Pipeline（每个 cycle，默认 schedule SLR）
 
@@ -53,9 +53,9 @@ prompt
 | `src/models.py` | LLM 调用 + `extract_code` / `run_humaneval_test` |
 | `src/skills.py` | `Skill` / `SkillBook`：单一全局 skill 的统计 + procedure 蒸馏 |
 | `src/train_plots.py` | SFT/GRPO 训练曲线 |
-| `experiments/scaling/*` | 6 个 phase 的 bench-agnostic 实现 + `benches/` 适配器 |
-| `experiments/train_small_model.py` | HumanEval SFT（LoRA）+ `format_prompt` |
-| `experiments/tau2_stage2/` | 同事的 tau2 SFT 框架（FSDP2 + FA2） |
+| `src/pipeline/*` | 6 个 phase 的 bench-agnostic 实现 + `benches/` 适配器 |
+| `src/pipeline/train_small_model.py` | HumanEval SFT（LoRA）+ `format_prompt` |
+| `tau2_stage2/` | 同事的 tau2 SFT 框架（FSDP2 + FA2） |
 
 ## 关键设计
 

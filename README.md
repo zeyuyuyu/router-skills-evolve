@@ -12,7 +12,7 @@
 
 本系统是一个带 Router 做课程采样、带 Skills 做 scaffold 增强的 **on-policy iterative distillation** 系统。大模型是 Teacher，小模型是 Student，每个 cycle 更新三件套（Skills + LLM + Router），越迭代越省钱。
 
-### 核心 Pipeline（`scaling/run_full_pipeline.sh`）
+### 核心 Pipeline（`scripts/run_full_pipeline.sh`）
 
 ```
 Cycle N:
@@ -139,7 +139,7 @@ python3 -m uncommon_route.cli serve --port 8403 &
 
 ## HumanEval 跑法
 
-HumanEval 与 tau2 共用同一个入口 `scaling/run_full_pipeline.sh --bench humaneval`（见下节"HumanEval 端到端跑法"）。HumanEval adapter（`experiments/scaling/benches/humaneval/adapter.py`）跑本地 code 模型 + pytest，无需 API key。
+HumanEval 与 tau2 共用同一个入口 `scripts/run_full_pipeline.sh --bench humaneval`（见下节"HumanEval 端到端跑法"）。HumanEval adapter（`src/pipeline/benches/humaneval/adapter.py`）跑本地 code 模型 + pytest，无需 API key。
 
 > 早期那套独立分步脚本（`run_evolve.py` / `extract_training_data.py` / `train_small_model_grpo.py` / `train_learnable_router.py` / `run_e2e_ablation.py` 等）已随单一 e2e pipeline 收敛而移除——统一走 `run_full_pipeline.sh`。
 
@@ -147,7 +147,7 @@ HumanEval 与 tau2 共用同一个入口 `scaling/run_full_pipeline.sh --bench h
 
 ## Tau-2 端到端跑法（主文件）
 
-**`scaling/run_full_pipeline.sh` 是正式实验的主入口**，支持真闭环多轮迭代。Tau-2 bench 是 multi-turn agentic 场景（客服 agent）。
+**`scripts/run_full_pipeline.sh` 是正式实验的主入口**，支持真闭环多轮迭代。Tau-2 bench 是 multi-turn agentic 场景（客服 agent）。
 
 ### 前置需求
 
@@ -157,14 +157,14 @@ HumanEval 与 tau2 共用同一个入口 `scaling/run_full_pipeline.sh --bench h
 | CUDA | 12.x（A800）或 13.0（H200） |
 | 磁盘 | ≥ 500 GB |
 | Python | 3.12（conda） |
-| 额外依赖 | `scikit-learn lightgbm sentence-transformers`（router/skills） + `experiments/tau2_stage2/code/training/requirements.txt`（LLM 训练） |
+| 额外依赖 | `scikit-learn lightgbm sentence-transformers`（router/skills） + `tau2_stage2/code/training/requirements.txt`（LLM 训练） |
 
 ### 环境变量
 
 ```bash
 export OPENAI_API_KEY=sk-...          # Phase 1 large model + tau2 eval judge
 export HF_TOKEN=hf_...                # Qwen3 系列下载（35B-A3B 必须）
-export BUNDLE_ROOT=$(pwd)/experiments/tau2_stage2
+export BUNDLE_ROOT=$(pwd)/tau2_stage2
 export EXPERIMENT_NAME=scaling_$(date -u +%Y%m%d_%H%M%S)
 export BENCH=tau2_bench
 export MODEL_SWEEP=05_qwen3_5_4b_273  # tau2_stage2/runs/ 下的 YAML 名（去掉 .yaml）
@@ -174,7 +174,7 @@ export N_CYCLES=4                      # MERA 推荐 4，main 分支跑过 8
 ### Smoke 测试（无 GPU，~10 分钟）
 
 ```bash
-bash scaling/run_full_pipeline.sh --smoke --mock
+bash scripts/run_full_pipeline.sh --smoke --mock
 ```
 
 验证标准：`results/scaling_*/cycle_0/` 下有 `traces.jsonl`、`skillbook.json`、`router/router.joblib`、`e2e_ablation_summary.json`，且 `full.routing_acc > base.routing_acc`。
@@ -182,7 +182,7 @@ bash scaling/run_full_pipeline.sh --smoke --mock
 ### 真实跑（4 cycle，~24–48 小时）
 
 ```bash
-bash scaling/run_full_pipeline.sh --n-cycles 4
+bash scripts/run_full_pipeline.sh --n-cycles 4
 ```
 
 常用 flag：
@@ -222,7 +222,7 @@ results/$EXPERIMENT_NAME/
 OUT=results/$EXPERIMENT_NAME/cycle_0
 
 # Phase 1: 收 traces（cycle 0，直接用默认 small/large model）
-python3 experiments/scaling/collect_traces.py \
+python3 src/pipeline/collect_traces.py \
     --bench tau2_bench \
     --n-tasks 848 \
     --small-model deepseek/deepseek-v3.2 \
@@ -232,7 +232,7 @@ python3 experiments/scaling/collect_traces.py \
 
 # Phase 1 cycle ≥ 1（闭环）：小模型换成上一轮 LoRA，传入 router + skillbook
 # 上一轮 LLM 需要先用 vllm_serve.sh 起起来，再用 --small-model openai/evol-llm-student
-python3 experiments/scaling/collect_traces.py \
+python3 src/pipeline/collect_traces.py \
     --bench tau2_bench --n-tasks 848 --cycle 1 --split train \
     --small-model openai/evol-llm-student \
     --large-model openai/gpt-5.4-2026-03-05 \
@@ -245,7 +245,7 @@ python3 experiments/scaling/collect_traces.py \
 # 并对每个 cluster 提炼 procedure（heuristic，从成功 completion 抽代码片段）
 
 # Phase 3: traces → SFT 数据，再训 LLM
-python3 experiments/scaling/traces_to_sft.py \
+python3 src/pipeline/traces_to_sft.py \
     --traces $OUT/traces.jsonl \
     --output $OUT/training_data.jsonl \
     --skillbook $OUT/skillbook.json     # procedure 前置到 SFT prompt
@@ -255,15 +255,15 @@ TRAIN_OUTPUT_DIR=$OUT/llm_adapter \
 RUN_CONFIG=$MODEL_SWEEP \
 BUNDLE_ROOT=$BUNDLE_ROOT \
 MODE=scaling_traces \
-    bash experiments/scaling/tau2_train_wrapper.sh
+    bash src/pipeline/tau2_train_wrapper.sh
 
 # Phase 4: Router 训练（bench-agnostic，直接读 trace 里的 prompt 字段）
-python3 experiments/scaling/train_router_simple.py \
+python3 src/pipeline/train_router_simple.py \
     --traces $OUT/traces.jsonl \
     --output-dir $OUT/router
 
 # Phase 5: E2E Ablation（4 路：Base / +Skills / +Router / Full）
-python3 experiments/scaling/run_e2e_ablation_simple.py \
+python3 src/pipeline/run_e2e_ablation_simple.py \
     --traces $OUT/traces.jsonl \
     --skillbook $OUT/skillbook.json \
     --router-dir $OUT/router \
@@ -271,7 +271,7 @@ python3 experiments/scaling/run_e2e_ablation_simple.py \
     --output $OUT/e2e_ablation_summary.json
 
 # Phase 6: 汇总多 cycle 曲线
-python3 experiments/scaling/aggregate_cycles.py \
+python3 src/pipeline/aggregate_cycles.py \
     --experiment-dir results/$EXPERIMENT_NAME \
     --n-cycles 4 \
     --output-md results/$EXPERIMENT_NAME/final_ablation_table.md \
@@ -282,7 +282,7 @@ python3 experiments/scaling/aggregate_cycles.py \
 
 ## HumanEval 端到端跑法（闭环）
 
-HumanEval adapter 已实现（`experiments/scaling/benches/humaneval/adapter.py`），可直接用主 pipeline 跑多轮闭环迭代。
+HumanEval adapter 已实现（`src/pipeline/benches/humaneval/adapter.py`），可直接用主 pipeline 跑多轮闭环迭代。
 
 ### 环境变量
 
@@ -296,27 +296,27 @@ export N_CYCLES=4
 ### Smoke 测试（无 GPU，~5 分钟）
 
 ```bash
-bash scaling/run_full_pipeline.sh --bench humaneval --smoke --mock
+bash scripts/run_full_pipeline.sh --bench humaneval --smoke --mock
 ```
 
 ### 真实跑（4 cycle，SFT + GRPO）
 
 ```bash
 # 完整跑：SFT + GRPO（需 GPU，~4–8 小时/cycle）
-bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4
+bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4
 
 # 只跑 Skills + Router（无需 GPU）
-SKIP_LLM=1 SKIP_GRPO=1 bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4
+SKIP_LLM=1 SKIP_GRPO=1 bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4
 
 # 只跑 SFT，跳过 GRPO
-SKIP_GRPO=1 bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4
+SKIP_GRPO=1 bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4
 
 # 调整 GRPO 超参
-GRPO_N_GENERATIONS=4 GRPO_EPOCHS=2 bash scaling/run_full_pipeline.sh --bench humaneval
+GRPO_N_GENERATIONS=4 GRPO_EPOCHS=2 bash scripts/run_full_pipeline.sh --bench humaneval
 
 # 切换 RL 算法：GRPO（默认）vs DAPO
-GRPO_ALGO=grpo bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 1
-GRPO_ALGO=dapo DAPO_CLIP_HIGH=0.5 bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 1
+GRPO_ALGO=grpo bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 1
+GRPO_ALGO=dapo DAPO_CLIP_HIGH=0.5 bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 1
 # 对比：diff 两次跑的 cycle_*/grpo_adapter/grpo_info.json，
 #       看 phase3b_grpo.log 里 [dapo] dynamic_sampling 行过滤了多少零方差 group
 ```
@@ -371,50 +371,51 @@ LLM 训练结论：Qwen2.5-Coder-1.5B + GRPO: 47/100 → 49/100（+2pt）。3B/7
 
 ```
 router-skills-evolve/
-├── src/                          # 核心代码（e2e pipeline 用到的）
+├── src/                          # 核心代码
 │   ├── config.py                 # API、模型池、价格
 │   ├── models.py                 # LLM 调用 + extract_code / run_humaneval_test
 │   ├── skills.py                 # SkillBook 数据结构 + 单一全局 skill
-│   └── train_plots.py            # 训练曲线绘制（SFT/GRPO 用）
+│   ├── train_plots.py            # 训练曲线绘制（SFT/GRPO 用）
+│   └── pipeline/                 # E2E pipeline 各阶段（bench-agnostic，import 为 src.pipeline.*）
+│       ├── collect_traces.py     # Phase 1: 多轮 ReAct 收 traces（router 路由）
+│       ├── traces_to_sft.py      # Phase 3a helper: traces → teacher/self-repair/success SFT 数据
+│       ├── train_small_model.py  # Phase 3a (HumanEval): SFT + LoRA；也提供 format_prompt
+│       ├── tau2_train_wrapper.sh # Phase 3a: tau2 SFT 框架（FSDP2+FA2）
+│       ├── grpo_train_simple.py  # Phase 3b (HumanEval): on-policy RL，test-exec reward
+│       ├── grpo_tau2_train.py    # Phase 3b (tau2): 轨迹级 GRPO/DAPO，reward = env passed
+│       ├── grpo_core.py          # GRPO/DAPO advantage + update（两个 phase3b 共用）
+│       ├── train_router_simple.py # Phase 4: 独占路由，原始 prompt → TF-IDF+LogReg
+│       ├── run_e2e_ablation_simple.py # Phase 5: 四臂评估 large/skills/router/full
+│       ├── aggregate_cycles.py   # Phase 6: 多 cycle 曲线 + 汇总表
+│       ├── eval_checkpoints.py   # 工具: base→+skills→+sft→+grpo 归因瀑布评估
+│       └── benches/
+│           ├── tau2_bench/adapter.py  # τ²-bench 接口（remote agent API）
+│           ├── humaneval/adapter.py   # HumanEval 接口（本地/vLLM/API 后端分派）
+│           └── swe_bench/adapter.py   # SWE-Bench 接口（stub，待实现）
 │
-├── experiments/
-│   ├── train_small_model.py      # Phase 3a (HumanEval): SFT + LoRA；也提供 format_prompt
-│   │
-│   ├── scaling/                  # Scaling e2e pipeline（bench-agnostic）
-│   │   ├── collect_traces.py     # Phase 1: 多轮 ReAct 收 traces（router 路由）
-│   │   ├── traces_to_sft.py      # Phase 3a helper: traces → teacher + self-repair SFT 数据
-│   │   ├── tau2_train_wrapper.sh # Phase 3a: tau2 SFT 框架（FSDP2+FA2）
-│   │   ├── grpo_train_simple.py  # Phase 3b (HumanEval): on-policy RL，test-exec reward
-│   │   ├── grpo_tau2_train.py    # Phase 3b (tau2): 轨迹级 GRPO/DAPO，reward = env passed
-│   │   ├── grpo_core.py          # GRPO/DAPO advantage + update（两个 phase3b 共用）
-│   │   ├── train_router_simple.py # Phase 4: 独占路由，原始 prompt → TF-IDF+LogReg
-│   │   ├── run_e2e_ablation_simple.py # Phase 5: 四臂评估 large/skills/router/full
-│   │   ├── aggregate_cycles.py   # Phase 6: 多 cycle 曲线 + 汇总表
-│   │   ├── eval_checkpoints.py   # 工具: 对 pipeline 产出的 checkpoint 做评估
-│   │   └── benches/
-│   │       ├── tau2_bench/adapter.py  # τ²-bench 接口（remote agent API）
-│   │       ├── humaneval/adapter.py   # HumanEval 接口（本地 code 模型 + pytest）
-│   │       └── swe_bench/adapter.py   # SWE-Bench 接口（stub，待实现）
-│   │
-│   └── tau2_stage2/              # Colleague 的 LLM SFT 框架（FSDP2 + FA2）
-│       ├── code/training/        # TRL SFTTrainer
-│       ├── data_processed/       # τ²-bench 语料
-│       └── docs/                 # 设计文档
-│
-├── scaling/
+├── scripts/                      # Shell 编排
 │   ├── run_full_pipeline.sh      # E2E 主入口：6 phases × N cycles（tau2 / humaneval）
-│   └── README.md                 # Scaling 详细文档
+│   ├── vllm_serve_humaneval.sh   # 起 vLLM server（隔离 venv，支持 LoRA）
+│   ├── setup_vllm_venv.sh        # 克隆主环境 + 装 vLLM（cu129 pin）
+│   ├── benchmark_tau2.sh         # tau2 基准
+│   └── README.md                 # Pipeline 详细文档
 │
-├── notebooks/
-│   └── router_skills_walkthrough.ipynb  # 动手拆解（无需 GPU，模拟 trace）
+├── config/                       # 实验输入存档（*.env recipe），--config <name> 加载
+│   ├── humaneval_dapo_gpt.env    # 当前主力：GPT distiller + SFT含success + DAPO
+│   ├── humaneval_vllm_dapo_gpt.env # 3-GPU vLLM 布局（待驱动支持 cu13）
+│   └── README.md
 │
+├── tau2_stage2/                  # Colleague 的 LLM SFT 框架（BUNDLE_ROOT；FSDP2+FA2）
+│   ├── code/training/            # TRL SFTTrainer
+│   ├── data_processed/           # τ²-bench 语料
+│   └── docs/
+│
+├── notebooks/router_skills_walkthrough.ipynb  # 动手拆解（无需 GPU）
 ├── data/                         # HumanEval.jsonl、traces、skills
 ├── results/                      # 实验结果（gitignored）
-├── docs/
-│   ├── ARCHITECTURE.md           # 架构详解
-│   ├── TRAINING.md               # LLM 训练指南
-│   └── E2E_ABLATION_RESULTS.md   # 主分支实验数字
-├── CLAUDE.md                     # Claude Code 操作速查 + 设计不变量
+├── docs/                         # ARCHITECTURE / TRAINING / E2E_ABLATION_RESULTS
+├── CLAUDE.md                     # Claude Code 操作速查 + 设计不变量 + repo 布局
+├── .env                          # COMMONSTACK_API_KEY（gitignored）
 └── requirements.txt
 ```
 
@@ -426,12 +427,12 @@ router-skills-evolve/
 |------|--------|---------|
 | Router (UncommonRoute) | 已有 | `UncommonRoute` repo |
 | Skills 数据结构 + SkillBook | Franklin/Zeyu | `src/skills.py` |
-| Router 训练（独占路由） | Zeyu | `experiments/scaling/train_router_simple.py` |
-| Scaling Pipeline 编排 | Zeyu | `scaling/run_full_pipeline.sh` |
-| τ²-bench Adapter | Zeyu | `experiments/scaling/benches/tau2_bench/` |
-| HumanEval Adapter | Zeyu | `experiments/scaling/benches/humaneval/` |
-| **LLM SFT 框架** | 白（colleague） | `experiments/tau2_stage2/` |
-| SWE-Bench Adapter | Teammate（待做） | `experiments/scaling/benches/swe_bench/` |
+| Router 训练（独占路由） | Zeyu | `src/pipeline/train_router_simple.py` |
+| Scaling Pipeline 编排 | Zeyu | `scripts/run_full_pipeline.sh` |
+| τ²-bench Adapter | Zeyu | `src/pipeline/benches/tau2_bench/` |
+| HumanEval Adapter | Zeyu | `src/pipeline/benches/humaneval/` |
+| **LLM SFT 框架** | 白（colleague） | `tau2_stage2/` |
+| SWE-Bench Adapter | Teammate（待做） | `src/pipeline/benches/swe_bench/` |
 
 ---
 
@@ -449,7 +450,7 @@ router-skills-evolve/
 ## FAQ
 
 **Q: HumanEval 有没有完整的闭环 pipeline？**  
-A: 有。`experiments/scaling/benches/humaneval/adapter.py` 已实现 `load_tasks()` 和 `run_task_pair()`，可直接用 `bash scaling/run_full_pipeline.sh --bench humaneval --n-cycles 4` 跑端到端闭环迭代。
+A: 有。`src/pipeline/benches/humaneval/adapter.py` 已实现 `load_tasks()` 和 `run_task_pair()`，可直接用 `bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4` 跑端到端闭环迭代。
 
 **Q: 不训 LLM 只跑 Skills + Router 可以吗？**  
 A: 可以，加 `--skip-llm` 或设 `SKIP_LLM=1` 跳过 Phase 3。Router 准确率 93%，cost 节省也显著（见上方 ablation 表）。

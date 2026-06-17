@@ -48,7 +48,7 @@ DeepSeekMath 的 group-relative estimator，无需 value network。
 - ❌ 需要 rollout（慢）、显存大（policy + ref）、超参敏感
 - 多轮（tau2）要点：reward 取轨迹末端 env 结果（最好是 graded）、只对 agent token 算梯度
   （tool/user token mask 掉）、rollout 温度必须 >0 否则 K 条坍缩。详见
-  `experiments/scaling/grpo_tau2_train.py`。
+  `src/pipeline/grpo_tau2_train.py`。
 
 ---
 

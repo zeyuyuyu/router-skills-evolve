@@ -6,7 +6,7 @@
 # training env's torch). Backgrounds the server and writes a PID file.
 #
 # Usage:
-#   scaling/vllm_serve_humaneval.sh <model_id_or_path> <port> <gpu_id> [served_name]
+#   scripts/vllm_serve_humaneval.sh <model_id_or_path> <port> <gpu_id> [served_name]
 #
 # Returns once the /v1/models endpoint is ready (or fails after a timeout).
 # The pipeline registers each served model in HE_VLLM_MAP so the HumanEval

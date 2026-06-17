@@ -1,6 +1,6 @@
 """HumanEval bench adapter for the scaling pipeline.
 
-Lets `scaling/run_full_pipeline.sh` run the original HumanEval experiment with
+Lets `scripts/run_full_pipeline.sh` run the original HumanEval experiment with
 the CURRENT pipeline (procedural SkillBook, closed-loop routing, learnable
 router), not just tau2/SWE. Unlike the tau2 adapter (which calls a remote
 agent API), HumanEval runs LOCAL code models + pytest — no API key needed.
@@ -12,7 +12,7 @@ small / large are HF model ids (or LoRA adapter paths in cycles >= 1):
 Each `run_task_pair` generates code with the small model and runs the task's
 HumanEval test; the large model is run when small fails (or always under
 force_both, for clean closed-loop oracle outcomes). Trace rows match the schema
-in `experiments/scaling/benches/__init__.py` and carry `small_completion` /
+in `src/pipeline/benches/__init__.py` and carry `small_completion` /
 `large_completion` (the generated code) so `traces_to_sft.py` can build SFT
 pairs.
 

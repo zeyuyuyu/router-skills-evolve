@@ -11,11 +11,11 @@
 # (TAU2_DOMAIN). Run it once per domain you care about.
 #
 # Quick wiring smoke (no GPU / no API key — synthetic rollouts):
-#   bash scaling/benchmark_tau2.sh --mock
+#   bash scripts/benchmark_tau2.sh --mock
 #
 # Real benchmark (1 GPU+ ; OPENAI_API_KEY + CommonStack base for gpt-5.2):
 #   OPENAI_API_KEY=... OPENAI_API_BASE=<commonstack> \
-#     bash scaling/benchmark_tau2.sh
+#     bash scripts/benchmark_tau2.sh
 #
 # Config (env vars; all optional):
 #   MODEL           HF id or local dir of the agent under test
@@ -33,7 +33,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-: "${BUNDLE_ROOT:=$REPO_ROOT/experiments/tau2_stage2}"
+: "${BUNDLE_ROOT:=$REPO_ROOT/tau2_stage2}"
 
 MOCK=false
 for a in "$@"; do case "$a" in --mock) MOCK=true ;; -h|--help) sed -n '1,40p' "$0"; exit 0 ;; esac; done
@@ -84,7 +84,7 @@ echo
 
 run_collect() {
   local extra=("$@")
-  "$PYTHON" "$REPO_ROOT/experiments/scaling/collect_traces.py" \
+  "$PYTHON" "$REPO_ROOT/src/pipeline/collect_traces.py" \
     --bench tau2_bench \
     --n-tasks "$N_TASKS" \
     --small-model "$1" \

@@ -5,7 +5,7 @@ Why this exists: `experiments/train_learnable_router.py` is hard-coupled to
 `data/HumanEval.jsonl` (looks up prompts by task_id from HumanEval). For tau2
 or SWE-Bench traces, that lookup fails. This trainer reads `prompt` directly
 from the trace row, so it works on any bench whose adapter writes the standard
-trace schema (see `experiments/scaling/benches/__init__.py`).
+trace schema (see `src/pipeline/benches/__init__.py`).
 
 Algorithm: TF-IDF over prompt → LogisticRegression. Label = 1 if the small
 model failed (i.e. we needed to route to large), 0 if small succeeded.

@@ -3,7 +3,7 @@
 Status: NOT IMPLEMENTED. Use `--bench tau2_bench` for now.
 
 To implement SWE-Bench support, fill in `load_tasks` and `run_task_pair`
-following the BenchAdapter protocol in `experiments/scaling/benches/__init__.py`.
+following the BenchAdapter protocol in `src/pipeline/benches/__init__.py`.
 
 ────────────────────────────── Implementation TODO ──────────────────────────────
 Estimated effort: 2-3 engineer-days.

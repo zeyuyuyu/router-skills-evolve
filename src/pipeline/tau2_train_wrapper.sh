@@ -17,7 +17,7 @@
 #                                       Use to reproduce the pre-evolve baseline.
 #
 # Required env vars:
-#   BUNDLE_ROOT          /path/to/experiments/tau2_stage2
+#   BUNDLE_ROOT          /path/to/tau2_stage2
 #   RUN_CONFIG           one of runs/<NN>_<model>_<data>.yaml (sans extension)
 #   TRAIN_OUTPUT_DIR     where to land train_outputs/<run_id>/
 #
@@ -35,7 +35,7 @@
 
 set -euo pipefail
 
-: "${BUNDLE_ROOT:?BUNDLE_ROOT must be set (path to experiments/tau2_stage2)}"
+: "${BUNDLE_ROOT:?BUNDLE_ROOT must be set (path to tau2_stage2)}"
 : "${RUN_CONFIG:?RUN_CONFIG must be set (e.g. 05_qwen3_5_4b_273)}"
 : "${TRAIN_OUTPUT_DIR:?TRAIN_OUTPUT_DIR must be set}"
 : "${MODE:=colleague_corpus}"

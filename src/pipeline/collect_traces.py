@@ -30,7 +30,7 @@ loop without introducing label bias. If --router/--skillbook are omitted the
 behaviour is byte-for-byte the original (cycle-0 / ablation use).
 
 Usage:
-    python experiments/scaling/collect_traces.py \
+    python src/pipeline/collect_traces.py \
         --bench tau2_bench \
         --n-tasks 30 \
         --small-model deepseek/deepseek-v3.2 \
@@ -40,7 +40,7 @@ Usage:
         --out results/scaling_xxx/cycle_1/traces.jsonl
 
 For smoke testing without GPUs/API keys:
-    SCALING_MOCK=1 python experiments/scaling/collect_traces.py --bench tau2_bench --n-tasks 30 --out /tmp/traces.jsonl
+    SCALING_MOCK=1 python src/pipeline/collect_traces.py --bench tau2_bench --n-tasks 30 --out /tmp/traces.jsonl
 """
 from __future__ import annotations
 
@@ -52,10 +52,10 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-# Make `experiments.scaling.benches` importable when invoked as a script.
+# Make `src.pipeline.benches` importable when invoked as a script.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from experiments.scaling.benches import load_adapter  # noqa: E402
+from src.pipeline.benches import load_adapter  # noqa: E402
 
 
 class FatalTraceCollectionError(RuntimeError):
