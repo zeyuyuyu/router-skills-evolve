@@ -26,7 +26,9 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-TAU2_BUNDLE = REPO_ROOT / "experiments" / "tau2_stage2"
+# Post-2026-06 refactor moved the bundle to the repo top level (was
+# experiments/tau2_stage2). Respect BUNDLE_ROOT (set by run_full_pipeline.sh).
+TAU2_BUNDLE = Path(os.environ.get("BUNDLE_ROOT", str(REPO_ROOT / "tau2_stage2")))
 
 
 def _extract_signature(prompt: str) -> str:

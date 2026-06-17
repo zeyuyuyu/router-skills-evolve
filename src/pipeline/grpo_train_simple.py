@@ -393,6 +393,71 @@ def _repair_rollout_vllm(client, served_model, tok, task, procedure, *, n, max_t
     return [{"reward": 1.0 if ok[i] else 0.0, "turns": turns_rec[i]} for i in range(n)]
 
 
+def _repair_rollout_vllm_global(client, served_model, tok, tasks, get_procedure, *,
+                                n, max_turns, temperature, max_new_tokens, concurrency):
+    """ALL tasks × K rollouts concurrently against vLLM, turn by turn.
+
+    Instead of one task at a time (K concurrent each), fire every still-active
+    (task, rollout) unit at once — vLLM continuous-batches hundreds of requests,
+    so a turn costs ~one batched forward regardless of task count. Returns the
+    same `groups` shape as the per-task loop.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from src.models import extract_code, run_humaneval_test
+
+    SYSTEM = ("You are a Python coding assistant. Return only valid Python code. "
+              "Do not include Markdown fences, explanations, examples, or tests.")
+    units = []
+    for ti, task in enumerate(tasks):
+        proc = get_procedure(task["prompt"]) or ""
+        first = f"{proc}\n\n---\n\n{task['prompt']}" if proc else task["prompt"]
+        for _ in range(n):
+            units.append({"ti": ti, "conv": [{"role": "user", "content": first}],
+                          "turns": [], "ok": False, "done": False})
+
+    def _gen(u):
+        msgs = [{"role": "system", "content": SYSTEM}, *u["conv"]]
+        r = client.chat.completions.create(
+            model=served_model, messages=msgs,
+            temperature=temperature, max_tokens=max_new_tokens)
+        return u, (r.choices[0].message.content or "")
+
+    for turn_idx in range(max_turns):
+        active = [u for u in units if not u["done"]]
+        if not active:
+            break
+        with ThreadPoolExecutor(max_workers=min(concurrency, len(active))) as pool:
+            results = list(pool.map(_gen, active))
+        for u, completion in results:
+            task = tasks[u["ti"]]
+            msgs = [{"role": "system", "content": SYSTEM}, *u["conv"]]
+            prompt_ids = tok.apply_chat_template(msgs, add_generation_prompt=True, tokenize=True)
+            completion_ids = tok(completion, add_special_tokens=False)["input_ids"]
+            u["turns"].append({"prompt_ids": prompt_ids, "completion_ids": completion_ids})
+            code = extract_code(completion, task["entry_point"], task["prompt"])
+            passed, error = run_humaneval_test(task, code)
+            if passed:
+                u["ok"] = True
+                u["done"] = True
+            elif turn_idx < max_turns - 1:
+                u["conv"].append({"role": "assistant", "content": code})
+                u["conv"].append({"role": "user", "content": (
+                    f"Your code failed with the following error:\n\n{error}\n\n"
+                    "Analyze the error and return a corrected version of the complete function.")})
+            else:
+                u["done"] = True
+        n_done = sum(1 for u in units if u["done"])
+        print(f"[grpo] vLLM rollout turn {turn_idx+1}/{max_turns}: "
+              f"{len(active)} reqs, {n_done}/{len(units)} units done", flush=True)
+
+    groups = []
+    for ti, task in enumerate(tasks):
+        rollouts = [{"reward": 1.0 if u["ok"] else 0.0, "turns": u["turns"]}
+                    for u in units if u["ti"] == ti]
+        groups.append({"task_id": task["task_id"], "rollouts": rollouts})
+    return groups
+
+
 def _run_repair_grpo(args, tasks, get_procedure) -> int:
     from src.pipeline.grpo_core import compute_advantages, grpo_update
 
@@ -443,24 +508,33 @@ def _run_repair_grpo(args, tasks, get_procedure) -> int:
               f"update in-process. Multi-turn repair preserved.", flush=True)
 
     # ── ROLLOUT: K on-policy repair trajectories per task ────────────────────
-    groups = []
-    for i, task in enumerate(tasks, 1):
-        proc = get_procedure(task["prompt"]) or ""
-        if vllm_client is not None:
-            rollouts = _repair_rollout_vllm(
-                vllm_client, served, tok, task, proc, n=args.n_generations,
-                max_turns=args.max_repair_turns, temperature=args.temperature,
-                max_new_tokens=max_new_tokens)
-        else:
+    if vllm_client is not None:
+        # vLLM: all tasks × K fired concurrently (server batches hundreds) — far
+        # faster than one task at a time.
+        concurrency = int(os.environ.get("GRPO_ROLLOUT_CONCURRENCY", "64"))
+        print(f"[grpo] vLLM global rollout: {len(tasks)}×K={args.n_generations} "
+              f"units, concurrency={concurrency}", flush=True)
+        groups = _repair_rollout_vllm_global(
+            vllm_client, served, tok, tasks, get_procedure,
+            n=args.n_generations, max_turns=args.max_repair_turns,
+            temperature=args.temperature, max_new_tokens=max_new_tokens,
+            concurrency=concurrency)
+        for g in groups:
+            n_pass = sum(1 for r in g["rollouts"] if r["reward"] > 0)
+            print(f"[grpo] {g['task_id']}  pass={n_pass}/{len(g['rollouts'])}", flush=True)
+    else:
+        groups = []
+        for i, task in enumerate(tasks, 1):
+            proc = get_procedure(task["prompt"]) or ""
             rollouts = _repair_rollout_batched(
                 model, tok, task, proc, n=args.n_generations, style=args.prompt_style,
                 max_turns=args.max_repair_turns, temperature=args.temperature,
                 max_new_tokens=max_new_tokens)
-        n_pass = sum(1 for r in rollouts if r["reward"] > 0)
-        print(f"[grpo] task {i}/{len(tasks)} {task['task_id']}  "
-              f"pass={n_pass}/{len(rollouts)}  "
-              f"avg_turns={sum(len(r['turns']) for r in rollouts)/len(rollouts):.1f}", flush=True)
-        groups.append({"task_id": task["task_id"], "rollouts": rollouts})
+            n_pass = sum(1 for r in rollouts if r["reward"] > 0)
+            print(f"[grpo] task {i}/{len(tasks)} {task['task_id']}  "
+                  f"pass={n_pass}/{len(rollouts)}  "
+                  f"avg_turns={sum(len(r['turns']) for r in rollouts)/len(rollouts):.1f}", flush=True)
+            groups.append({"task_id": task["task_id"], "rollouts": rollouts})
 
     kept, adv_stats = compute_advantages(groups, dynamic_sampling=is_dapo)
     print(f"[grpo] advantage: {adv_stats}", flush=True)
