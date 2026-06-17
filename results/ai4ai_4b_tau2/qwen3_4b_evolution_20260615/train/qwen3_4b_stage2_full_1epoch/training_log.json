@@ -1,0 +1,74 @@
+{
+  "run_id": "12_qwen3_4b_ai4ai_2epoch",
+  "metrics": {
+    "train_runtime": 1252.7467,
+    "train_samples_per_second": 2.01,
+    "train_steps_per_second": 0.032,
+    "total_flos": 1.532671689601581e+18,
+    "train_loss": 0.26612621545791626
+  },
+  "history": [
+    {
+      "loss": 0.42038607597351074,
+      "grad_norm": 0.96875,
+      "learning_rate": 1.8534498304362758e-05,
+      "entropy": 0.2596413666382432,
+      "num_tokens": 17745774.0,
+      "mean_token_accuracy": 0.9056536078453064,
+      "epoch": 0.25316455696202533,
+      "step": 10
+    },
+    {
+      "loss": 0.22474565505981445,
+      "grad_norm": 0.921875,
+      "learning_rate": 1.2481351312526606e-05,
+      "entropy": 0.22133173681795598,
+      "num_tokens": 35538958.0,
+      "mean_token_accuracy": 0.929742269217968,
+      "epoch": 0.5063291139240507,
+      "step": 20
+    },
+    {
+      "loss": 0.19654536247253418,
+      "grad_norm": 0.64453125,
+      "learning_rate": 5.47208558579299e-06,
+      "entropy": 0.19990757051855326,
+      "num_tokens": 53260893.0,
+      "mean_token_accuracy": 0.9380484953522682,
+      "epoch": 0.759493670886076,
+      "step": 30
+    },
+    {
+      "loss": 0.22282776832580567,
+      "grad_norm": 1.25,
+      "learning_rate": 2.0307395629399716e-06,
+      "entropy": 0.22121690605816088,
+      "num_tokens": 70058257.0,
+      "mean_token_accuracy": 0.9315135714254881,
+      "epoch": 1.0,
+      "step": 40
+    },
+    {
+      "train_runtime": 1252.7467,
+      "train_samples_per_second": 2.01,
+      "train_steps_per_second": 0.032,
+      "total_flos": 1.532671689601581e+18,
+      "train_loss": 0.26612621545791626,
+      "epoch": 1.0,
+      "step": 40
+    }
+  ],
+  "model_name": "Qwen/Qwen3-4B",
+  "resolved_model_name": "/mnt/cephfs/data/stable/models/Qwen/Qwen3-4B",
+  "resolved_model_local_path": "/mnt/cephfs/data/stable/models/Qwen/Qwen3-4B",
+  "n_train_rows": 5665,
+  "n_val_rows": 378,
+  "n_runs_kept": 249,
+  "git_sha": "unknown",
+  "published_best_checkpoint": "/root/router-skills-evolve/results/ai4ai_4b_tau2/qwen3_4b_evolution_20260615/train/qwen3_4b_stage2_full_1epoch/checkpoint-best",
+  "skipped_final_model_save": false,
+  "global_step": 40,
+  "epoch": 1.0,
+  "best_metric": null,
+  "best_model_checkpoint": null
+}

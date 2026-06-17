@@ -1,0 +1,1 @@
+SFT_CHECKPOINT=/root/router-skills-evolve/results/ai4ai_4b_tau2/qwen3_4b_evolution_20260615/train/qwen3_4b_stage2_full_1epoch/checkpoint-final

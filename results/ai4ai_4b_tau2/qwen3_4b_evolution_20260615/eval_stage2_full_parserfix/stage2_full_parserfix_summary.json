@@ -1,0 +1,58 @@
+{
+  "model": "qwen3-4b-sft",
+  "checkpoint": "qwen3_4b_stage2_full_1epoch/checkpoint-final",
+  "split": "test",
+  "num_trials": 1,
+  "seed": 300,
+  "max_steps": 200,
+  "user_model": "openai/openai/gpt-5.2",
+  "judge": "openai/openai/gpt-5.2",
+  "saves": {
+    "stage2_full_parserfix_20260617_005840_test_airline20": {
+      "n": 20,
+      "pass": 6,
+      "pass_rate": 0.3,
+      "avg_reward": 0.3,
+      "assistant_tool_calls": 407,
+      "assistant_user_tags": 0,
+      "unexpected_kwarg_errors": 0,
+      "termination_reasons": {
+        "user_stop": 18,
+        "max_steps": 2
+      }
+    },
+    "stage2_full_parserfix_20260617_005840_test_retail40": {
+      "n": 40,
+      "pass": 14,
+      "pass_rate": 0.35,
+      "avg_reward": 0.35,
+      "assistant_tool_calls": 317,
+      "assistant_user_tags": 0,
+      "unexpected_kwarg_errors": 0,
+      "termination_reasons": {
+        "user_stop": 40
+      }
+    },
+    "stage2_full_parserfix_20260617_005840_test_telecom40": {
+      "n": 40,
+      "pass": 15,
+      "pass_rate": 0.375,
+      "avg_reward": 0.375,
+      "assistant_tool_calls": 605,
+      "assistant_user_tags": 0,
+      "unexpected_kwarg_errors": 0,
+      "termination_reasons": {
+        "user_stop": 37,
+        "max_steps": 3
+      }
+    }
+  },
+  "overall": {
+    "n": 100,
+    "pass": 35,
+    "pass_rate": 0.35,
+    "assistant_tool_calls": 1329,
+    "assistant_user_tags": 0,
+    "unexpected_kwarg_errors": 0
+  }
+}

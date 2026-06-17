@@ -1,0 +1,33 @@
+{
+  "rows": 100,
+  "small_success": 23,
+  "large_success": 72,
+  "final_success": 75,
+  "small_fail_large_ok": 52,
+  "by_domain": {
+    "airline": {
+      "n": 20,
+      "small_success": 4,
+      "large_success": 11,
+      "final_success": 11,
+      "small_fail_large_ok": 7,
+      "large_completion_empty": 0
+    },
+    "retail": {
+      "n": 40,
+      "small_success": 11,
+      "large_success": 28,
+      "final_success": 29,
+      "small_fail_large_ok": 18,
+      "large_completion_empty": 0
+    },
+    "telecom": {
+      "n": 40,
+      "small_success": 8,
+      "large_success": 33,
+      "final_success": 35,
+      "small_fail_large_ok": 27,
+      "large_completion_empty": 0
+    }
+  }
+}

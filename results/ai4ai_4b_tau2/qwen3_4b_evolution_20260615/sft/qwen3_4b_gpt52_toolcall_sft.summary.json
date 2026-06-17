@@ -1,0 +1,11 @@
+{
+  "total": 72,
+  "hard": 52,
+  "written": 52,
+  "no_tool_calls": 0,
+  "by_domain": {
+    "airline": 7,
+    "retail": 18,
+    "telecom": 27
+  }
+}
