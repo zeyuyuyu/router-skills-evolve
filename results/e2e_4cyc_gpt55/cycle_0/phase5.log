@@ -1,0 +1,6 @@
+[ablation] 82 rows, 82 with labels
+[ablation] DONE  out=/shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_0/e2e_ablation_summary.json
+  large     routing_acc=29.27%  task_pass=96.34%
+  skills    routing_acc=70.73%  task_pass=70.73%
+  router    routing_acc=92.68%  task_pass=91.46%
+  full      routing_acc=92.68%  task_pass=91.46%

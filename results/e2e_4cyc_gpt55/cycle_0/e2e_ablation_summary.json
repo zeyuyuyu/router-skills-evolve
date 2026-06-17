@@ -1,0 +1,47 @@
+{
+  "variants": {
+    "large": {
+      "routing_acc": 0.2926829268292683,
+      "large_f1": 0.45283018867924524,
+      "fallback": 0.0,
+      "cost_vs_large": 1.0,
+      "n_eval": 82,
+      "task_pass": 0.9634146341463414
+    },
+    "skills": {
+      "routing_acc": 0.7073170731707317,
+      "large_f1": 0,
+      "fallback": 0.2926829268292683,
+      "cost_vs_large": 0.09999999999999999,
+      "n_eval": 82,
+      "task_pass": 0.7073170731707317
+    },
+    "router": {
+      "routing_acc": 0.926829268292683,
+      "large_f1": 0.8636363636363635,
+      "fallback": 0.06097560975609756,
+      "cost_vs_large": 0.3195121951219512,
+      "n_eval": 82,
+      "task_pass": 0.9146341463414634
+    },
+    "full": {
+      "routing_acc": 0.926829268292683,
+      "large_f1": 0.8636363636363635,
+      "fallback": 0.06097560975609756,
+      "cost_vs_large": 0.3195121951219512,
+      "n_eval": 82,
+      "task_pass": 0.9146341463414634
+    }
+  },
+  "label_distribution": {
+    "0": 58,
+    "1": 24
+  },
+  "n_traces_total": 82,
+  "n_traces_with_label": 82,
+  "router_threshold": 0.5,
+  "cycle": 0,
+  "bench": "humaneval",
+  "model_config": "05_qwen3_5_4b_273",
+  "schedule": "SLR"
+}

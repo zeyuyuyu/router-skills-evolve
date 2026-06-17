@@ -1,0 +1,22 @@
+[collect_traces] loaded router from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/router/router.joblib
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] bench=humaneval cycle=2 split=train closed_loop=True workers=8 mock=False
+[collect_traces] loaded 82 tasks
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] loaded SkillBook (1 signatures) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_1/skillbook.json
+[collect_traces] 10/82  success=10/10  elapsed=22.4s
+[collect_traces] 20/82  success=20/20  elapsed=45.6s
+[collect_traces] 30/82  success=30/30  elapsed=60.7s
+[collect_traces] 40/82  success=39/40  elapsed=87.2s
+[collect_traces] 50/82  success=48/50  elapsed=103.8s
+[collect_traces] 60/82  success=58/60  elapsed=121.9s
+[collect_traces] 70/82  success=68/70  elapsed=164.1s
+[collect_traces] 80/82  success=78/80  elapsed=197.3s
+[collect_traces] 82/82  success=80/82  elapsed=239.5s
+[collect_traces] DONE  out=/shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_2/traces.jsonl  final_success=80/82 (97.6%)  elapsed=239.6s  policy_route: small=54 large=28

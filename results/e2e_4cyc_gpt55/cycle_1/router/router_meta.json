@@ -1,0 +1,17 @@
+{
+  "metrics": {
+    "n_train": 61,
+    "n_eval": 21,
+    "accuracy": 0.6190476190476191,
+    "f1_large": 0.42857142857142855
+  },
+  "threshold_default": 0.5,
+  "n_examples_total": 82,
+  "label_distribution": {
+    "0_small_ok": 54,
+    "1_need_large": 28
+  },
+  "seed": 42,
+  "vectorizer": "tfidf(4096, 1-2gram)",
+  "classifier": "LogisticRegression(class_weight=balanced)"
+}

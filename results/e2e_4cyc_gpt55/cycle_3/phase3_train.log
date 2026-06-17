@@ -1,0 +1,59 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+================================================================================
+📂 加载训练数据: /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_3/training_data.jsonl
+================================================================================
+✅ 加载 83 条训练样本
+
+📝 训练文本示例 (前 200 字符):
+<|im_start|>system
+You are a Python coding assistant. Return only valid Python code. Do not include Markdown fences, explanations, examples, or tests.<|im_end|>
+<|im_start|>user
+# Procedure for cluste...
+
+================================================================================
+🤖 加载 base model: /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_2/grpo_adapter
+================================================================================
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   0%|          | 1/338 [00:00<00:42,  7.89it/s]Loading weights:   8%|▊         | 26/338 [00:00<00:02, 118.65it/s]Loading weights:  12%|█▏        | 40/338 [00:00<00:02, 121.75it/s]Loading weights:  21%|██        | 71/338 [00:00<00:01, 187.88it/s]Loading weights:  36%|███▌      | 122/338 [00:00<00:00, 258.61it/s]Loading weights:  54%|█████▍    | 184/338 [00:00<00:00, 360.75it/s]Loading weights:  75%|███████▌  | 255/338 [00:00<00:00, 455.38it/s]Loading weights:  90%|████████▉ | 303/338 [00:00<00:00, 460.36it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 348.84it/s]
+Loading weights:   0%|          | 0/224 [00:00<?, ?it/s]Loading weights: 100%|██████████| 224/224 [00:00<00:00, 8666.24it/s]
+/shared_home/yuhang.yao/router-skills-evolve/venv/lib/python3.12/site-packages/peft/mapping_func.py:72: UserWarning: You are trying to modify a model with PEFT for a second time. If you want to reload the model with a different config, make sure to call `.unload()` before.
+  warnings.warn(
+/shared_home/yuhang.yao/router-skills-evolve/venv/lib/python3.12/site-packages/peft/tuners/tuners_utils.py:302: UserWarning: Already found a `peft_config` attribute in the model. This will lead to having multiple adapters in the model. Make sure to know what you are doing!
+  warnings.warn(
+[transformers] warmup_ratio is deprecated and will be removed in v5.2. Use `warmup_steps` instead.
+/shared_home/yuhang.yao/router-skills-evolve/src/pipeline/train_small_model.py:296: FutureWarning: The default `loss_type` will change from `'nll'` to `'chunked_nll'` in TRL 1.7. For standard models this is transparent (same math, lower memory) and no action is needed — you'll get the new default automatically on upgrade. If you use a custom model, check ahead of time that `loss_type='chunked_nll'` runs and yields the same loss as `'nll'`; if it doesn't, pin `loss_type='nll'` to keep the current behavior and please open an issue at https://github.com/huggingface/trl/issues so we can address the edge case.
+  training_args = SFTConfig(
+
+================================================================================
+🎯 配置 LoRA (rank=16, alpha=32)
+================================================================================
+   可训练参数: 4,358,144 (0.28%)
+
+================================================================================
+🏃 开始训练
+================================================================================
+Adding EOS to train dataset:   0%|          | 0/83 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 83/83 [00:00<00:00, 11402.79 examples/s]
+Tokenizing train dataset:   0%|          | 0/83 [00:00<?, ? examples/s]Tokenizing train dataset:  24%|██▍       | 20/83 [00:00<00:00, 176.04 examples/s]Tokenizing train dataset:  46%|████▌     | 38/83 [00:00<00:00, 135.87 examples/s]Tokenizing train dataset:  76%|███████▌  | 63/83 [00:00<00:00, 176.92 examples/s]Tokenizing train dataset: 100%|██████████| 83/83 [00:00<00:00, 159.48 examples/s]Tokenizing train dataset: 100%|██████████| 83/83 [00:00<00:00, 159.46 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+  0%|          | 0/12 [00:00<?, ?it/s]  8%|▊         | 1/12 [00:12<02:22, 12.92s/it]                                                8%|▊         | 1/12 [00:12<02:22, 12.92s/it] 17%|█▋        | 2/12 [00:22<01:49, 10.94s/it]                                               17%|█▋        | 2/12 [00:22<01:49, 10.94s/it] 25%|██▌       | 3/12 [00:31<01:29,  9.94s/it]                                               25%|██▌       | 3/12 [00:31<01:29,  9.94s/it] 33%|███▎      | 4/12 [00:39<01:14,  9.28s/it]                                               33%|███▎      | 4/12 [00:39<01:14,  9.28s/it] 42%|████▏     | 5/12 [00:45<00:56,  8.08s/it]                                               42%|████▏     | 5/12 [00:45<00:56,  8.08s/it] 50%|█████     | 6/12 [00:46<00:34,  5.74s/it]                                               50%|█████     | 6/12 [00:46<00:34,  5.74s/it] 58%|█████▊    | 7/12 [00:52<00:28,  5.66s/it]                                               58%|█████▊    | 7/12 [00:52<00:28,  5.66s/it] 67%|██████▋   | 8/12 [00:56<00:20,  5.12s/it]                                               67%|██████▋   | 8/12 [00:56<00:20,  5.12s/it] 75%|███████▌  | 9/12 [01:01<00:15,  5.10s/it]                                               75%|███████▌  | 9/12 [01:01<00:15,  5.10s/it] 83%|████████▎ | 10/12 [01:05<00:09,  4.94s/it]                                                83%|████████▎ | 10/12 [01:05<00:09,  4.94s/it] 92%|█████████▏| 11/12 [01:10<00:04,  4.97s/it]                                                92%|█████████▏| 11/12 [01:10<00:04,  4.97s/it]100%|██████████| 12/12 [01:11<00:00,  3.74s/it]                                               100%|██████████| 12/12 [01:11<00:00,  3.74s/it]                                               100%|██████████| 12/12 [01:12<00:00,  3.74s/it]100%|██████████| 12/12 [01:12<00:00,  6.05s/it]
+{'loss': '0.2441', 'grad_norm': '0.4818', 'learning_rate': '0', 'entropy': '0.1465', 'mean_token_accuracy': '0.9256', 'num_tokens': '1.626e+04', 'epoch': '0.1928'}
+{'loss': '0.2466', 'grad_norm': '0.5165', 'learning_rate': '0.0002', 'entropy': '0.1377', 'mean_token_accuracy': '0.915', 'num_tokens': '3.355e+04', 'epoch': '0.3855'}
+{'loss': '0.4838', 'grad_norm': '0.8141', 'learning_rate': '0.0001959', 'entropy': '0.2579', 'mean_token_accuracy': '0.8557', 'num_tokens': '4.879e+04', 'epoch': '0.5783'}
+{'loss': '0.2468', 'grad_norm': '0.5213', 'learning_rate': '0.0001841', 'entropy': '0.1869', 'mean_token_accuracy': '0.9169', 'num_tokens': '6.452e+04', 'epoch': '0.7711'}
+{'loss': '0.1627', 'grad_norm': '0.2749', 'learning_rate': '0.0001655', 'entropy': '0.1821', 'mean_token_accuracy': '0.9229', 'num_tokens': '8.055e+04', 'epoch': '0.9639'}
+{'loss': '0.1835', 'grad_norm': '0.4362', 'learning_rate': '0.0001415', 'entropy': '0.214', 'mean_token_accuracy': '0.9383', 'num_tokens': '8.344e+04', 'epoch': '1'}
+{'loss': '0.1234', 'grad_norm': '0.2463', 'learning_rate': '0.0001142', 'entropy': '0.1786', 'mean_token_accuracy': '0.9459', 'num_tokens': '9.892e+04', 'epoch': '1.193'}
+{'loss': '0.169', 'grad_norm': '0.1777', 'learning_rate': '8.577e-05', 'entropy': '0.2015', 'mean_token_accuracy': '0.931', 'num_tokens': '1.154e+05', 'epoch': '1.386'}
+{'loss': '0.1852', 'grad_norm': '0.1939', 'learning_rate': '5.846e-05', 'entropy': '0.2086', 'mean_token_accuracy': '0.9409', 'num_tokens': '1.31e+05', 'epoch': '1.578'}
+{'loss': '0.1303', 'grad_norm': '0.1398', 'learning_rate': '3.451e-05', 'entropy': '0.1799', 'mean_token_accuracy': '0.9609', 'num_tokens': '1.471e+05', 'epoch': '1.771'}
+{'loss': '0.09916', 'grad_norm': '0.1366', 'learning_rate': '1.587e-05', 'entropy': '0.1602', 'mean_token_accuracy': '0.9652', 'num_tokens': '1.638e+05', 'epoch': '1.964'}
+{'loss': '0.1125', 'grad_norm': '0.2304', 'learning_rate': '4.051e-06', 'entropy': '0.2399', 'mean_token_accuracy': '0.9289', 'num_tokens': '1.669e+05', 'epoch': '2'}
+{'train_runtime': '72.64', 'train_samples_per_second': '2.285', 'train_steps_per_second': '0.165', 'train_loss': '0.1989', 'epoch': '2'}
+[plot] saved training curve → /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_3/llm_adapter/training_curve.png
+
+✅ 训练完成!
+   Output: /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_3/llm_adapter
+
+下一步:
+   1. 部署 LoRA adapter 到 inference 服务
+   2. 更新 CommonStack / UncommonRoute 模型池, 加入 finetuned 模型
+   3. 重跑 run_evolve.py, 对比 fine-tune 前后效果

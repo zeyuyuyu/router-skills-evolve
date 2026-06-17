@@ -1,0 +1,2 @@
+[router] loaded 82 examples (24 label=1, 58 label=0); skipped 0
+[router] DONE  acc=0.714  f1_large=0.250  out=/shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_0/router/router.joblib

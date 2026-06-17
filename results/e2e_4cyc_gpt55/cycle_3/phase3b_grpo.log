@@ -1,0 +1,222 @@
+[grpo] loaded skillbook (1 clusters) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_3/skillbook.json
+[grpo] 82 tasks (split=train)  rollout=repair
+[grpo] repair rollout: algo=dapo K=8 max_turns=3 temp=0.8 dynamic_sampling=True
+[grpo] loading LoRA adapter (/shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_3/llm_adapter) on top of Qwen/Qwen2.5-Coder-1.5B-Instruct
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   4%|▍         | 14/338 [00:00<00:02, 139.25it/s]Loading weights:  18%|█▊        | 62/338 [00:00<00:00, 330.16it/s]Loading weights:  33%|███▎      | 111/338 [00:00<00:00, 387.59it/s]Loading weights:  51%|█████     | 171/338 [00:00<00:00, 454.84it/s]Loading weights:  65%|██████▍   | 219/338 [00:00<00:00, 458.80it/s]Loading weights:  82%|████████▏ | 277/338 [00:00<00:00, 493.69it/s]Loading weights:  97%|█████████▋| 327/338 [00:00<00:00, 487.72it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 456.47it/s]
+[grpo] LoRA merged
+[grpo] rollout via vLLM @ http://127.0.0.1:8102/v1 (model=grpo-rollout-policy); update in-process. Multi-turn repair preserved.
+[grpo] vLLM global rollout: 82×K=8 units, concurrency=64
+[grpo] vLLM rollout turn 1/3: 656 reqs, 404/656 units done
+[grpo] vLLM rollout turn 2/3: 252 reqs, 424/656 units done
+[grpo] vLLM rollout turn 3/3: 232 reqs, 656/656 units done
+[grpo] HumanEval/0  pass=8/8
+[grpo] HumanEval/2  pass=8/8
+[grpo] HumanEval/4  pass=8/8
+[grpo] HumanEval/6  pass=0/8
+[grpo] HumanEval/8  pass=7/8
+[grpo] HumanEval/10  pass=1/8
+[grpo] HumanEval/12  pass=8/8
+[grpo] HumanEval/14  pass=8/8
+[grpo] HumanEval/16  pass=8/8
+[grpo] HumanEval/18  pass=8/8
+[grpo] HumanEval/20  pass=4/8
+[grpo] HumanEval/22  pass=8/8
+[grpo] HumanEval/24  pass=7/8
+[grpo] HumanEval/26  pass=0/8
+[grpo] HumanEval/28  pass=8/8
+[grpo] HumanEval/30  pass=8/8
+[grpo] HumanEval/32  pass=1/8
+[grpo] HumanEval/34  pass=8/8
+[grpo] HumanEval/36  pass=8/8
+[grpo] HumanEval/38  pass=0/8
+[grpo] HumanEval/40  pass=8/8
+[grpo] HumanEval/42  pass=7/8
+[grpo] HumanEval/44  pass=8/8
+[grpo] HumanEval/46  pass=5/8
+[grpo] HumanEval/48  pass=8/8
+[grpo] HumanEval/50  pass=0/8
+[grpo] HumanEval/52  pass=8/8
+[grpo] HumanEval/54  pass=7/8
+[grpo] HumanEval/56  pass=8/8
+[grpo] HumanEval/58  pass=8/8
+[grpo] HumanEval/60  pass=8/8
+[grpo] HumanEval/62  pass=8/8
+[grpo] HumanEval/64  pass=6/8
+[grpo] HumanEval/66  pass=8/8
+[grpo] HumanEval/68  pass=8/8
+[grpo] HumanEval/70  pass=6/8
+[grpo] HumanEval/72  pass=7/8
+[grpo] HumanEval/74  pass=4/8
+[grpo] HumanEval/76  pass=2/8
+[grpo] HumanEval/78  pass=8/8
+[grpo] HumanEval/80  pass=2/8
+[grpo] HumanEval/82  pass=8/8
+[grpo] HumanEval/84  pass=8/8
+[grpo] HumanEval/86  pass=6/8
+[grpo] HumanEval/88  pass=1/8
+[grpo] HumanEval/90  pass=1/8
+[grpo] HumanEval/92  pass=8/8
+[grpo] HumanEval/94  pass=5/8
+[grpo] HumanEval/96  pass=8/8
+[grpo] HumanEval/98  pass=7/8
+[grpo] HumanEval/100  pass=1/8
+[grpo] HumanEval/102  pass=4/8
+[grpo] HumanEval/104  pass=5/8
+[grpo] HumanEval/106  pass=5/8
+[grpo] HumanEval/108  pass=0/8
+[grpo] HumanEval/110  pass=1/8
+[grpo] HumanEval/112  pass=3/8
+[grpo] HumanEval/114  pass=8/8
+[grpo] HumanEval/116  pass=8/8
+[grpo] HumanEval/118  pass=3/8
+[grpo] HumanEval/120  pass=6/8
+[grpo] HumanEval/122  pass=8/8
+[grpo] HumanEval/124  pass=6/8
+[grpo] HumanEval/126  pass=0/8
+[grpo] HumanEval/128  pass=7/8
+[grpo] HumanEval/130  pass=0/8
+[grpo] HumanEval/132  pass=0/8
+[grpo] HumanEval/134  pass=0/8
+[grpo] HumanEval/136  pass=7/8
+[grpo] HumanEval/138  pass=4/8
+[grpo] HumanEval/140  pass=3/8
+[grpo] HumanEval/142  pass=5/8
+[grpo] HumanEval/144  pass=2/8
+[grpo] HumanEval/146  pass=4/8
+[grpo] HumanEval/148  pass=0/8
+[grpo] HumanEval/150  pass=5/8
+[grpo] HumanEval/152  pass=8/8
+[grpo] HumanEval/154  pass=6/8
+[grpo] HumanEval/156  pass=8/8
+[grpo] HumanEval/158  pass=6/8
+[grpo] HumanEval/160  pass=1/8
+[grpo] HumanEval/162  pass=8/8
+[grpo] advantage: {'n_groups': 82, 'n_dropped_zero_variance': 43, 'n_informative_groups': 39, 'n_rollouts_kept': 312}
+[grpo] 628 repair-turn examples
+[grpo] epoch=0 step=5 loss=0.5766 mean_adv=-0.577
+[grpo] epoch=0 step=10 loss=0.5766 mean_adv=-0.577
+[grpo] epoch=0 step=15 loss=-0.3778 mean_adv=+0.378
+[grpo] epoch=0 step=20 loss=2.6446 mean_adv=-2.646
+[grpo] epoch=0 step=25 loss=0.3791 mean_adv=-0.378
+[grpo] epoch=0 step=30 loss=-0.5772 mean_adv=+0.577
+[grpo] epoch=0 step=35 loss=0.5773 mean_adv=-0.577
+[grpo] epoch=0 step=40 loss=1.2900 mean_adv=-1.291
+[grpo] epoch=0 step=45 loss=1.2899 mean_adv=-1.291
+[grpo] epoch=0 step=50 loss=1.3027 mean_adv=-1.291
+[grpo] epoch=0 step=55 loss=1.2919 mean_adv=-1.291
+[grpo] epoch=0 step=60 loss=-0.5754 mean_adv=+0.577
+[grpo] epoch=0 step=65 loss=2.6429 mean_adv=-2.646
+[grpo] epoch=0 step=70 loss=1.7358 mean_adv=-1.732
+[grpo] epoch=0 step=75 loss=0.7734 mean_adv=-0.775
+[grpo] epoch=0 step=80 loss=-0.7738 mean_adv=+0.775
+[grpo] epoch=0 step=85 loss=0.5776 mean_adv=-0.577
+[grpo] epoch=0 step=90 loss=1.0009 mean_adv=-1.000
+[grpo] epoch=0 step=95 loss=-0.5769 mean_adv=+0.577
+[grpo] epoch=0 step=100 loss=0.7753 mean_adv=-0.775
+[grpo] epoch=0 step=105 loss=1.0003 mean_adv=-1.000
+[grpo] epoch=0 step=110 loss=0.7735 mean_adv=-0.775
+[grpo] epoch=0 step=115 loss=-0.5777 mean_adv=+0.577
+[grpo] epoch=0 step=120 loss=1.7308 mean_adv=-1.732
+[grpo] epoch=0 step=125 loss=0.3780 mean_adv=-0.378
+[grpo] epoch=0 step=130 loss=0.5773 mean_adv=-0.577
+[grpo] epoch=0 step=135 loss=0.3783 mean_adv=-0.378
+[grpo] epoch=0 step=140 loss=-1.2918 mean_adv=+1.291
+[grpo] epoch=0 step=145 loss=-0.7747 mean_adv=+0.775
+[grpo] epoch=0 step=150 loss=-0.5782 mean_adv=+0.577
+[grpo] epoch=0 step=155 loss=1.2888 mean_adv=-1.291
+[grpo] epoch=0 step=160 loss=0.5773 mean_adv=-0.577
+[grpo] epoch=0 step=165 loss=0.5767 mean_adv=-0.577
+[grpo] epoch=0 step=170 loss=1.7318 mean_adv=-1.732
+[grpo] epoch=0 step=175 loss=1.2913 mean_adv=-1.291
+[grpo] epoch=0 step=180 loss=0.9989 mean_adv=-1.000
+[grpo] epoch=0 step=185 loss=0.9975 mean_adv=-1.000
+[grpo] epoch=0 step=190 loss=0.3781 mean_adv=-0.378
+[grpo] epoch=0 step=195 loss=-0.3780 mean_adv=+0.378
+[grpo] epoch=0 step=200 loss=1.7315 mean_adv=-1.732
+[grpo] epoch=0 step=205 loss=-0.9998 mean_adv=+1.000
+[grpo] epoch=0 step=210 loss=-1.0001 mean_adv=+1.000
+[grpo] epoch=0 step=215 loss=0.5770 mean_adv=-0.577
+[grpo] epoch=0 step=220 loss=-0.3789 mean_adv=+0.378
+[grpo] epoch=0 step=225 loss=1.7297 mean_adv=-1.732
+[grpo] epoch=0 step=230 loss=-0.5783 mean_adv=+0.577
+[grpo] epoch=0 step=235 loss=0.3780 mean_adv=-0.378
+[grpo] epoch=0 step=240 loss=0.5767 mean_adv=-0.577
+[grpo] epoch=0 step=245 loss=0.3785 mean_adv=-0.378
+[grpo] epoch=0 step=250 loss=-0.5769 mean_adv=+0.577
+[grpo] epoch=0 step=255 loss=0.3782 mean_adv=-0.378
+[grpo] epoch=0 step=260 loss=-0.5774 mean_adv=+0.577
+[grpo] epoch=0 step=265 loss=0.3781 mean_adv=-0.378
+[grpo] epoch=0 step=270 loss=0.5777 mean_adv=-0.577
+[grpo] epoch=0 step=275 loss=0.3782 mean_adv=-0.378
+[grpo] epoch=0 step=280 loss=0.3777 mean_adv=-0.378
+[grpo] epoch=0 step=285 loss=0.3778 mean_adv=-0.378
+[grpo] epoch=0 step=290 loss=-0.5779 mean_adv=+0.577
+[grpo] epoch=0 step=295 loss=-0.5776 mean_adv=+0.577
+[grpo] epoch=0 step=300 loss=0.9993 mean_adv=-1.000
+[grpo] epoch=0 step=305 loss=-0.3774 mean_adv=+0.378
+[grpo] epoch=0 step=310 loss=1.2902 mean_adv=-1.291
+[grpo] epoch=0 step=315 loss=-0.3776 mean_adv=+0.378
+[grpo] epoch=0 step=320 loss=-0.5783 mean_adv=+0.577
+[grpo] epoch=0 step=325 loss=1.0056 mean_adv=-1.000
+[grpo] epoch=0 step=330 loss=0.3777 mean_adv=-0.378
+[grpo] epoch=0 step=335 loss=0.5770 mean_adv=-0.577
+[grpo] epoch=0 step=340 loss=2.6527 mean_adv=-2.646
+[grpo] epoch=0 step=345 loss=0.5767 mean_adv=-0.577
+[grpo] epoch=0 step=350 loss=0.9984 mean_adv=-1.000
+[grpo] epoch=0 step=355 loss=1.0001 mean_adv=-1.000
+[grpo] epoch=0 step=360 loss=-0.5770 mean_adv=+0.577
+[grpo] epoch=0 step=365 loss=0.3777 mean_adv=-0.378
+[grpo] epoch=0 step=370 loss=1.7326 mean_adv=-1.732
+[grpo] epoch=0 step=375 loss=-0.3766 mean_adv=+0.378
+[grpo] epoch=0 step=380 loss=0.3781 mean_adv=-0.378
+[grpo] epoch=0 step=385 loss=0.3786 mean_adv=-0.378
+[grpo] epoch=0 step=390 loss=0.3777 mean_adv=-0.378
+[grpo] epoch=0 step=395 loss=0.3779 mean_adv=-0.378
+[grpo] epoch=0 step=400 loss=0.3780 mean_adv=-0.378
+[grpo] epoch=0 step=405 loss=1.2912 mean_adv=-1.291
+[grpo] epoch=0 step=410 loss=0.5776 mean_adv=-0.577
+[grpo] epoch=0 step=415 loss=-0.5760 mean_adv=+0.577
+[grpo] epoch=0 step=420 loss=-0.3779 mean_adv=+0.378
+[grpo] epoch=0 step=425 loss=-0.3792 mean_adv=+0.378
+[grpo] epoch=0 step=430 loss=0.3783 mean_adv=-0.378
+[grpo] epoch=0 step=435 loss=0.9991 mean_adv=-1.000
+[grpo] epoch=0 step=440 loss=1.0003 mean_adv=-1.000
+[grpo] epoch=0 step=445 loss=-0.3777 mean_adv=+0.378
+[grpo] epoch=0 step=450 loss=-0.7746 mean_adv=+0.775
+[grpo] epoch=0 step=455 loss=0.9984 mean_adv=-1.000
+[grpo] epoch=0 step=460 loss=-0.3772 mean_adv=+0.378
+[grpo] epoch=0 step=465 loss=-0.3768 mean_adv=+0.378
+[grpo] epoch=0 step=470 loss=-0.3768 mean_adv=+0.378
+[grpo] epoch=0 step=475 loss=0.5784 mean_adv=-0.577
+[grpo] epoch=0 step=480 loss=-1.0013 mean_adv=+1.000
+[grpo] epoch=0 step=485 loss=1.0011 mean_adv=-1.000
+[grpo] epoch=0 step=490 loss=0.5779 mean_adv=-0.577
+[grpo] epoch=0 step=495 loss=0.3778 mean_adv=-0.378
+[grpo] epoch=0 step=500 loss=0.9981 mean_adv=-1.000
+[grpo] epoch=0 step=505 loss=0.3798 mean_adv=-0.378
+[grpo] epoch=0 step=510 loss=-0.7745 mean_adv=+0.775
+[grpo] epoch=0 step=515 loss=0.3770 mean_adv=-0.378
+[grpo] epoch=0 step=520 loss=1.0003 mean_adv=-1.000
+[grpo] epoch=0 step=525 loss=1.0017 mean_adv=-1.000
+[grpo] epoch=0 step=530 loss=2.6488 mean_adv=-2.646
+[grpo] epoch=0 step=535 loss=0.3770 mean_adv=-0.378
+[grpo] epoch=0 step=540 loss=0.3787 mean_adv=-0.378
+[grpo] epoch=0 step=545 loss=0.3841 mean_adv=-0.378
+[grpo] epoch=0 step=550 loss=1.2913 mean_adv=-1.291
+[grpo] epoch=0 step=555 loss=1.2966 mean_adv=-1.291
+[grpo] epoch=0 step=560 loss=0.5838 mean_adv=-0.577
+[grpo] epoch=0 step=565 loss=0.3785 mean_adv=-0.378
+[grpo] epoch=0 step=570 loss=0.3846 mean_adv=-0.378
+[grpo] epoch=0 step=575 loss=-0.7748 mean_adv=+0.775
+[grpo] epoch=0 step=580 loss=-0.7736 mean_adv=+0.775
+[grpo] epoch=0 step=585 loss=0.7756 mean_adv=-0.775
+[grpo] epoch=0 step=590 loss=1.7322 mean_adv=-1.732
+[grpo] epoch=0 step=595 loss=-1.0031 mean_adv=+1.000
+[grpo] epoch=0 step=600 loss=0.3858 mean_adv=-0.378
+[grpo] epoch=0 step=605 loss=0.5818 mean_adv=-0.577
+[grpo] epoch=0 step=610 loss=0.5790 mean_adv=-0.577
+[grpo] epoch=0 step=615 loss=0.7741 mean_adv=-0.775
+[grpo] epoch=0 step=620 loss=-0.5776 mean_adv=+0.577
+[grpo] epoch=0 step=625 loss=0.5789 mean_adv=-0.577
+[grpo] saved LoRA to /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_3/grpo_adapter (update steps=628)

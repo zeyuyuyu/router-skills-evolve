@@ -1,0 +1,140 @@
+{
+  "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+  "training_samples": 83,
+  "lora_r": 16,
+  "lora_alpha": 32,
+  "epochs": 2,
+  "learning_rate": 0.0002,
+  "prompt_style": "qwen-chat",
+  "log_history": [
+    {
+      "loss": 0.42418667674064636,
+      "grad_norm": 1.0217833518981934,
+      "learning_rate": 0.0,
+      "entropy": 0.2138131009414792,
+      "mean_token_accuracy": 0.876804031431675,
+      "num_tokens": 18261.0,
+      "epoch": 0.1927710843373494,
+      "step": 1
+    },
+    {
+      "loss": 0.34312260150909424,
+      "grad_norm": 0.7660424113273621,
+      "learning_rate": 0.0002,
+      "entropy": 0.202147098723799,
+      "mean_token_accuracy": 0.8896771036088467,
+      "num_tokens": 37096.0,
+      "epoch": 0.3855421686746988,
+      "step": 2
+    },
+    {
+      "loss": 0.30554160475730896,
+      "grad_norm": 0.5736643671989441,
+      "learning_rate": 0.00019594929736144976,
+      "entropy": 0.2272935169748962,
+      "mean_token_accuracy": 0.8843759596347809,
+      "num_tokens": 56061.0,
+      "epoch": 0.5783132530120482,
+      "step": 3
+    },
+    {
+      "loss": 0.20332297682762146,
+      "grad_norm": 0.408478319644928,
+      "learning_rate": 0.00018412535328311814,
+      "entropy": 0.20027052238583565,
+      "mean_token_accuracy": 0.8997015953063965,
+      "num_tokens": 75455.0,
+      "epoch": 0.7710843373493976,
+      "step": 4
+    },
+    {
+      "loss": 0.23718659579753876,
+      "grad_norm": 0.39525750279426575,
+      "learning_rate": 0.00016548607339452853,
+      "entropy": 0.22726782178506255,
+      "mean_token_accuracy": 0.9116512313485146,
+      "num_tokens": 94117.0,
+      "epoch": 0.963855421686747,
+      "step": 5
+    },
+    {
+      "loss": 0.1784447431564331,
+      "grad_norm": 0.6531102061271667,
+      "learning_rate": 0.00014154150130018866,
+      "entropy": 0.23316220939159393,
+      "mean_token_accuracy": 0.927915891011556,
+      "num_tokens": 97677.0,
+      "epoch": 1.0,
+      "step": 6
+    },
+    {
+      "loss": 0.18258272111415863,
+      "grad_norm": 0.2505474388599396,
+      "learning_rate": 0.00011423148382732853,
+      "entropy": 0.23779425118118525,
+      "mean_token_accuracy": 0.9383710026741028,
+      "num_tokens": 116509.0,
+      "epoch": 1.1927710843373494,
+      "step": 7
+    },
+    {
+      "loss": 0.12932519614696503,
+      "grad_norm": 0.1782715767621994,
+      "learning_rate": 8.57685161726715e-05,
+      "entropy": 0.175961472094059,
+      "mean_token_accuracy": 0.954918559640646,
+      "num_tokens": 135442.0,
+      "epoch": 1.3855421686746987,
+      "step": 8
+    },
+    {
+      "loss": 0.1442926526069641,
+      "grad_norm": 0.19316448271274567,
+      "learning_rate": 5.845849869981137e-05,
+      "entropy": 0.20857396675273776,
+      "mean_token_accuracy": 0.9471938349306583,
+      "num_tokens": 154399.0,
+      "epoch": 1.5783132530120483,
+      "step": 9
+    },
+    {
+      "loss": 0.18044574558734894,
+      "grad_norm": 0.22968325018882751,
+      "learning_rate": 3.45139266054715e-05,
+      "entropy": 0.20444637816399336,
+      "mean_token_accuracy": 0.9474456943571568,
+      "num_tokens": 173025.0,
+      "epoch": 1.7710843373493976,
+      "step": 10
+    },
+    {
+      "loss": 0.1799350082874298,
+      "grad_norm": 0.20496982336044312,
+      "learning_rate": 1.587464671688187e-05,
+      "entropy": 0.19770516781136394,
+      "mean_token_accuracy": 0.9491811096668243,
+      "num_tokens": 191532.0,
+      "epoch": 1.963855421686747,
+      "step": 11
+    },
+    {
+      "loss": 0.10125754028558731,
+      "grad_norm": 0.34415945410728455,
+      "learning_rate": 4.050702638550275e-06,
+      "entropy": 0.2559393395980199,
+      "mean_token_accuracy": 0.9492420554161072,
+      "num_tokens": 195354.0,
+      "epoch": 2.0,
+      "step": 12
+    },
+    {
+      "train_runtime": 51.714,
+      "train_samples_per_second": 3.21,
+      "train_steps_per_second": 0.232,
+      "total_flos": 1540989959989248.0,
+      "train_loss": 0.2174703385680914,
+      "epoch": 2.0,
+      "step": 12
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+[traces_to_sft] 82 traces -> 83 SFT pairs total  (teacher=20  repair=3  success=60  with_procedure=80  skipped=0)  out=/shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_2/training_data.jsonl

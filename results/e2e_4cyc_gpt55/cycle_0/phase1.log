@@ -1,0 +1,12 @@
+[collect_traces] bench=humaneval cycle=0 split=train closed_loop=False workers=8 mock=False
+[collect_traces] loaded 82 tasks
+[collect_traces] 10/82  success=10/10  elapsed=19.1s
+[collect_traces] 20/82  success=20/20  elapsed=33.4s
+[collect_traces] 30/82  success=30/30  elapsed=44.8s
+[collect_traces] 40/82  success=39/40  elapsed=56.0s
+[collect_traces] 50/82  success=48/50  elapsed=72.4s
+[collect_traces] 60/82  success=58/60  elapsed=88.0s
+[collect_traces] 70/82  success=68/70  elapsed=106.0s
+[collect_traces] 80/82  success=78/80  elapsed=119.0s
+[collect_traces] 82/82  success=80/82  elapsed=154.6s
+[collect_traces] DONE  out=/shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_0/traces.jsonl  final_success=80/82 (97.6%)  elapsed=154.6s

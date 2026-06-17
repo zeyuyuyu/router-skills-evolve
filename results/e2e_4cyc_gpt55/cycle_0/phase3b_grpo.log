@@ -1,0 +1,128 @@
+[grpo] loaded skillbook (1 clusters) from /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_0/skillbook.json
+[grpo] 82 tasks (split=train)  rollout=repair
+[grpo] repair rollout: algo=dapo K=8 max_turns=3 temp=0.8 dynamic_sampling=True
+[grpo] loading LoRA adapter (/shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_0/llm_adapter) on top of Qwen/Qwen2.5-Coder-1.5B-Instruct
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   4%|▍         | 15/338 [00:00<00:02, 149.12it/s]Loading weights:  15%|█▌        | 52/338 [00:00<00:01, 274.14it/s]Loading weights:  29%|██▉       | 99/338 [00:00<00:00, 358.81it/s]Loading weights:  48%|████▊     | 161/338 [00:00<00:00, 393.80it/s]Loading weights:  65%|██████▍   | 219/338 [00:00<00:00, 446.48it/s]Loading weights:  80%|███████▉  | 269/338 [00:00<00:00, 455.03it/s]Loading weights:  96%|█████████▋| 326/338 [00:00<00:00, 488.26it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 433.07it/s]
+[grpo] LoRA merged
+[grpo] rollout via vLLM @ http://127.0.0.1:8102/v1 (model=grpo-rollout-policy); update in-process. Multi-turn repair preserved.
+[grpo] vLLM global rollout: 82×K=8 units, concurrency=64
+[grpo] vLLM rollout turn 1/3: 656 reqs, 387/656 units done
+[grpo] vLLM rollout turn 2/3: 269 reqs, 405/656 units done
+[grpo] vLLM rollout turn 3/3: 251 reqs, 656/656 units done
+[grpo] HumanEval/0  pass=7/8
+[grpo] HumanEval/2  pass=8/8
+[grpo] HumanEval/4  pass=8/8
+[grpo] HumanEval/6  pass=1/8
+[grpo] HumanEval/8  pass=7/8
+[grpo] HumanEval/10  pass=2/8
+[grpo] HumanEval/12  pass=8/8
+[grpo] HumanEval/14  pass=8/8
+[grpo] HumanEval/16  pass=8/8
+[grpo] HumanEval/18  pass=5/8
+[grpo] HumanEval/20  pass=7/8
+[grpo] HumanEval/22  pass=8/8
+[grpo] HumanEval/24  pass=8/8
+[grpo] HumanEval/26  pass=0/8
+[grpo] HumanEval/28  pass=8/8
+[grpo] HumanEval/30  pass=8/8
+[grpo] HumanEval/32  pass=0/8
+[grpo] HumanEval/34  pass=8/8
+[grpo] HumanEval/36  pass=5/8
+[grpo] HumanEval/38  pass=0/8
+[grpo] HumanEval/40  pass=8/8
+[grpo] HumanEval/42  pass=8/8
+[grpo] HumanEval/44  pass=8/8
+[grpo] HumanEval/46  pass=8/8
+[grpo] HumanEval/48  pass=8/8
+[grpo] HumanEval/50  pass=0/8
+[grpo] HumanEval/52  pass=8/8
+[grpo] HumanEval/54  pass=8/8
+[grpo] HumanEval/56  pass=7/8
+[grpo] HumanEval/58  pass=8/8
+[grpo] HumanEval/60  pass=8/8
+[grpo] HumanEval/62  pass=8/8
+[grpo] HumanEval/64  pass=4/8
+[grpo] HumanEval/66  pass=8/8
+[grpo] HumanEval/68  pass=6/8
+[grpo] HumanEval/70  pass=4/8
+[grpo] HumanEval/72  pass=7/8
+[grpo] HumanEval/74  pass=1/8
+[grpo] HumanEval/76  pass=2/8
+[grpo] HumanEval/78  pass=7/8
+[grpo] HumanEval/80  pass=2/8
+[grpo] HumanEval/82  pass=7/8
+[grpo] HumanEval/84  pass=7/8
+[grpo] HumanEval/86  pass=4/8
+[grpo] HumanEval/88  pass=4/8
+[grpo] HumanEval/90  pass=0/8
+[grpo] HumanEval/92  pass=8/8
+[grpo] HumanEval/94  pass=6/8
+[grpo] HumanEval/96  pass=8/8
+[grpo] HumanEval/98  pass=4/8
+[grpo] HumanEval/100  pass=1/8
+[grpo] HumanEval/102  pass=0/8
+[grpo] HumanEval/104  pass=4/8
+[grpo] HumanEval/106  pass=4/8
+[grpo] HumanEval/108  pass=1/8
+[grpo] HumanEval/110  pass=4/8
+[grpo] HumanEval/112  pass=5/8
+[grpo] HumanEval/114  pass=8/8
+[grpo] HumanEval/116  pass=7/8
+[grpo] HumanEval/118  pass=4/8
+[grpo] HumanEval/120  pass=0/8
+[grpo] HumanEval/122  pass=8/8
+[grpo] HumanEval/124  pass=5/8
+[grpo] HumanEval/126  pass=0/8
+[grpo] HumanEval/128  pass=3/8
+[grpo] HumanEval/130  pass=0/8
+[grpo] HumanEval/132  pass=0/8
+[grpo] HumanEval/134  pass=0/8
+[grpo] HumanEval/136  pass=7/8
+[grpo] HumanEval/138  pass=8/8
+[grpo] HumanEval/140  pass=0/8
+[grpo] HumanEval/142  pass=4/8
+[grpo] HumanEval/144  pass=2/8
+[grpo] HumanEval/146  pass=6/8
+[grpo] HumanEval/148  pass=0/8
+[grpo] HumanEval/150  pass=1/8
+[grpo] HumanEval/152  pass=8/8
+[grpo] HumanEval/154  pass=5/8
+[grpo] HumanEval/156  pass=8/8
+[grpo] HumanEval/158  pass=4/8
+[grpo] HumanEval/160  pass=2/8
+[grpo] HumanEval/162  pass=8/8
+[grpo] advantage: {'n_groups': 82, 'n_dropped_zero_variance': 42, 'n_informative_groups': 40, 'n_rollouts_kept': 320}
+[grpo] 630 repair-turn examples
+[grpo] epoch=0 step=5 loss=0.4843 mean_adv=-0.478
+[grpo] epoch=0 step=10 loss=-0.3248 mean_adv=-0.339
+[grpo] epoch=0 step=15 loss=0.4040 mean_adv=-0.239
+[grpo] epoch=0 step=20 loss=0.2820 mean_adv=-0.189
+[grpo] epoch=0 step=25 loss=0.5285 mean_adv=-0.289
+[grpo] epoch=0 step=30 loss=0.5213 mean_adv=-0.339
+[grpo] epoch=0 step=35 loss=0.5767 mean_adv=-0.106
+[grpo] epoch=0 step=40 loss=0.8210 mean_adv=-0.493
+[grpo] epoch=0 step=45 loss=1.0590 mean_adv=-1.094
+[grpo] epoch=0 step=50 loss=0.5633 mean_adv=-0.862
+[grpo] epoch=0 step=55 loss=0.6680 mean_adv=-0.722
+[grpo] epoch=0 step=60 loss=1.2287 mean_adv=-1.150
+[grpo] epoch=0 step=65 loss=1.8314 mean_adv=-0.984
+[grpo] epoch=0 step=70 loss=0.6448 mean_adv=-0.384
+[grpo] epoch=0 step=75 loss=0.3667 mean_adv=-0.133
+[grpo] epoch=0 step=80 loss=1.2390 mean_adv=-0.140
+[grpo] epoch=0 step=85 loss=0.7501 mean_adv=-0.500
+[grpo] epoch=0 step=90 loss=0.3896 mean_adv=+0.067
+[grpo] epoch=0 step=95 loss=0.8851 mean_adv=-0.844
+[grpo] epoch=0 step=100 loss=0.4890 mean_adv=-0.583
+[grpo] epoch=0 step=105 loss=0.5430 mean_adv=-0.656
+[grpo] epoch=0 step=110 loss=0.3937 mean_adv=-0.289
+[grpo] epoch=0 step=115 loss=0.7877 mean_adv=-0.961
+[grpo] epoch=0 step=120 loss=1.2068 mean_adv=-1.045
+[grpo] epoch=0 step=125 loss=-0.5499 mean_adv=+0.338
+[grpo] epoch=0 step=130 loss=0.2305 mean_adv=-0.156
+[grpo] epoch=0 step=135 loss=1.8969 mean_adv=-1.484
+[grpo] epoch=0 step=140 loss=0.4685 mean_adv=-0.528
+[grpo] epoch=0 step=145 loss=0.5073 mean_adv=-0.417
+[grpo] epoch=0 step=150 loss=0.2922 mean_adv=-0.100
+[grpo] epoch=0 step=155 loss=0.7300 mean_adv=-0.056
+[grpo] saved LoRA to /shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_0/grpo_adapter (update steps=158)

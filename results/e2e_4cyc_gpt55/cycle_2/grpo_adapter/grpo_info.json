@@ -1,0 +1,19 @@
+{
+  "algo": "dapo",
+  "rollout": "repair",
+  "model": "/shared_home/yuhang.yao/router-skills-evolve/results/e2e_4cyc_gpt55/cycle_2/llm_adapter",
+  "n_generations": 8,
+  "max_turns": 3,
+  "epochs": 1,
+  "lr": 5e-06,
+  "beta": 0.04,
+  "clip_low": 0.2,
+  "clip_high": 0.5,
+  "dapo_dynamic_sampling": true,
+  "update_steps": 689,
+  "n_examples": 689,
+  "n_groups": 82,
+  "n_dropped_zero_variance": 38,
+  "n_informative_groups": 44,
+  "n_rollouts_kept": 352
+}
