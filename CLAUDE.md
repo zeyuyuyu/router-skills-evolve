@@ -105,13 +105,16 @@ Bench branches: `humaneval` (local models + pytest reward, GRPO on) vs `tau2_ben
 - **Qwen3 thinking mode off** (`enable_thinking=False`) — tau2 corpus has no CoT, enabling
   it goes OOD.
 - **flash-attn build:** `MAX_JOBS=4` max, else OOM.
-- **vLLM is gated behind a driver check.** Switches: `HE_USE_VLLM` (Phase 1 serving),
-  `GRPO_USE_VLLM` (Phase 3b colocate weight-sync). On the original box (driver 575.57.08,
-  CUDA 12.9 ceiling) they MUST stay 0: vllm 0.22 hard-requires flashinfer, and flashinfer
-  0.6 ships cu13 kernels → `cudaErrorInsufficientDriver`. On a new server, check
-  `nvidia-smi` CUDA version first; if it supports CUDA 13, set both to 1 (and run the
-  pipeline under a vllm-capable venv, e.g. `scripts/setup_vllm_venv.sh`). Otherwise the
-  pipeline runs fine on in-process HF generate (just slower).
+- **vLLM on driver 575.57.08 (CUDA 12.9): use the cu12 venv.** The old `.vllm_venv`
+  (vllm 0.22) is a **cu13** build — flash-attn / flashinfer / `_C` kernels are compiled
+  for CUDA 13 and fail with `CUDA driver version is insufficient` (only a couple of
+  Qwen2.5 models limp along via TRITON_ATTN hacks; Qwen3-4B breaks). The fix is
+  **`.vllm_cu12_venv`** (vllm 0.11.0 / torch 2.8+cu128 / transformers 4.57 / fastapi
+  0.116.1 / starlette 0.41.3) — native FLASH_ATTN, no workarounds. Build it with
+  `scripts/setup_vllm_cu12_venv.sh`. Both serve scripts (`scripts/vllm_serve_humaneval.sh`
+  and `tau2_stage2/code/training/eval/vllm_serve.sh`) now default to `.vllm_cu12_venv`.
+  Switches `HE_USE_VLLM` (Phase 1 serving) / `GRPO_USE_VLLM` (Phase 3b weight-sync) can
+  now be set to 1. In-process HF generate (both 0) still works and needs no vLLM.
 - **SFT on hard-tasks-only collapses the model.** With ~19 teacher pairs, grad_accum
   produces nan-grad steps and pass@1 drops to ~0. Always run with `SFT_INCLUDE_SUCCESS=1`
   (also behaviour-clones solved tasks → ~77 pairs, stable). See `config/humaneval_dapo_gpt.env`.

@@ -333,6 +333,66 @@ def _repair_rollout_batched(model, tok, task, procedure, *, n, style, max_turns,
     return [{"reward": 1.0 if ok[i] else 0.0, "turns": turns_rec[i]} for i in range(n)]
 
 
+def _repair_rollout_vllm(client, served_model, tok, task, procedure, *, n, max_turns,
+                         temperature, max_new_tokens):
+    """K multi-turn repair trajectories via a vLLM OpenAI endpoint (parallel).
+
+    Valid because GRPO collects ALL rollouts BEFORE the gradient update — the
+    rollout policy is STATIC (the served SFT checkpoint), so no weight sync is
+    needed. Generation goes over HTTP (vLLM continuous-batches the concurrent
+    requests → far higher throughput than in-process HF generate) while the
+    multi-turn ReAct repair loop is preserved.
+
+    The OpenAI chat API returns TEXT, so prompt/completion token ids for the GRPO
+    loss are reconstructed with the SAME tokenizer + chat template vLLM used.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from src.models import extract_code, run_humaneval_test
+
+    SYSTEM = ("You are a Python coding assistant. Return only valid Python code. "
+              "Do not include Markdown fences, explanations, examples, or tests.")
+    first = f"{procedure}\n\n---\n\n{task['prompt']}" if procedure else task["prompt"]
+    convs = [[{"role": "user", "content": first}] for _ in range(n)]
+    turns_rec: list = [[] for _ in range(n)]
+    ok = [False] * n
+    done = [False] * n
+
+    def _gen(i):
+        msgs = [{"role": "system", "content": SYSTEM}, *convs[i]]
+        r = client.chat.completions.create(
+            model=served_model, messages=msgs,
+            temperature=temperature, max_tokens=max_new_tokens)
+        return i, (r.choices[0].message.content or "")
+
+    for turn_idx in range(max_turns):
+        active = [i for i in range(n) if not done[i]]
+        if not active:
+            break
+        with ThreadPoolExecutor(max_workers=len(active)) as pool:
+            results = list(pool.map(_gen, active))
+        for i, completion in results:
+            msgs = [{"role": "system", "content": SYSTEM}, *convs[i]]
+            # ids consistent with what vLLM saw (same template) for the GRPO loss
+            prompt_ids = tok.apply_chat_template(msgs, add_generation_prompt=True,
+                                                 tokenize=True)
+            completion_ids = tok(completion, add_special_tokens=False)["input_ids"]
+            turns_rec[i].append({"prompt_ids": prompt_ids, "completion_ids": completion_ids})
+            code = extract_code(completion, task["entry_point"], task["prompt"])
+            passed, error = run_humaneval_test(task, code)
+            if passed:
+                ok[i] = True
+                done[i] = True
+            elif turn_idx < max_turns - 1:
+                convs[i].append({"role": "assistant", "content": code})
+                convs[i].append({"role": "user", "content": (
+                    f"Your code failed with the following error:\n\n{error}\n\n"
+                    "Analyze the error and return a corrected version of the complete function.")})
+            else:
+                done[i] = True
+
+    return [{"reward": 1.0 if ok[i] else 0.0, "turns": turns_rec[i]} for i in range(n)]
+
+
 def _run_repair_grpo(args, tasks, get_procedure) -> int:
     from src.pipeline.grpo_core import compute_advantages, grpo_update
 
@@ -368,14 +428,34 @@ def _run_repair_grpo(args, tasks, get_procedure) -> int:
         lora_dropout=0.05, bias="none"))
     model.eval()
 
+    # vLLM rollout: serve the (static) rollout policy and generate over HTTP.
+    # GRPO_ROLLOUT_VLLM_URL points at a vLLM server hosting THIS checkpoint
+    # (args.model); GRPO_ROLLOUT_VLLM_MODEL is its served name. The gradient
+    # update still runs on the in-process `model`.
+    vllm_url = os.environ.get("GRPO_ROLLOUT_VLLM_URL", "")
+    vllm_client = None
+    if vllm_url:
+        from openai import OpenAI
+        vllm_client = OpenAI(api_key=os.environ.get("HE_VLLM_API_KEY", "EMPTY"),
+                             base_url=vllm_url)
+        served = os.environ.get("GRPO_ROLLOUT_VLLM_MODEL", args.model)
+        print(f"[grpo] rollout via vLLM @ {vllm_url} (model={served}); "
+              f"update in-process. Multi-turn repair preserved.", flush=True)
+
     # ── ROLLOUT: K on-policy repair trajectories per task ────────────────────
     groups = []
     for i, task in enumerate(tasks, 1):
         proc = get_procedure(task["prompt"]) or ""
-        rollouts = _repair_rollout_batched(
-            model, tok, task, proc, n=args.n_generations, style=args.prompt_style,
-            max_turns=args.max_repair_turns, temperature=args.temperature,
-            max_new_tokens=max_new_tokens)
+        if vllm_client is not None:
+            rollouts = _repair_rollout_vllm(
+                vllm_client, served, tok, task, proc, n=args.n_generations,
+                max_turns=args.max_repair_turns, temperature=args.temperature,
+                max_new_tokens=max_new_tokens)
+        else:
+            rollouts = _repair_rollout_batched(
+                model, tok, task, proc, n=args.n_generations, style=args.prompt_style,
+                max_turns=args.max_repair_turns, temperature=args.temperature,
+                max_new_tokens=max_new_tokens)
         n_pass = sum(1 for r in rollouts if r["reward"] > 0)
         print(f"[grpo] task {i}/{len(tasks)} {task['task_id']}  "
               f"pass={n_pass}/{len(rollouts)}  "

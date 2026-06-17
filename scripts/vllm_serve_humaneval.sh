@@ -19,7 +19,7 @@ GPU="${3:-0}"
 SERVED="${4:-$MODEL}"
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VLLM_VENV="${HE_VLLM_VENV:-$REPO_ROOT/.vllm_venv}"
+VLLM_VENV="${HE_VLLM_VENV:-$REPO_ROOT/.vllm_cu12_venv}"
 VLLM_BIN="$VLLM_VENV/bin/vllm"
 LOG_DIR="${HE_VLLM_LOG_DIR:-$REPO_ROOT/results/_vllm_logs}"
 mkdir -p "$LOG_DIR"
@@ -51,18 +51,16 @@ else
 fi
 
 echo "[vllm_serve] starting: model=$MODEL_TO_LOAD served=$SERVED port=$PORT gpu=$GPU"
-# Put the venv's bin first on PATH so vLLM's runtime subprocesses (ninja for
-# kernel compilation, etc.) resolve to the venv tools rather than failing.
-# Driver/CUDA workaround (driver 575 / CUDA 12.9 on this box):
-#   - vllm 0.22's bundled FLASH_ATTN (vllm-flash-attn Hopper) + flashinfer are
-#     built for CUDA 13 → "CUDA driver insufficient" / "No module named flashinfer".
-#   - TRITON_ATTN compiles at runtime (no cu13 prebuilt kernel) and
-#     VLLM_USE_FLASHINFER_SAMPLER=0 falls back to the PyTorch-native sampler.
-# On a CUDA-13-capable driver, override: HE_VLLM_ATTN_BACKEND=FLASH_ATTN
-# VLLM_USE_FLASHINFER_SAMPLER=1 (faster).
+# Default venv is .vllm_cu12_venv (vllm 0.11 / cu12) — native FLASH_ATTN works on
+# this driver, so NO TRITON_ATTN / flashinfer-off workarounds are needed.
+# Optional overrides (e.g. if pointing HE_VLLM_VENV at the old cu13 .vllm_venv,
+# set HE_VLLM_ATTN_BACKEND=TRITON_ATTN and VLLM_USE_FLASHINFER_SAMPLER=0):
+EXTRA_ARGS=()
+[[ -n "${HE_VLLM_ATTN_BACKEND:-}" ]] && EXTRA_ARGS+=(--attention-backend "$HE_VLLM_ATTN_BACKEND")
+# Put the venv's bin first on PATH so vLLM's runtime subprocesses resolve to it.
 CUDA_VISIBLE_DEVICES="$GPU" \
   PATH="$VLLM_VENV/bin:$PATH" \
-  VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}" \
+  ${VLLM_USE_FLASHINFER_SAMPLER:+VLLM_USE_FLASHINFER_SAMPLER="$VLLM_USE_FLASHINFER_SAMPLER"} \
   nohup "$VLLM_BIN" serve "$MODEL_TO_LOAD" \
     --served-model-name "$SERVED" \
     --port "$PORT" \
@@ -70,7 +68,7 @@ CUDA_VISIBLE_DEVICES="$GPU" \
     --max-model-len "${HE_VLLM_MAX_LEN:-4096}" \
     --dtype bfloat16 \
     --trust-remote-code \
-    --attention-backend "${HE_VLLM_ATTN_BACKEND:-TRITON_ATTN}" \
+    "${EXTRA_ARGS[@]}" \
     "${LORA_ARGS[@]}" \
     > "$SRV_LOG" 2>&1 &
 SERVER_PID=$!

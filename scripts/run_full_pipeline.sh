@@ -697,25 +697,40 @@ phase3b_grpo_train() {
 
   echo "  [Phase 3b] GRPO — bench=$BENCH cycle=$cycle algo=$GRPO_ALGO K=$GRPO_N_GENERATIONS epochs=$GRPO_EPOCHS lr=$GRPO_LR"
 
-  # Warm-start from Phase 3a SFT checkpoint if available.
+  # Warm-start from Phase 3a SFT checkpoint if available. train_small_model.py
+  # saves the final LoRA at llm_adapter/ (top-level adapter_model.safetensors),
+  # NOT checkpoint-best — prefer that so GRPO builds on SFT (not raw base).
   local grpo_base="$SMALL_MODEL"
-  local sft_ckpt="$out/llm_adapter/checkpoint-best"
-  [[ -d "$sft_ckpt" ]] && grpo_base="$sft_ckpt"
+  if   [[ -f "$out/llm_adapter/adapter_model.safetensors" ]]; then grpo_base="$out/llm_adapter"
+  elif [[ -d "$out/llm_adapter/checkpoint-best" ]]; then grpo_base="$out/llm_adapter/checkpoint-best"
+  fi
 
   SKILLBOOK_ARG=""
   [[ -f "$out/skillbook.json" ]] && SKILLBOOK_ARG="--skillbook $out/skillbook.json"
 
   if [[ "$BENCH" == "humaneval" ]]; then
-    # ── HumanEval: GRPO/DAPO, reward = test execution ───────────────────────
-    # GRPO_USE_VLLM=1 → single-shot rollout via vLLM colocate on the training
-    # GPU with TRL weight auto-sync (fast). Otherwise the default multi-turn
-    # repair rollout (in-process HF generate; weights are the live policy).
-    local rollout_args=()
-    if [[ "$GRPO_USE_VLLM" == "1" ]]; then
-      rollout_args=(--rollout single --use-vllm --vllm-gpu-util "$GRPO_VLLM_GPU_UTIL")
-      echo "  [Phase 3b] vLLM colocate rollout (weight auto-sync) gpu_util=$GRPO_VLLM_GPU_UTIL"
+    # ── HumanEval: multi-turn repair GRPO/DAPO, reward = test execution ──────
+    # GRPO_USE_VLLM=1 → serve the (static, during rollout) SFT checkpoint on a
+    # vLLM server and generate the repair trajectories over HTTP (continuous
+    # batching → fast); the gradient UPDATE still runs in-process. Multi-turn
+    # ReAct repair is preserved either way. No weight sync needed because GRPO
+    # collects all rollouts before the update (rollout policy is static).
+    local rollout_pidfile=""
+    if [[ "$GRPO_USE_VLLM" == "1" && "$MOCK" != "true" ]]; then
+      local rport="${GRPO_VLLM_PORT:-8102}"
+      local rgpu="${GRPO_VLLM_GPU:-$HE_VLLM_SMALL_GPU}"
+      local rserved="grpo-rollout-policy"
+      echo "  [Phase 3b] serving rollout policy ($grpo_base) on vLLM gpu$rgpu:$rport (multi-turn repair preserved)"
+      if HE_VLLM_LOG_DIR="$out/_vllm" HE_VLLM_GPU_UTIL="${GRPO_VLLM_GPU_UTIL:-0.85}" \
+           bash "$REPO_ROOT/scripts/vllm_serve_humaneval.sh" "$grpo_base" "$rport" "$rgpu" "$rserved"; then
+        rollout_pidfile="$out/_vllm/vllm_${rserved}_${rport}.pid"
+        export GRPO_ROLLOUT_VLLM_URL="http://127.0.0.1:$rport/v1"
+        export GRPO_ROLLOUT_VLLM_MODEL="$rserved"
+      else
+        echo "[WARN] rollout vLLM serve failed → falling back to in-process HF repair"
+      fi
     fi
-    $DRY_RUN && { echo "  DRY: grpo_train_simple --algo $GRPO_ALGO --model $grpo_base --output-dir $out/grpo_adapter K=$GRPO_N_GENERATIONS ${rollout_args[*]}"; return; }
+    $DRY_RUN && { echo "  DRY: grpo_train_simple --algo $GRPO_ALGO --model $grpo_base --output-dir $out/grpo_adapter K=$GRPO_N_GENERATIONS vllm=${GRPO_USE_VLLM:-0}"; return; }
     GRPO_N_GENERATIONS="$GRPO_N_GENERATIONS" \
     GRPO_EPOCHS="$GRPO_EPOCHS" \
     GRPO_LR="$GRPO_LR" \
@@ -734,10 +749,15 @@ phase3b_grpo_train() {
       --beta "$GRPO_BETA" \
       --clip-low "$DAPO_CLIP_LOW" \
       --clip-high "$DAPO_CLIP_HIGH" \
-      "${rollout_args[@]}" \
       --prompt-style "${HE_PROMPT_STYLE:-qwen-chat}" \
       $SKILLBOOK_ARG \
       2>&1 | tee "$out/phase3b_grpo.log"
+    # tear down the rollout vLLM server
+    if [[ -n "$rollout_pidfile" && -f "$rollout_pidfile" ]]; then
+      local rpid; rpid=$(sed -n 's/.*PID=\([0-9][0-9]*\).*/\1/p' "$rollout_pidfile" | head -1)
+      [[ -n "$rpid" ]] && { kill "$rpid" 2>/dev/null; sleep 1; kill -9 "$rpid" 2>/dev/null; } || true
+      rm -f "$rollout_pidfile"
+    fi
     return
   fi
 
