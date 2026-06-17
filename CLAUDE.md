@@ -20,7 +20,8 @@ data. The three co-evolve over N cycles. Main entrypoint: `scripts/run_full_pipe
   `benches/`, `tau2_train_wrapper.sh`). Imported as `from src.pipeline.X import …`.
 - `scripts/` — shell orchestration (`run_full_pipeline.sh`, `vllm_serve_humaneval.sh`,
   `setup_vllm_venv.sh`, `benchmark_tau2.sh`).
-- `config/` — experiment input recipes (`*.env`), loaded via `--config <name>` or
+- `config/` — experiment input recipes (`*.yaml`, e.g. `humaneval_dapo_gpt.yaml` with
+  large+distiller=gpt-5.5), loaded via `--config <name>` or
   `EXPERIMENT_CONFIG=<name>`. See `config/README.md`.
 - `tau2_stage2/` — vendored tau2 SFT framework (`BUNDLE_ROOT`). `data/`, `results/`.
 - The old `experiments/` tree is gone; its contents moved to `src/pipeline/` and `tau2_stage2/`.
@@ -117,7 +118,19 @@ Bench branches: `humaneval` (local models + pytest reward, GRPO on) vs `tau2_ben
   now be set to 1. In-process HF generate (both 0) still works and needs no vLLM.
 - **SFT on hard-tasks-only collapses the model.** With ~19 teacher pairs, grad_accum
   produces nan-grad steps and pass@1 drops to ~0. Always run with `SFT_INCLUDE_SUCCESS=1`
-  (also behaviour-clones solved tasks → ~77 pairs, stable). See `config/humaneval_dapo_gpt.env`.
+  (also behaviour-clones solved tasks → ~77 pairs, stable). See `config/humaneval_dapo_gpt.yaml`.
+- **`SCALING_FORCE_BOTH=1` for the canonical run (run-both oracle).** Default cycle-0
+  collection only runs the large model on tasks the small model FAILED (cost-saving
+  fallback) → teacher traces on ~25% of tasks, so skill distillation + SFT mostly
+  self-distill. Setting `SCALING_FORCE_BOTH=1` runs gpt-5.5 on EVERY task → teacher
+  traces everywhere (the "run-both oracle" the Phase-1 design intends). Costs more API
+  but markedly improves the skills/SFT arms.
+- **GRPO Phase 3b OOMs at the default batch size.** `GRPO_BATCH_SIZE` defaults to 4;
+  with long multi-turn repair trajectories (up to `GRPO_MAX_LEN=4096`) × 3 forward
+  passes, a batch of 4 long seqs blows ~72 GB on one GPU. Run with `GRPO_BATCH_SIZE=1`
+  and `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`. (Serving a LoRA adapter on
+  vLLM 0.11 for the rollout also needs `--enforce-eager` — auto-enabled in
+  `scripts/vllm_serve_humaneval.sh` — to dodge a LoRA+CUDA-graph illegal-memory crash.)
 - **Trimmed tree:** the only entrypoint is `scripts/run_full_pipeline.sh`. The old standalone
   HumanEval scripts (`run_evolve.py`, `extract_training_data.py`, `train_small_model_grpo.py`,
   `train_learnable_router.py`, `run_e2e_ablation.py`, the DPO/GRPO variants) and the BERT

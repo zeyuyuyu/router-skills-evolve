@@ -4,7 +4,7 @@
 
 > **职责划分（重要）**: **Router 独占路由**（per-prompt 决定 small/large）；**Skills 只负责提炼 procedure**（拼进小模型 prompt，不参与路由）。SkillBook 用单一全局 skill（`extract_signature` 恒返回 `"coding"`），不再按 cluster 细分。
 
-已验证：**99% 准确率 + 省 83% 成本**（HumanEval 164 题真实实验）
+已验证（**gpt-5.5 作大模型**，HumanEval）：Router 恢复 **91.5% pass**（大模型 96.3%），成本只要 **~1/3**（32% vs always-large）。详见下方 [已验证结果](#已验证结果)。
 
 ---
 
@@ -226,7 +226,7 @@ python3 src/pipeline/collect_traces.py \
     --bench tau2_bench \
     --n-tasks 848 \
     --small-model deepseek/deepseek-v3.2 \
-    --large-model openai/gpt-5.4-2026-03-05 \
+    --large-model openai/gpt-5.5 \
     --cycle 0 --split train \
     --out $OUT/traces.jsonl
 
@@ -235,7 +235,7 @@ python3 src/pipeline/collect_traces.py \
 python3 src/pipeline/collect_traces.py \
     --bench tau2_bench --n-tasks 848 --cycle 1 --split train \
     --small-model openai/evol-llm-student \
-    --large-model openai/gpt-5.4-2026-03-05 \
+    --large-model openai/gpt-5.5 \
     --router results/$EXPERIMENT_NAME/cycle_0/router/router.joblib \
     --skillbook results/$EXPERIMENT_NAME/cycle_0/skillbook.json \
     --out results/$EXPERIMENT_NAME/cycle_1/traces.jsonl
@@ -299,10 +299,33 @@ export N_CYCLES=4
 bash scripts/run_full_pipeline.sh --bench humaneval --smoke --mock
 ```
 
-### 真实跑（4 cycle，SFT + GRPO）
+### 真实跑（4 cycle，SFT + GRPO，gpt-5.5 大模型）
+
+**推荐：直接用存好的 gpt-5.5 配方 `config/humaneval_dapo_gpt.yaml`**（small=Qwen2.5-Coder-1.5B，
+large+distiller=gpt-5.5，DAPO，多轮 repair）。这是当前主力实验的完整命令：
 
 ```bash
-# 完整跑：SFT + GRPO（需 GPU，~4–8 小时/cycle）
+# 完整 4 轮端到端（gpt-5.5 teacher + vLLM 加速 + run-both oracle）
+# - CUDA_VISIBLE_DEVICES=3 跑训练；vLLM small/rollout 服务在 GPU1
+# - SCALING_FORCE_BOTH=1：每题都跑 gpt-5.5，拿全量 teacher trace（蒸馏/SFT 质量↑）
+# - GRPO_BATCH_SIZE=1 + expandable_segments：避免长 repair 轨迹把显存撑爆
+PYTHON=$PWD/venv/bin/python \
+CUDA_VISIBLE_DEVICES=3 \
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+HE_USE_VLLM=1 HE_VLLM_SMALL_GPU=1 GRPO_USE_VLLM=1 GRPO_VLLM_GPU=1 \
+GRPO_BATCH_SIZE=1 SCALING_FORCE_BOTH=1 SCALING_TRACE_WORKERS=8 EVAL_WORKERS=64 \
+EXPERIMENT_NAME=e2e_4cyc_gpt55 EXPERIMENT_CONFIG=humaneval_dapo_gpt \
+  bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4
+
+# 断点续跑（cycle 0 已完成时，从 cycle 1 继续，前面 env 不变）
+#   ... bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4 --resume 1
+```
+
+要看结果:`results/e2e_4cyc_gpt55/cycle_<k>/e2e_ablation_summary.md`(每轮四臂)
++ `results/e2e_4cyc_gpt55/final_ablation_table.md`(跨轮汇总)。
+
+```bash
+# 不带配方的最简跑法（用 pipeline 内置默认）
 bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4
 
 # 只跑 Skills + Router（无需 GPU）
@@ -341,11 +364,26 @@ GRPO_ALGO=dapo DAPO_CLIP_HIGH=0.5 bash scripts/run_full_pipeline.sh --bench huma
 
 ## 已验证结果
 
-### HumanEval 164 题（main 分支，8×A800）
+### ⭐ 当前主力：HumanEval × gpt-5.5（`results/e2e_4cyc_gpt55/`，cycle 0 四臂）
 
-| 策略 | 成功率 | 成本 | vs GPT-5.4 |
+small=Qwen2.5-Coder-1.5B，large+distiller=**gpt-5.5**，DAPO，run-both oracle（每题都跑 teacher）：
+
+| 系统臂 | Task Pass | Routing Acc | Large F1 | Fallback | Cost vs always-large |
+|------|---:|---:|---:|---:|---:|
+| large（always gpt-5.5） | 96.34% | — | — | 0% | 100% |
+| skills（always-small + procedure） | 70.73% | 70.73% | 0% | 29.27% | 10% |
+| **router** | **91.46%** | **92.68%** | **86.36%** | 6.10% | **31.95%** |
+| **full（+ SFT + DAPO）** | **91.46%** | 92.68% | 86.36% | 6.10% | 31.95% |
+
+**Router 恢复 91.5% 的大模型质量，成本只要 ~1/3**，仅把 ~6% 的难题路由给 gpt-5.5。
+路由是主要杠杆（skills 单独 +0.02，SFT/GRPO 在 1.5B 上增益微弱）。多轮（4 cycle）汇总见
+`results/e2e_4cyc_gpt55/final_ablation_table.md`。
+
+### HumanEval 164 题（main 分支历史数字，8×A800）
+
+| 策略 | 成功率 | 成本 | vs 大模型 |
 |------|--------|------|-----------|
-| Pure GPT-5.4 | 95% | $0.37 | 100% |
+| Pure 大模型 | 95% | $0.37 | 100% |
 | Router Only | 74% | $0.15 | 42% |
 | Router + Fallback | 98% | $0.27 | 73% |
 | **Router + Skills Evolve** | **99%** | **$0.06** | **17%** |
@@ -400,9 +438,9 @@ router-skills-evolve/
 │   ├── benchmark_tau2.sh         # tau2 基准
 │   └── README.md                 # Pipeline 详细文档
 │
-├── config/                       # 实验输入存档（*.env recipe），--config <name> 加载
-│   ├── humaneval_dapo_gpt.env    # 当前主力：GPT distiller + SFT含success + DAPO
-│   ├── humaneval_vllm_dapo_gpt.env # 3-GPU vLLM 布局（待驱动支持 cu13）
+├── config/                       # 实验输入存档（*.yaml recipe），--config <name> 加载
+│   ├── humaneval_dapo_gpt.yaml   # 当前主力：large+distiller=gpt-5.5 + SFT含success + DAPO
+│   ├── tau2_retail.yaml          # tau2 retail domain 配方
 │   └── README.md
 │
 ├── tau2_stage2/                  # Colleague 的 LLM SFT 框架（BUNDLE_ROOT；FSDP2+FA2）
@@ -439,7 +477,7 @@ router-skills-evolve/
 ## 进一步阅读
 
 - [notebooks/router_skills_walkthrough.ipynb](notebooks/router_skills_walkthrough.ipynb) - **动手拆解**：signature/skills/SFT/GRPO/router 逐步跑通（无需 GPU，模拟 trace）
-- [scaling/README.md](scaling/README.md) - Tau-2 / SWE-Bench scaling 完整文档
+- [scripts/README.md](scripts/README.md) - Pipeline / scaling 完整文档
 - [CLAUDE.md](CLAUDE.md) - Claude Code 操作速查 + 设计不变量
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - 架构详解
 - [docs/TRAINING.md](docs/TRAINING.md) - LLM 训练指南

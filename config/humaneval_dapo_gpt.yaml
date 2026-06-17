@@ -1,8 +1,14 @@
-# humaneval_dapo_gpt — 当前主力实验
-# GPT skill distiller + SFT 含 success pairs(修复 hard-only 崩溃) + DAPO,HF 推理。
-# 跑法:
-#   PYTHON=$PWD/venv/bin/python CUDA_VISIBLE_DEVICES=<gpu> EXPERIMENT_NAME=e2e_test \
-#   EXPERIMENT_CONFIG=humaneval_dapo_gpt bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 1
+# humaneval_dapo_gpt — 当前主力实验（large+distiller = gpt-5.5）
+# gpt-5.5 蒸 skill + SFT 含 success pairs(修复 hard-only 崩溃) + DAPO。
+# 推荐跑法(vLLM 加速 + run-both oracle + GRPO 显存防爆):
+#   PYTHON=$PWD/venv/bin/python CUDA_VISIBLE_DEVICES=3 \
+#   PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+#   HE_USE_VLLM=1 HE_VLLM_SMALL_GPU=1 GRPO_USE_VLLM=1 GRPO_VLLM_GPU=1 \
+#   GRPO_BATCH_SIZE=1 SCALING_FORCE_BOTH=1 SCALING_TRACE_WORKERS=8 EVAL_WORKERS=64 \
+#   EXPERIMENT_NAME=e2e_4cyc_gpt55 EXPERIMENT_CONFIG=humaneval_dapo_gpt \
+#   bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 4
+# 注:SCALING_FORCE_BOTH / GRPO_BATCH_SIZE / *_VLLM 是跑时 env(决定算力布局),不写进本配方;
+#    本文件只存"实验配方"(模型/算法/超参)。
 
 # 模型:HumanEval 用本地 code 模型(small 被训,large 当 teacher)。
 # 之前这两个值只在 scripts/run_full_pipeline.sh 里有默认、config 不显示;现显式列出。
