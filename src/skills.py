@@ -7,6 +7,7 @@
 """
 
 import json
+import os
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -88,16 +89,21 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
         distiller = make_llm_distiller("deepseek/deepseek-v3.2")
         sb.distill_all(distiller=distiller)
     """
-    def _distiller(signature: str, exemplars: List[Dict]) -> str:
+    def _distiller(signature: str, exemplars: List[Dict],
+                   prev_procedure: str = "") -> str:
         # lazy import to avoid pulling in openai at module load time
         try:
             from .models import call_llm  # noqa: PLC0415
         except ImportError:
             return _heuristic_procedure(signature, exemplars)
 
-        # Build a compact multi-example block (stay within ~3k tokens)
+        # Build a multi-example block. With one global "coding" skill ALL of the
+        # cycle's solved tasks accumulate here, so distill from as many as the cap
+        # allows (SKILL_DISTILL_N) — not just a handful. Each is truncated below
+        # to keep total tokens bounded.
+        n_distill = int(os.environ.get("SKILL_DISTILL_N", "50"))
         examples_text = []
-        for i, ex in enumerate(exemplars[:6], 1):
+        for i, ex in enumerate(exemplars[:n_distill], 1):
             prompt_snip = (ex.get("prompt") or "").strip()[:400]
             completion_snip = (ex.get("completion") or "").strip()[:500]
             examples_text.append(
@@ -106,12 +112,21 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
                 f"**Solution**:\n```python\n{completion_snip}\n```"
             )
 
+        # Skill evolution: when a procedure from the previous cycle exists, ask the
+        # model to REFINE it with the new exemplars (keep what works, fix gaps),
+        # rather than regenerate from scratch — so the skill genuinely improves
+        # cycle over cycle.
+        refine = bool((prev_procedure or "").strip())
         system_prompt = (
             "You are an expert coding-skills curator. "
-            "Given a cluster of similar coding problems and their solutions, "
-            "write a concise, reusable **Procedure** that teaches a weaker model "
-            "how to solve any problem in this cluster. "
-            "Format the output in plain Markdown (no preamble). "
+            "Given a cluster of similar coding problems and their solutions"
+            + (", plus the CURRENT procedure from the previous cycle, "
+               "improve that procedure" if refine else
+               ", write a concise, reusable **Procedure**")
+            + " that teaches a weaker model how to solve any problem in this cluster. "
+            + ("Keep the parts that already work, fix gaps the new examples reveal, "
+               "and prune anything misleading. " if refine else "")
+            + "Format the output in plain Markdown (no preamble). "
             "Include:\n"
             "1. **Problem type** — what makes this cluster distinct (1-2 sentences)\n"
             "2. **Key algorithm / pattern** — the core approach (e.g. two-pointer, "
@@ -124,10 +139,21 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
             "Keep the total response under 400 words."
         )
 
+        prev_block = ""
+        if refine:
+            prev_block = (
+                "## CURRENT procedure (previous cycle — refine this)\n"
+                + prev_procedure.strip()[:2000]
+                + "\n\n---\n"
+            )
         user_prompt = (
             f"Cluster signature: `{signature}`\n\n"
+            + prev_block
+            + "## New solved examples this cycle\n"
             + "\n\n".join(examples_text)
-            + "\n\n---\nNow write the Procedure for this cluster."
+            + ("\n\n---\nNow write the IMPROVED Procedure for this cluster."
+               if refine else
+               "\n\n---\nNow write the Procedure for this cluster.")
         )
 
         try:
@@ -170,7 +196,9 @@ class Skill:
     - recommend_cheapest_viable_model(candidates, min_rate): 推荐最便宜可用模型
     """
 
-    MAX_EXEMPLARS = 8
+    # With a single global skill, all solved tasks this cycle land here; keep
+    # enough to distill a representative procedure (env SKILL_MAX_EXEMPLARS).
+    MAX_EXEMPLARS = int(os.environ.get("SKILL_MAX_EXEMPLARS", "50"))
 
     def __init__(self, signature: str):
         self.signature = signature
@@ -224,7 +252,14 @@ class Skill:
         if not self.exemplars:
             return self.procedure
         if distiller is not None:
-            self.procedure = distiller(self.signature, self.exemplars)
+            # Pass the PREVIOUS procedure so the distiller refines it (true skill
+            # evolution) rather than regenerating from scratch each cycle. Older
+            # distillers that take only (signature, exemplars) still work.
+            try:
+                self.procedure = distiller(self.signature, self.exemplars,
+                                           self.procedure)
+            except TypeError:
+                self.procedure = distiller(self.signature, self.exemplars)
             self.procedure_source = "llm"
         else:
             self.procedure = _heuristic_procedure(self.signature, self.exemplars)

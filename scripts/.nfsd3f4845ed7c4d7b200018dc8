@@ -79,40 +79,24 @@ done
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Experiment config: a flat YAML recipe in config/ (KEY: value per line) that
-# sets the env vars below (SMALL_MODEL, DISTILLER_MODEL, GRPO_ALGO, HE_USE_VLLM,
-# SKILL_MAX_EXEMPLARS, …). Loaded BEFORE the `: "${VAR:=default}"` defaults, so
-# config values win over defaults; env vars / CLI flags passed inline still win
-# over the config (we only export keys not already set). Accepts a bare name
-# (config/<name>.yaml), a path, or absolute path. Legacy .env (shell) still works.
+# Experiment config: a sourceable .env-style recipe in config/ that exports the
+# env vars below (SMALL_MODEL, DISTILLER_MODEL, GRPO_ALGO, HE_USE_VLLM, …). It is
+# sourced BEFORE the `: "${VAR:=default}"` defaults, so config values win over
+# defaults but env vars / CLI flags passed inline still win over the config.
+# Accepts a bare name (config/<name>.env), a path, or an absolute path.
 #   EXPERIMENT_CONFIG=humaneval_dapo_gpt bash scripts/run_full_pipeline.sh ...
 #   bash scripts/run_full_pipeline.sh --config humaneval_dapo_gpt ...
 if [[ -n "${EXPERIMENT_CONFIG:-}" ]]; then
   _cfg="$EXPERIMENT_CONFIG"
-  for _cand in "$_cfg" "$REPO_ROOT/config/$EXPERIMENT_CONFIG" \
-               "$REPO_ROOT/config/${EXPERIMENT_CONFIG}.yaml" \
-               "$REPO_ROOT/config/${EXPERIMENT_CONFIG}.yml" \
-               "$REPO_ROOT/config/${EXPERIMENT_CONFIG}.env"; do
-    [[ -f "$_cand" ]] && { _cfg="$_cand"; break; }
-  done
-  if [[ ! -f "$_cfg" ]]; then
+  [[ -f "$_cfg" ]] || _cfg="$REPO_ROOT/config/$EXPERIMENT_CONFIG"
+  [[ -f "$_cfg" ]] || _cfg="$REPO_ROOT/config/${EXPERIMENT_CONFIG}.env"
+  if [[ -f "$_cfg" ]]; then
+    echo "[config] loading experiment config: $_cfg"
+    set -a; # shellcheck disable=SC1090
+    source "$_cfg"; set +a
+  else
     echo "[ERROR] EXPERIMENT_CONFIG='$EXPERIMENT_CONFIG' not found (looked in config/)"; exit 2
   fi
-  echo "[config] loading experiment config: $_cfg"
-  case "$_cfg" in
-    *.env)
-      set -a; # shellcheck disable=SC1090
-      source "$_cfg"; set +a ;;
-    *)  # flat YAML: KEY: value  (export only if not already set inline)
-      while IFS=':' read -r _k _v; do
-        _k="${_k// /}"
-        [[ "$_k" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue   # skip comments/blank/nested
-        _v="${_v%%#*}"                                        # strip inline comment
-        _v="$(printf '%s' "$_v" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'\$//")"
-        [[ -n "${!_k+x}" ]] && continue                        # inline env/flag already set → keep it
-        export "$_k=$_v"
-      done < "$_cfg" ;;
-  esac
 fi
 : "${BUNDLE_ROOT:=$REPO_ROOT/tau2_stage2}"
 : "${EXPERIMENT_NAME:=scaling_$(date -u +%Y%m%d_%H%M%S)}"
