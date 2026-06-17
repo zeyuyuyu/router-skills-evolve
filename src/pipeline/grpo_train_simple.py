@@ -373,8 +373,8 @@ def _repair_rollout_vllm(client, served_model, tok, task, procedure, *, n, max_t
         for i, completion in results:
             msgs = [{"role": "system", "content": SYSTEM}, *convs[i]]
             # ids consistent with what vLLM saw (same template) for the GRPO loss
-            prompt_ids = tok.apply_chat_template(msgs, add_generation_prompt=True,
-                                                 tokenize=True)
+            _enc = tok.apply_chat_template(msgs, add_generation_prompt=True, tokenize=True)
+            prompt_ids = _enc["input_ids"] if hasattr(_enc, "keys") else list(_enc)
             completion_ids = tok(completion, add_special_tokens=False)["input_ids"]
             turns_rec[i].append({"prompt_ids": prompt_ids, "completion_ids": completion_ids})
             code = extract_code(completion, task["entry_point"], task["prompt"])
@@ -431,7 +431,8 @@ def _repair_rollout_vllm_global(client, served_model, tok, tasks, get_procedure,
         for u, completion in results:
             task = tasks[u["ti"]]
             msgs = [{"role": "system", "content": SYSTEM}, *u["conv"]]
-            prompt_ids = tok.apply_chat_template(msgs, add_generation_prompt=True, tokenize=True)
+            _enc = tok.apply_chat_template(msgs, add_generation_prompt=True, tokenize=True)
+            prompt_ids = _enc["input_ids"] if hasattr(_enc, "keys") else list(_enc)
             completion_ids = tok(completion, add_special_tokens=False)["input_ids"]
             u["turns"].append({"prompt_ids": prompt_ids, "completion_ids": completion_ids})
             code = extract_code(completion, task["entry_point"], task["prompt"])
