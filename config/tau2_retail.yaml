@@ -1,0 +1,36 @@
+# tau2_retail — tau-2 默认主力配置(retail 域,无 vLLM)
+# 远程 API small/large + DeepSeek 蒸馏 + FSDP2 SFT,GRPO 关。
+# 这条默认路 **不碰 vLLM**:small model 是远程 API,Phase 1 不 serve 本地 student;
+# SFT 走 FSDP2;GRPO 默认 SKIP。详见下方「vLLM 注意」。
+# 跑法:
+#   PYTHON=$PWD/venv/bin/python EXPERIMENT_NAME=tau2_test \
+#   EXPERIMENT_CONFIG=tau2_retail bash scripts/run_full_pipeline.sh --bench tau2_bench --n-cycles 1
+#   (--bench / --n-cycles / --model-config 走命令行 flag,不在 config 里)
+
+# 模型:small/large/distiller 全是远程 API → local_student_ckpt 为空 → 不起 vLLM
+SMALL_MODEL: deepseek/deepseek-v3.2
+LARGE_MODEL: openai/gpt-5.4-2026-03-05
+DISTILLER_MODEL: deepseek/deepseek-v3.2
+
+# tau2 域(单域/单次运行)
+TAU2_DOMAIN: retail
+
+# SFT:FSDP2,不用 vLLM
+SCALING_NUM_TRAIN_EPOCHS: 2
+
+# RL:tau2 GRPO/DAPO 是 trajectory-level,贵且 opt-in,默认关
+# (要开:SKIP_GRPO: 0,并按 tau2-grpo-design 设置 rollout 温度 0.7–1.0)
+SKIP_GRPO: 1
+
+# skill 蒸馏 exemplar 数(与 humaneval 配置一致,旧默认 8 太少)
+SKILL_MAX_EXEMPLARS: 50
+SKILL_DISTILL_N: 50
+
+# ── vLLM 注意 ────────────────────────────────────────────────────────────────
+# tau2 没有 HumanEval 那种 HE_USE_VLLM 开关 —— vLLM 是否启动是自动判定的:
+# 仅当 cycle ≥ 1 且 small model 是 *本地训出的 checkpoint* 时,Phase 1 才会用
+# tau2_stage2/.../eval/vllm_serve.sh 把 student serve 成 OpenAI endpoint(tau2 靠
+# litellm/OpenAI API 驱动 agent,本地权重必须 serve,没有 in-process HF fallback)。
+# 本配置 small model 用远程 API,故全程不需要 vLLM。
+# 若要路由到本地 student(cycle≥1):需 cu13 兼容驱动 + vllm-capable venv,
+# 相关旋钮 TAU2_LOCAL_PORT / TAU2_LOCAL_TP_SIZE / TAU2_LOCAL_GPU。

@@ -123,18 +123,21 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
             system = (
                 "You are an expert coding-skills curator. "
                 "Given a cluster of similar coding problems and their solutions"
-                + (", plus the CURRENT procedure so far, improve that procedure"
-                   if refine else ", write a concise, reusable **Procedure**")
-                + " that teaches a weaker model how to solve any problem in this cluster. "
-                + ("Keep the parts that already work, fix gaps the new examples reveal, "
-                   "and prune anything misleading. " if refine else "")
-                + "Format the output in plain Markdown (no preamble). Include:\n"
-                "1. **Problem type** (1-2 sentences)\n"
-                "2. **Key algorithm / pattern**\n"
-                "3. **Step-by-step template**\n"
-                "4. **Reusable snippet** (3-10 transferable lines)\n"
-                "5. **Common pitfalls** (1-3)\n"
-                "Keep the total response under 400 words."
+                + (", plus the CURRENT cheatsheet so far, improve it"
+                   if refine else ", write a tight CHEATSHEET")
+                + " that helps a SMALL (1.5B) model solve these faster. "
+                + ("Keep what works, fix gaps the new examples reveal, prune fluff. "
+                   if refine else "")
+                + "Be CONCRETE and SHORT — a small model gains nothing from generic "
+                "advice it already knows (e.g. 'use all/any/sum', 'handle edge cases'). "
+                "Give only HIGH-SIGNAL, transferable content:\n"
+                "1. **Recipes** — 2-4 copy-pasteable code idioms that recur across these "
+                "problems (each ≤4 lines, with a one-line 'use when ...' trigger)\n"
+                "2. **Gotchas** — up to 3 SPECIFIC mistakes seen in these solutions "
+                "(off-by-one, order/dup loss, wrong return shape — not platitudes)\n"
+                "Plain Markdown, no preamble, NO step-by-step prose, NO restating the "
+                "obvious. Hard cap 150 words. If there is no transferable pattern, say so "
+                "in one line rather than padding."
             )
             prev_block = (
                 "## CURRENT procedure so far (refine this)\n" + prev.strip()[:2000]
@@ -157,7 +160,7 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
         def _call(prompt: str):
             try:
                 r = call_llm(model_id=model_id, prompt=prompt, use_proxy=use_proxy,
-                             temperature=0.3, max_tokens=600)
+                             temperature=0.3, max_tokens=400)
             except Exception as e:  # noqa: BLE001 — missing key / network
                 return None, str(e)
             return (r.get("response") or "").strip() or None, r.get("error")
@@ -202,26 +205,24 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
             sources = ([("Previous-cycle procedure", prev)] if prev else []) + \
                       [(f"Partial procedure {i+1}", p) for i, p in enumerate(partials)]
             merge_sys = (
-                "You are an expert coding-skills curator. Several partial Procedures "
-                "were distilled from different batches of solved problems in the SAME "
-                "cluster. Merge them into ONE coherent, non-redundant **Procedure** "
-                "(plain Markdown, no preamble) with sections: Problem type / Key "
-                "algorithm / Step-by-step template / Reusable snippet / Common "
-                "pitfalls. Keep the union of useful content, drop duplicates, under "
-                "400 words."
+                "Merge these partial coding CHEATSHEETS (same cluster) into ONE, "
+                "plain Markdown, no preamble: a **Recipes** list (copy-pasteable "
+                "idioms, each with a 'use when ...' trigger) and a **Gotchas** list "
+                "(specific mistakes). Deduplicate, keep only high-signal transferable "
+                "content, NO generic advice, NO step-by-step prose. Hard cap 150 words."
             )
             merge_user = f"Cluster signature: `{signature}`\n\n" + "\n\n---\n".join(
                 f"## {name}\n{text.strip()[:1500]}" for name, text in sources
-            ) + "\n\n---\nNow output the single merged Procedure."
+            ) + "\n\n---\nNow output the single merged cheatsheet."
             resp, _err = _call(f"{merge_sys}\n\n{merge_user}")
             procedure = resp or max(partials, key=len)   # fall back to longest partial
 
         header = (
-            f"# Procedure for cluster `{signature}`\n"
+            f"# Coding cheatsheet `{signature}`\n"
             f"# distilled by {model_id} from {len(exemplars)} exemplar(s) "
             f"(parallel map-reduce, {len(batches)} batch(es)≤{batch_size})\n\n"
         )
-        return (header + procedure)[:2400]
+        return (header + procedure)[:1400]
 
     return _distiller
 

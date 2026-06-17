@@ -18,12 +18,18 @@ flag(不在 config 里),因为它们决定流程本身。旧的 `.env`(可 sourc
 
 ## 现有配置
 
-| 文件 | distiller | RL | SFT 数据 | 推理后端 | 备注 |
-|------|-----------|----|---------| --------|------|
-| `humaneval_dapo_gpt.yaml` | gpt-5.4-mini | DAPO | +success | HF | **当前主力**(修复 SFT 崩溃 + skill 用全部 trace) |
+| 文件 | bench | distiller | RL | SFT 后端 | vLLM | 备注 |
+|------|-------|-----------|----|---------| -----|------|
+| `humaneval_dapo_gpt.yaml` | humaneval | gpt-5.4-mini | DAPO | HF | 否(可选提速) | **当前主力**(修复 SFT 崩溃 + skill 用全部 trace) |
+| `tau2_retail.yaml` | tau2_bench | deepseek-v3.2 | 关(opt-in) | FSDP2 | 否 | 远程 API small/large,默认这条路不碰 vLLM |
 
 > 改实验直接复制这个 yaml 改字段。vLLM 版(`HE_USE_VLLM=1`/`GRPO_USE_VLLM=1` +
 > GPU 布局 `HE_VLLM_SMALL_GPU`/`HE_VLLM_LARGE_GPU`)等驱动支持 cu13 后再加(见下)。
+
+**两个 bench 的 vLLM 不是一回事**:HumanEval 的 `HE_USE_VLLM`/`GRPO_USE_VLLM` 是纯
+*提速*开关(默认 0 = in-process HF,完全能跑);tau2 没有这个开关,vLLM 仅在 **cycle ≥ 1
+且 small model 是本地训出的 checkpoint** 时自动启动(把 student serve 成 OpenAI endpoint,
+无 HF fallback)。tau2 默认用远程 API small/large → 全程不碰 vLLM。
 
 ## 关键开关
 

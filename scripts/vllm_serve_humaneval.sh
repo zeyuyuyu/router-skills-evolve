@@ -53,8 +53,16 @@ fi
 echo "[vllm_serve] starting: model=$MODEL_TO_LOAD served=$SERVED port=$PORT gpu=$GPU"
 # Put the venv's bin first on PATH so vLLM's runtime subprocesses (ninja for
 # kernel compilation, etc.) resolve to the venv tools rather than failing.
+# Driver/CUDA workaround (driver 575 / CUDA 12.9 on this box):
+#   - vllm 0.22's bundled FLASH_ATTN (vllm-flash-attn Hopper) + flashinfer are
+#     built for CUDA 13 → "CUDA driver insufficient" / "No module named flashinfer".
+#   - TRITON_ATTN compiles at runtime (no cu13 prebuilt kernel) and
+#     VLLM_USE_FLASHINFER_SAMPLER=0 falls back to the PyTorch-native sampler.
+# On a CUDA-13-capable driver, override: HE_VLLM_ATTN_BACKEND=FLASH_ATTN
+# VLLM_USE_FLASHINFER_SAMPLER=1 (faster).
 CUDA_VISIBLE_DEVICES="$GPU" \
   PATH="$VLLM_VENV/bin:$PATH" \
+  VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}" \
   nohup "$VLLM_BIN" serve "$MODEL_TO_LOAD" \
     --served-model-name "$SERVED" \
     --port "$PORT" \
@@ -62,6 +70,7 @@ CUDA_VISIBLE_DEVICES="$GPU" \
     --max-model-len "${HE_VLLM_MAX_LEN:-4096}" \
     --dtype bfloat16 \
     --trust-remote-code \
+    --attention-backend "${HE_VLLM_ATTN_BACKEND:-TRITON_ATTN}" \
     "${LORA_ARGS[@]}" \
     > "$SRV_LOG" 2>&1 &
 SERVER_PID=$!
