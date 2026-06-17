@@ -179,9 +179,9 @@ if $SMOKE; then
   N_TASKS=30
   SKIP_LLM=1   # smoke skips LLM training by default
 elif [[ "$BENCH" == "humaneval" ]]; then
-  N_TASKS=82   # HumanEval train split (even indices of the 164 tasks)
+  N_TASKS="${N_TASKS:-82}"   # HumanEval train split (even indices of the 164 tasks)
 else
-  N_TASKS=848   # tau2-bench eval split size; SWE-Bench Lite ≈ 300
+  N_TASKS="${N_TASKS:-848}"  # tau2-bench eval split size; SWE-Bench Lite ≈ 300
 fi
 
 if $MOCK; then

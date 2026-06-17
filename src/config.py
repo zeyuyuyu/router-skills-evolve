@@ -59,6 +59,7 @@ DYNAMIC_PRICES = {
     "openai/gpt-5.4-mini-2026-03-17": (0.75, 4.50),
     "openai/gpt-5.4-nano-2026-03-17": (0.20, 1.25),
     "openai/gpt-5.4-pro-2026-03-05": (30.0, 180.0),
+    "openai/gpt-5.5": (3.0, 18.0),  # 估值(公开价格表暂无);仅用于成本统计
     "openai/gpt-oss-120b": (0.05, 0.25),  # 开源!
 
     # DeepSeek (开源)
