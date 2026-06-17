@@ -268,6 +268,13 @@ def main():
     )
 
     model = get_peft_model(model, lora_config)
+    # Gradient checkpointing + frozen base + LoRA: the embedding output must
+    # require grad or the checkpointed segments break the graph → nan gradients
+    # (finite loss but grad_norm=nan on the first backward, then weights collapse).
+    # enable_input_require_grads() registers the hook that fixes this; pair with
+    # use_reentrant=False in the trainer args below.
+    if hasattr(model, "enable_input_require_grads"):
+        model.enable_input_require_grads()
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total_params = sum(p.numel() for p in model.parameters())
     print(f"   可训练参数: {trainable_params:,} ({trainable_params/total_params*100:.2f}%)")
@@ -298,7 +305,9 @@ def main():
         save_strategy="epoch",
         save_total_limit=2,
         bf16=True,
-        gradient_checkpointing=True,
+        gradient_checkpointing=(os.environ.get("SFT_GRAD_CKPT", "1") == "1"),
+        gradient_checkpointing_kwargs={"use_reentrant": False},  # LoRA+ckpt nan fix
+        max_grad_norm=1.0,                                       # clip stray spikes
         report_to="none",
         dataset_text_field="text",
         max_length=args.max_seq_len,
