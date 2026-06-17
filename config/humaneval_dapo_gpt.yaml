@@ -4,10 +4,16 @@
 #   PYTHON=$PWD/venv/bin/python CUDA_VISIBLE_DEVICES=<gpu> EXPERIMENT_NAME=e2e_test \
 #   EXPERIMENT_CONFIG=humaneval_dapo_gpt bash scripts/run_full_pipeline.sh --bench humaneval --n-cycles 1
 
+# 模型:HumanEval 用本地 code 模型(small 被训,large 当 teacher)。
+# 之前这两个值只在 scripts/run_full_pipeline.sh 里有默认、config 不显示;现显式列出。
+HE_SMALL_MODEL: Qwen/Qwen2.5-Coder-1.5B-Instruct
+HE_LARGE_MODEL: Qwen/Qwen2.5-Coder-3B-Instruct
+
 # skill 蒸馏:用 GPT 总结 procedure;单一全局 skill 下尽量用全部解出的 trace
 DISTILLER_MODEL: openai/gpt-5.4-mini-2026-03-17
 SKILL_MAX_EXEMPLARS: 50      # 每个 skill 保留多少 exemplar(旧默认 8 太少)
 SKILL_DISTILL_N: 50          # distiller 喂给 LLM 的 exemplar 数
+SKILL_FEWSHOT_K: 4          # 烤进 skill 的经典例子数(甜点;k=2 持平, k=8 过长反降)
 
 # SFT:不只用 hard task,也克隆已解出的题(避免 nan 梯度崩溃)
 SFT_INCLUDE_SUCCESS: 1
@@ -23,6 +29,10 @@ GRPO_LR: 5e-6
 # 多轮 ReAct 修复轮数
 HE_MAX_REPAIR_TURNS: 2
 
-# 推理后端:HF generate(vLLM 在本机驱动 CUDA 12.9 下不可用)
+# 推理后端:默认 HF generate。
+# 注:本机驱动 575/CUDA 12.9 + vllm 0.22(cu13 构建)下,vLLM 需 workaround 才能起——
+#   scripts/vllm_serve_humaneval.sh 已内置 --attention-backend TRITON_ATTN +
+#   VLLM_USE_FLASHINFER_SAMPLER=0,并需 fastapi==0.116.1 / starlette==0.41.3。
+#   验证可起 Qwen2.5-Coder-1.5B/3B(纯文本)。要启用本地 vLLM 推理:设 HE_USE_VLLM: 1。
 HE_USE_VLLM: 0
 GRPO_USE_VLLM: 0

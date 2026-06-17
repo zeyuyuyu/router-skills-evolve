@@ -33,6 +33,36 @@ _TOOL_CALL = _re.compile(r"\b([a-z_][a-z0-9_]{2,})\s*\(")
 _TAGGED_TOOL = _re.compile(r"<(?:tool|tool_call|function)>\s*([^<]+?)\s*</(?:tool|tool_call|function)>", _re.IGNORECASE)
 
 
+def _select_classic_examples(exemplars: List[Dict], k: int = None) -> List[Dict]:
+    """Pick a FIXED set of classic worked examples for the skill (structured).
+
+    Deterministic (not per-prompt retrieval) → constant skill prefix, safe as a
+    training prefix. Picks the k exemplars with the shortest completions (clean,
+    canonical solutions teach the pattern best). k from SKILL_FEWSHOT_K (default
+    2); 0 disables. Returns [{task_id, prompt, completion}].
+    """
+    if k is None:
+        k = int(os.environ.get("SKILL_FEWSHOT_K", "2"))
+    if k <= 0:
+        return []
+    pool = [e for e in exemplars if (e.get("prompt") and e.get("completion"))]
+    chosen = sorted(pool, key=lambda e: len(e["completion"]))[:k]
+    return [{"task_id": e.get("task_id", ""),
+             "prompt": e["prompt"].strip()[:500],
+             "completion": e["completion"].strip()[:600]} for e in chosen]
+
+
+def _render_examples(examples: List[Dict]) -> str:
+    """Render curated classic examples into the skill prefix text."""
+    if not examples:
+        return ""
+    blocks = ["## Worked examples (canonical solutions — study the pattern)"]
+    for i, e in enumerate(examples, 1):
+        blocks.append(f"### Example {i}\n```python\n{e.get('prompt','')}\n```\n"
+                      f"Solution:\n```python\n{e.get('completion','')}\n```")
+    return "\n\n".join(blocks)
+
+
 def _heuristic_procedure(signature: str, exemplars: List[Dict], max_chars: int = 1200) -> str:
     """Induce a reusable scaffold from successful trajectories without any LLM.
 
@@ -259,8 +289,13 @@ class Skill:
         # drive routing; these fields make the skill teachable to the small
         # model and inspectable by a human.
         self.exemplars: List[Dict] = []   # [{task_id, prompt, completion, model}]
-        self.procedure: str = ""          # distilled reusable scaffold
+        self.procedure: str = ""          # distilled reusable scaffold (cheatsheet)
         self.procedure_source: str = ""   # "" | "heuristic" | "llm"
+        # Curated CLASSIC examples shown to the small model alongside the
+        # procedure. A FIXED list (same for every problem → constant prefix, safe
+        # for training), stored as structured data so it persists in skillbook.json
+        # and can be re-curated (deterministically now, or by an LLM later).
+        self.examples: List[Dict] = []    # [{task_id, prompt, completion}]
 
     def update(self, model_id: str, success: bool, task_id: str = ""):
         """记录一次调用结果 (stats only — exemplars via add_exemplar)"""
@@ -310,6 +345,10 @@ class Skill:
         else:
             self.procedure = _heuristic_procedure(self.signature, self.exemplars)
             self.procedure_source = "heuristic"
+        # Curate the skill's fixed CLASSIC examples (structured field, persisted
+        # in skillbook.json). Same for every problem → constant prefix → training
+        # stays stable. Re-curated each distill as exemplars accumulate.
+        self.examples = _select_classic_examples(self.exemplars)
         return self.procedure
 
     def model_success_rate(
@@ -377,6 +416,7 @@ class Skill:
             "exemplars": self.exemplars,
             "procedure": self.procedure,
             "procedure_source": self.procedure_source,
+            "examples": self.examples,
         }
 
     @classmethod
@@ -390,6 +430,7 @@ class Skill:
         s.exemplars = data.get("exemplars", [])
         s.procedure = data.get("procedure", "")
         s.procedure_source = data.get("procedure_source", "")
+        s.examples = data.get("examples", [])
         return s
 
 
@@ -424,62 +465,16 @@ class SkillBook:
             skill.add_exemplar(prompt, completion, model_id, task_id)
 
     def get_procedure(self, prompt: str) -> str:
-        """Return the distilled procedure for the prompt's cluster (or '')."""
-        skill = self.skills.get(extract_signature(prompt))
-        return skill.procedure if skill else ""
-
-    def nearest_exemplars(self, prompt: str, k: int = 3,
-                          exclude_task_id: str = "") -> List[Dict]:
-        """Top-k solved exemplars most similar to `prompt` (TF-IDF cosine).
-
-        Concrete worked examples help a small model more than an abstract
-        procedure. Retrieval is over the cluster's accumulated exemplars; at
-        held-out eval time these come from TRAIN traces (no leakage). Falls back
-        to most-recent-k if scikit-learn is unavailable.
+        """Skill prefix for the prompt's cluster: cheatsheet + curated classic
+        examples (constant per skill, NOT per-prompt retrieval). '' if no skill.
         """
         skill = self.skills.get(extract_signature(prompt))
-        if not skill or not skill.exemplars:
-            return []
-        pool = [e for e in skill.exemplars
-                if not (exclude_task_id and e.get("task_id") == exclude_task_id)
-                and (e.get("prompt") and e.get("completion"))]
-        if len(pool) <= k:
-            return pool
-        try:
-            from sklearn.feature_extraction.text import TfidfVectorizer
-            from sklearn.metrics.pairwise import cosine_similarity
-            corpus = [e["prompt"] for e in pool] + [prompt]
-            tfidf = TfidfVectorizer().fit_transform(corpus)
-            sims = cosine_similarity(tfidf[-1], tfidf[:-1])[0]
-            order = sims.argsort()[::-1][:k]
-            return [pool[i] for i in order]
-        except Exception:  # noqa: BLE001
-            return pool[-k:]
-
-    def get_context(self, prompt: str, fewshot_k: int = 0,
-                    with_procedure: bool = True, exclude_task_id: str = "") -> str:
-        """Full skill context = distilled procedure + k nearest worked examples.
-
-        This is what the small model sees as its `procedure` prefix. fewshot_k=0
-        → procedure only (legacy). The abstract cheatsheet teaches the pattern;
-        the concrete examples show it applied to similar problems.
-        """
-        parts = []
-        if with_procedure:
-            proc = self.get_procedure(prompt)
-            if proc:
-                parts.append(proc)
-        if fewshot_k > 0:
-            exs = self.nearest_exemplars(prompt, k=fewshot_k, exclude_task_id=exclude_task_id)
-            if exs:
-                blocks = ["## Worked examples (similar solved problems — adapt, don't copy)"]
-                for i, e in enumerate(exs, 1):
-                    p = (e.get("prompt") or "").strip()[:500]
-                    c = (e.get("completion") or "").strip()[:600]
-                    blocks.append(f"### Example {i}\n```python\n{p}\n```\n"
-                                  f"Solution:\n```python\n{c}\n```")
-                parts.append("\n\n".join(blocks))
-        return "\n\n".join(parts)
+        if not skill:
+            return ""
+        examples_text = _render_examples(getattr(skill, "examples", []))
+        if skill.procedure and examples_text:
+            return f"{skill.procedure}\n\n{examples_text}"
+        return skill.procedure or examples_text
 
     def distill_all(self, distiller=None) -> int:
         """(Re)distill procedures for every skill that has exemplars.

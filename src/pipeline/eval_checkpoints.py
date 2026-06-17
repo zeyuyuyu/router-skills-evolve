@@ -118,13 +118,9 @@ def main() -> int:
         from src.skills import SkillBook
         sb = SkillBook()
         sb.load(Path(args.skillbook))
-        if args.fewshot_k > 0:
-            procedure_fn = lambda p: sb.get_context(p, fewshot_k=args.fewshot_k)
-            print(f"[eval] skill = procedure + {args.fewshot_k} few-shot exemplars "
-                  f"({len(sb.skills)} clusters)", flush=True)
-        else:
-            procedure_fn = sb.get_procedure
-            print(f"[eval] using skillbook procedures ({len(sb.skills)} clusters)", flush=True)
+        procedure_fn = sb.get_procedure  # = cheatsheet + curated classic examples
+        print(f"[eval] using skillbook ({len(sb.skills)} clusters); "
+              f"procedure includes baked classic examples", flush=True)
 
     # Build the waterfall stages: (label, model_id, use_procedure).
     have_skills = procedure_fn is not None and not args.no_skills_stage
