@@ -428,17 +428,10 @@ phase1_collect_traces() {
     elif [[ -d "$prev_sft"  ]]; then prev="$prev_sft"
     fi
     if [[ -n "$prev" ]]; then
-      if [[ "$BENCH" == "humaneval" ]]; then
-        # HumanEval loads the LoRA adapter LOCALLY (adapter._get_model handles
-        # adapter dirs) — pass the path directly, no vLLM serving. (tau2 serves
-        # the student via vLLM because its adapter calls a remote agent API.)
-        small_arg="$prev"
-      else
-        local_student_ckpt="$prev"
-        local_student_port="${TAU2_LOCAL_PORT:-8050}"
-        local_student_served="${TAU2_LOCAL_SERVED_MODEL:-evol-llm-student}"
-        small_arg="openai/$local_student_served"
-      fi
+      local_student_ckpt="$prev"
+      local_student_port="${TAU2_LOCAL_PORT:-8050}"
+      local_student_served="${TAU2_LOCAL_SERVED_MODEL:-evol-llm-student}"
+      small_arg="openai/$local_student_served"
     fi
     prev_router="$RESULTS_DIR/cycle_$((cycle-1))/router/router.joblib"
     prev_skillbook="$RESULTS_DIR/cycle_$((cycle-1))/skillbook.json"

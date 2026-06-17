@@ -265,6 +265,74 @@ def _repair_rollout(model, tok, task, procedure, *, style, max_turns,
     return {"reward": 1.0 if ok else 0.0, "turns": turns}
 
 
+def _repair_rollout_batched(model, tok, task, procedure, *, n, style, max_turns,
+                            temperature, max_new_tokens):
+    """K on-policy repair trajectories for one task, generated in BATCHES.
+
+    Same result shape as K calls to `_repair_rollout` (a list of n
+    {"reward", "turns":[{"prompt_ids","completion_ids"}]} dicts), but each turn
+    issues ONE batched `model.generate` over all still-failing trajectories
+    instead of n sequential calls — ~Kx fewer generate calls, far higher GPU
+    utilisation (the main HumanEval-GRPO speedup while vLLM is driver-blocked).
+    """
+    import torch
+    from src.pipeline.benches.humaneval.adapter import _format_multiturn_prompt
+    from src.models import extract_code, run_humaneval_test
+
+    gen_kwargs = {"max_new_tokens": max_new_tokens, "do_sample": temperature > 0,
+                  "pad_token_id": tok.pad_token_id, "eos_token_id": tok.eos_token_id}
+    if temperature > 0:
+        gen_kwargs["temperature"] = temperature
+    if style == "qwen-chat":
+        qend = tok.convert_tokens_to_ids("<|im_end|>")
+        if isinstance(qend, int) and qend >= 0:
+            gen_kwargs["eos_token_id"] = qend
+
+    raw_problem = task["prompt"]
+    first = f"{procedure}\n\n---\n\n{raw_problem}" if procedure else raw_problem
+    convs = [[{"role": "user", "content": first}] for _ in range(n)]
+    turns_rec: list = [[] for _ in range(n)]
+    ok = [False] * n
+    done = [False] * n
+
+    for turn_idx in range(max_turns):
+        active = [i for i in range(n) if not done[i]]
+        if not active:
+            break
+        prompts = [_format_multiturn_prompt(convs[i], style) for i in active]
+        # Left-pad so all completions start at the same column for batched decode.
+        old_side = tok.padding_side
+        tok.padding_side = "left"
+        enc = tok(prompts, return_tensors="pt", padding=True).to(model.device)
+        tok.padding_side = old_side
+        with torch.no_grad():
+            out = model.generate(**enc, **gen_kwargs)
+        gen = out[:, enc["input_ids"].shape[1]:]  # new tokens, aligned across rows
+
+        for bi, i in enumerate(active):
+            new_ids = gen[bi].tolist()
+            while new_ids and new_ids[-1] == tok.pad_token_id:  # trim right pad
+                new_ids.pop()
+            completion = tok.decode(new_ids, skip_special_tokens=True)
+            # clean (unpadded) prompt ids for this trajectory's loss example
+            prompt_ids = tok(prompts[bi], return_tensors="pt")["input_ids"][0].tolist()
+            turns_rec[i].append({"prompt_ids": prompt_ids, "completion_ids": new_ids})
+            code = extract_code(completion, task["entry_point"], task["prompt"])
+            passed, error = run_humaneval_test(task, code)
+            if passed:
+                ok[i] = True
+                done[i] = True
+            elif turn_idx < max_turns - 1:
+                convs[i].append({"role": "assistant", "content": code})
+                convs[i].append({"role": "user", "content": (
+                    f"Your code failed with the following error:\n\n{error}\n\n"
+                    "Analyze the error and return a corrected version of the complete function.")})
+            else:
+                done[i] = True
+
+    return [{"reward": 1.0 if ok[i] else 0.0, "turns": turns_rec[i]} for i in range(n)]
+
+
 def _run_repair_grpo(args, tasks, get_procedure) -> int:
     from src.pipeline.grpo_core import compute_advantages, grpo_update
 
@@ -304,12 +372,10 @@ def _run_repair_grpo(args, tasks, get_procedure) -> int:
     groups = []
     for i, task in enumerate(tasks, 1):
         proc = get_procedure(task["prompt"]) or ""
-        rollouts = [
-            _repair_rollout(model, tok, task, proc, style=args.prompt_style,
-                            max_turns=args.max_repair_turns, temperature=args.temperature,
-                            max_new_tokens=max_new_tokens)
-            for _ in range(args.n_generations)
-        ]
+        rollouts = _repair_rollout_batched(
+            model, tok, task, proc, n=args.n_generations, style=args.prompt_style,
+            max_turns=args.max_repair_turns, temperature=args.temperature,
+            max_new_tokens=max_new_tokens)
         n_pass = sum(1 for r in rollouts if r["reward"] > 0)
         print(f"[grpo] task {i}/{len(tasks)} {task['task_id']}  "
               f"pass={n_pass}/{len(rollouts)}  "
