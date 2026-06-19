@@ -92,3 +92,7 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Structural fix required: (1) Run shepherd cron directly ON A800 (`crontab -e` on A800); (2) Expose state.json via HTTPS on A800 (e.g. `python3 -m http.server 8080`); (3) Fix network policy at https://code.claude.com/docs/en/claude-code-on-the-web.
   DONE: actions=FAILED (A800 unreachable day 35+)
 [2026-06-19T10:04:24Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. SSH timed out after 30s. Persistent outage day 36 (first failure ~2026-05-14). No state read; all checks (queue/GPU/disk/PID/artifacts) skipped. 77+ pending experiments EXP-001..EXP-079 queued in pending_queue_update scripts; cannot be applied until connectivity restored. Actions taken: none. DONE: actions=FAILED
+[2026-06-19 14:03:48 UTC] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after two attempts (15s + 20s).
+  Actions taken: none (cannot reach remote state.json or any A800 artifact).
+  Next step: manual check required; if outage persists past next shepherd cycle, investigate network/power on A800.
