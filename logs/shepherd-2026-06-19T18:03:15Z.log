@@ -1,0 +1,10 @@
+[2026-06-19T18:03:15Z] SHEPHERD RUN — FAILED
+
+A800 host 117.74.66.181 port 50507 unreachable: TCP connection timed out after 15 s.
+
+Actions taken: none (cannot read state, cannot SSH).
+Actions skipped: state read, queue check, stuck-experiment check, disk check, daily artifact check.
+
+RECOMMENDATION: Verify A800 is powered on and network is reachable from the cloud runner. Check if port 50507 forwarding is active. If A800 rebooted, restart the orchestrator cron and vLLM serve script.
+
+Next shepherd run will retry automatically in ~2 hours.
