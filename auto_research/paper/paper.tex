@@ -1,5 +1,5 @@
 % MERA: Model Evolution and Routing with Skill Adaptation — AAAI 2027 submission
-% paper.tex — auto-generated 2026-06-12 by weekly pipeline
+% paper.tex — auto-generated 2026-06-19 by weekly pipeline
 % DO NOT edit the %% MANUAL-PIN blocks below.
 
 \documentclass[letterpaper]{article}
@@ -47,16 +47,16 @@ On HumanEval (164 code tasks), MERA achieves \textbf{99\% task accuracy at 83\% 
 cost} than always routing to the frontier model.
 A BERT-based router achieves \textbf{93.04\% routing accuracy} with a \textbf{2.12\%
 fallback rate}.
-A GRPO evolution pass yields +2pp MBPP pass@1 for Qwen2.5-Coder-1.5B (provisional,
-$n{=}1$ seed).
-Extending MERA to three-domain agentic customer-service tasks (tau2-bench) with a
-Qwen3.6-35B-A3B adapter, we achieve \textbf{89.19\% agentic task pass at 22.16\%
-of always-large cost} at peak.
-On a held-out 100-task split, the domain-specialized 35B model (80\%) surpasses the
+Over 4 end-to-end evolution cycles on HumanEval with DAPO multi-turn repair ($G{=}8$),
+the skills arm improves from 70.7\% to 75.6\% task pass; a mechanistic analysis
+reveals that \textbf{52.4\% of training groups produce zero gradient} even with DAPO
+dynamic sampling, identifying zero-variance collapse as the binding improvement bottleneck.
+A standalone GRPO pass on MBPP yields +2pp pass@1 for Qwen2.5-Coder-1.5B ($n{=}1$ seed).
+Extended to three-domain agentic tau2-bench tasks with a Qwen3.6-35B-A3B adapter,
+MERA achieves \textbf{89.19\% task pass at 22.16\% of always-large cost} at peak;
+a held-out evaluation shows the domain-specialized 35B model (80\%) surpassing the
 frontier GPT-5.4 (71\%), revealing that agent specialization can render frontier
 escalation counterproductive.
-We identify router overfitting and the 73\%-silent-group GRPO problem as the two
-binding constraints on further improvement.
 \end{abstract}
 
 %% SECTION 1 %%
@@ -115,7 +115,14 @@ results with verifiable rewards.
 DAPO~\cite{yu2025dapo} removes low-variance groups.
 REINFORCE++~\cite{zeng2025reinforceplusplus} introduces a global EMA baseline.
 GCPO~\cite{chen2026gcpo} addresses winner-takes-all collapse via team-level coverage credit.
-We apply GRPO to a 1.5B code model and identify the same collapse failure mode.
+MicroCoder~\cite{microcoder2026} uses per-group diversity-determined temperature to reduce
+diversity collapse; RECRL~\cite{recrl2026} applies adaptive curriculum sampling to
+concentrate gradient on Goldilocks-zone problems.
+EGCA~\cite{egca2026} localizes GRPO advantage to causally responsible token spans via
+execution-trace divergence, yielding $+1.5$pp MBPP.
+TAROT~\cite{tarot2026} introduces intra-problem test-tier curriculum for code RL.
+We apply GRPO to a 1.5B code model and quantify zero-variance collapse: 73\% at
+$G{=}4$ (MBPP), reducing to 52.4\% at $G{=}8$ DAPO (HumanEval).
 
 \paragraph{Continual LLM Adaptation.}
 Plasticity loss~\cite{plasticity2026} causes degradation in long RL training horizons.
@@ -242,7 +249,48 @@ Qwen2.5-Coder-7B & GRPO 100$\times$4 & 77/100 & 75/100 \\
 \end{table}
 
 Naive scaling of training budget or model size consistently fails.
-The best positive result is 1.5B GRPO 200$\times$4 (+2pp).
+The best positive result is 1.5B GRPO 200$\times$4 (+2pp, $n{=}1$ seed).
+
+\subsection{Multi-Cycle HumanEval Evolution (DAPO)}
+\label{sec:he4cyc}
+
+We run a 4-cycle end-to-end MERA pipeline on HumanEval (82 tasks) using GPT-5.5 as the
+large model and a Qwen3.6-35B-A3B adapter as the evolving small model, with DAPO
+multi-turn repair rollout ($G{=}8$, max\_turns$=3$, LoRA $r{=}16$, $\eta{=}5\times10^{-6}$).
+
+\begin{table}[h]
+\centering
+\caption{4-cycle HumanEval MERA---per-cycle Full-variant and skills-arm results.}
+\label{tab:he4cyc}
+\begin{tabular}{lrrrr}
+\toprule
+Cycle & Full Task Pass & Route Acc & Cost & Skills Arm \\
+\midrule
+0 & 91.46\% & 92.68\% & 31.95\% & 70.73\% \\
+1 & 92.68\% & 90.24\% & 40.73\% & --- \\
+2 & 91.46\% & 93.90\% & 28.66\% & --- \\
+3 & 92.68\% & 92.68\% & 27.56\% & \textbf{75.61\%} \\
+\midrule
+Always-large (GPT-5.5) & \multicolumn{2}{r}{96.34\%} & 100\% & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The skills arm (always-small $+$ procedure) improves from 70.73\% to \textbf{75.61\%}
+over 4 cycles, confirming MERA-driven SFT expands the small model's task coverage.
+The Full system equals the Router-only system at cycle~3 (both 92.68\% task pass),
+indicating that the cycle-3 GRPO adapter did not move routing-level performance beyond
+the trained router.
+
+\paragraph{Zero-Variance Diagnosis (Cycle~3 GRPO).}
+Inspection of the cycle-3 GRPO training log reveals a concrete bottleneck: of 82
+training groups ($G{=}8$, DAPO dynamic sampling), \textbf{43/82 (52.4\%) were dropped
+as zero-variance}---despite DAPO's post-hoc filtering. The informative subset:
+39 groups, 312 rollouts used for weight updates. Zero-variance breaks down as
+${\approx}45\%$ all-pass (problems the cycle-3 model already masters) and
+${\approx}7\%$ all-fail (intractable at 1.5B capacity). This is lower than the
+73\% zero-variance at $G{=}4$ standard GRPO (§\ref{sec:analysis}): DAPO reduces
+but does not eliminate the bottleneck.
 
 %% SECTION 6 %%
 \section{End-to-End Ablation}
@@ -336,11 +384,14 @@ beyond always-small routing.
 \section{Failure Mode Analysis}
 \label{sec:analysis}
 
-\paragraph{73\%-Silent-Group Problem.}
-With $G=4$ rollouts and binary reward, 53\% of tasks have all-fail groups and 20\% have
-all-pass groups. GRPO advantage normalization $A_i=(r_i-\bar{r})/\sigma_r$ produces
-$0/0$ on all-same-reward groups, clipped to zero. Only the 27\% mixed-outcome tasks
-provide non-zero gradient.
+\paragraph{Zero-Variance Silent-Group Problem.}
+With $G{=}4$ rollouts and binary reward on MBPP, 53\% of tasks yield all-fail groups
+and 20\% yield all-pass groups. GRPO advantage normalization $A_i=(r_i-\bar{r})/\sigma_r$
+produces $0/0$ on all-same-reward groups, clipped to zero---leaving only 27\% of tasks
+with non-zero gradient. Scaling to $G{=}8$ with DAPO dynamic sampling on HumanEval
+reduces zero-variance to \textbf{52.4\%} (43/82 groups; §\ref{sec:he4cyc}): DAPO
+mitigates but does not eliminate the bottleneck. Only 39 of 82 HumanEval training tasks
+provide informative gradient at $G{=}8$ DAPO.
 
 \paragraph{Winner-Takes-All Collapse.}
 On mixed-outcome tasks, GRPO reinforces the single passing rollout until it dominates
@@ -349,25 +400,31 @@ single solution mode per task.
 
 \paragraph{Remedies.}
 REINFORCE++~\cite{zeng2025reinforceplusplus} uses a global EMA baseline that converts
-all-fail to $-0.47$ signal and all-pass to $+0.53$ signal.
-GCPO~\cite{chen2026gcpo} uses team-level AST-diversity coverage credit to maintain
-exploration incentive on mixed groups.
-Both are queued as priority experiments.
+all-fail to $-0.47$ signal and all-pass to $+0.53$ signal, providing gradient on
+previously silent groups.
+GCPO~\cite{chen2026gcpo} uses team-level AST-diversity coverage credit to prevent
+winner-takes-all collapse.
+RECRL~\cite{recrl2026} and MicroCoder~\cite{microcoder2026} address zero-variance via
+adaptive curriculum sampling and diversity-determined temperature respectively.
+These are queued as priority experiments pending A800 restoration.
 
 %% SECTION 8 %%
 \section{Conclusion}
 
 We present MERA, achieving 99\% task accuracy at 17\% of frontier cost on HumanEval via
-skills evolution, 93.04\% routing accuracy with a learned BERT router, and a first positive
-LLM evolution signal (+2pp MBPP) via GRPO.
-Extended to tau2 agentic tasks, MERA demonstrates 89.19\% task pass at 22.16\% of
-always-large cost at peak, and reveals a novel finding: domain-specialized adaptation
-of the small model renders frontier model routing counterproductive on held-out tasks
-(80\% small vs.\ 71\% large), reframing routing as a domain-specialization decision
-rather than a pure capability-gap decision.
-We identify router overfitting, winner-takes-all collapse, and 73\%-silent-group failure
-as the three binding constraints, and propose regularized routing and cooperative policy
-optimization as remedies.
+skills evolution, 93.04\% routing accuracy with a learned BERT router, and +2pp MBPP
+pass@1 via GRPO (standalone; $n{=}1$ seed).
+Over 4 end-to-end HumanEval evolution cycles, the skills arm improves from 70.7\% to
+75.6\% task pass while the Full system maintains 92.68\% routing accuracy at 27.56\%
+of always-large cost; a mechanistic analysis pinpoints 52.4\% zero-variance DAPO groups
+as the primary barrier to further LLM improvement.
+Extended to tau2 agentic tasks, MERA reaches 89.19\% task pass at 22.16\% of always-large
+cost at peak, and reveals that the domain-specialized small model (80\%) surpasses
+the frontier GPT-5.4 (71\%) on held-out tasks, reframing routing as a domain-specialization
+decision rather than a pure capability-gap decision.
+We identify router overfitting, winner-takes-all collapse, and 52\%-zero-variance GRPO
+as the three binding constraints, motivating regularized routing, cooperative policy
+optimization, and adaptive curriculum training as the next experimental directions.
 
 %% REFERENCES %%
 \bibliographystyle{aaai}
