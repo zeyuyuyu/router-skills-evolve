@@ -1,0 +1,16 @@
+[2026-06-19T20:03:59Z] SHEPHERD RUN — FAILED: A800 unreachable
+
+Diagnosis: The Claude Code remote execution environment (cloud container) blocks outbound TCP connections on non-HTTP ports. Attempted connections to 117.74.66.181:50507 (SSH) and 117.74.66.181:22 returned EAGAIN (errno=11) — connection refused/blocked by network policy. Port 80 (HTTP) is reachable, but SSH is not.
+
+Attempts made:
+  1. sshpass not installed → installed via apt.
+  2. openssh-client not installed → apt fetch failed (404 on security.ubuntu.com mirror).
+  3. paramiko (Python SSH) installed → TCP connect to :50507 timed out.
+  4. Raw socket test confirmed: port 50507 and 22 both blocked; port 80 open.
+
+No state.json was read. No GPU stats. No experiment results checked. No actions taken (A, B, C, D, E).
+
+Recommendation: The shepherd routine must be hosted on a machine with outbound SSH access to 117.74.66.181:50507, or the A800 must expose an HTTP API (e.g. a lightweight FastAPI status endpoint) that the shepherd can poll over port 80/443.
+
+Actions taken: none (SSH blocked).
+FAILED: A800 SSH unreachable from cloud execution environment (outbound SSH port blocked by network policy).
