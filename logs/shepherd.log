@@ -2,3 +2,9 @@
   Reason: SSH to A800 (117.74.66.181:50507) timed out after 15s. Connection refused or host unreachable.
   Actions taken: none (cannot read state or modify anything without A800 access).
   Recommendation: Verify A800 is powered on, SSH port 50507 is open, and network path is clear.
+[2026-06-19T06:04:05Z] SHEPHERD RUN — FAILED
+  Action: SSH to zeyuwang@117.74.66.181:50507 timed out (ConnectTimeout=15s).
+  A800 is unreachable from this cloud environment.
+  No state read, no actions taken, no routines triggered.
+  PushNotification tool not available in this session — failure logged here only.
+  DONE: actions=FAILED
