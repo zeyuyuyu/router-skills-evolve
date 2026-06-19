@@ -97,3 +97,9 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Actions taken: none (cannot safely mutate state without server access).
   Recommendation: Check if A800 is powered on, VPN/firewall rules, or whether SSH service on port 50507 is down.
   Next shepherd run will retry.
+[2026-06-19T22:04:06Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP probe timed out (10s), paramiko SSH timed out (15s).
+  Persistent outage: day 36+ (first recorded failure ~2026-05-14). sshpass installed OK; SSH binary absent in container; paramiko v5.0.0 installed and attempted connect — timeout.
+  Steps A/B/C/D/E all skipped — no state readable, no actions taken.
+  Root cause: cloud execution environment network policy blocks outbound TCP to non-standard ports.
+  DONE: actions=FAILED (A800 unreachable day 36+)
