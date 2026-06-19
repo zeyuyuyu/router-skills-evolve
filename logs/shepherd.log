@@ -1,0 +1,4 @@
+[2026-06-19T02:03:54Z] SHEPHERD RUN — FAILED
+  Reason: SSH to A800 (117.74.66.181:50507) timed out after 15s. Connection refused or host unreachable.
+  Actions taken: none (cannot read state or modify anything without A800 access).
+  Recommendation: Verify A800 is powered on, SSH port 50507 is open, and network path is clear.
