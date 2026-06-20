@@ -47,3 +47,5 @@
   Actions taken: none.
   STRUCTURAL FIX (repeated): run cron on A800 itself, or expose state via HTTPS.
   DONE: actions=FAILED (A800 unreachable — same persistent infrastructure block)
+[2026-06-20T$(date -u +%H:%M:%SZ)] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable. Neither ssh nor sshpass available in container; TCP probe via nc also timed out (port closed or host down). No state read, no actions taken. Manual intervention required to verify A800 status.
+[2026-06-20T14:03:01Z] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable. ssh/sshpass not installed in container; TCP probe (nc -z -w5) timed out — port closed or host down. No state read, no actions taken. Manual intervention required.
