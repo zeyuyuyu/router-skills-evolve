@@ -36,3 +36,14 @@
   Actions taken: none (A800 unreachable — conservative policy, no blind actions).
   PushNotification tool not available in this session; writing alert to repo log and pushing to GitHub.
   Next shepherd: verify A800 connectivity before assuming queue health.
+
+[2026-06-20T12:04:44Z] SHEPHERD RUN — FAILED: A800 unreachable (persistent).
+  SSH to zeyuwang@117.74.66.181:50507 timed out after 20s.
+  sshpass installed OK; openssh-client installed from noble base (security mirror 404'd).
+  This is run #N of a persistent outage (~37 days). Cloud outbound TCP to non-standard
+  port 50507 is blocked by the execution environment's network policy.
+  All steps A/B/C/D/E skipped. No state read, no GPU/queue/result analysis performed.
+  PushNotification tool not available in this session.
+  Actions taken: none.
+  STRUCTURAL FIX (repeated): run cron on A800 itself, or expose state via HTTPS.
+  DONE: actions=FAILED (A800 unreachable — same persistent infrastructure block)
