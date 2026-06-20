@@ -63,3 +63,9 @@
     (2) Or expose state.json via HTTP on A800 (e.g. nginx on port 443/8443 with auth).
     (3) Or fix the cloud network policy: https://code.claude.com/docs/en/claude-code-on-the-web
   DONE: actions=FAILED (A800 unreachable day 37+)
+[2026-06-20T18:03:54Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s.
+  sshpass installed OK; openssh-client installed OK; TCP connect failed.
+  Actions taken: none (cannot assess state, queue, GPU, or experiments).
+  Recommendation: Check if A800 is down, network path is broken, or port 50507 is blocked.
+  Next shepherd should retry; if still unreachable, escalate.
