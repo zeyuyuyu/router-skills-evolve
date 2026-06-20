@@ -49,3 +49,17 @@
   DONE: actions=FAILED (A800 unreachable — same persistent infrastructure block)
 [2026-06-20T$(date -u +%H:%M:%SZ)] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable. Neither ssh nor sshpass available in container; TCP probe via nc also timed out (port closed or host down). No state read, no actions taken. Manual intervention required to verify A800 status.
 [2026-06-20T14:03:01Z] SHEPHERD FAILED: A800 (117.74.66.181:50507) unreachable. ssh/sshpass not installed in container; TCP probe (nc -z -w5) timed out — port closed or host down. No state read, no actions taken. Manual intervention required.
+
+[2026-06-20T16:05:42Z] SHEPHERD RUN — FAILED: A800 unreachable (persistent, run #10+).
+  SSH to zeyuwang@117.74.66.181:50507 timed out after 15s (ConnectTimeout).
+  sshpass and openssh-client installed from apt during run; retry also timed out.
+  nc confirms outbound TCP to port 50507 is blocked from this cloud execution environment.
+  This outage has persisted across every shepherd run since at least 2026-05-14 (~37 days).
+  All steps A/B/C/D/E skipped. No state.json read, no queue/GPU/result checks performed.
+  PushNotification tool not available in this session; logging to repo and pushing to GitHub.
+  Actions taken: none (conservative policy — no blind mutations without state read).
+  STRUCTURAL FIX REQUIRED (repeated recommendation):
+    (1) Move shepherd cron to run directly ON A800 — no outbound routing needed.
+    (2) Or expose state.json via HTTP on A800 (e.g. nginx on port 443/8443 with auth).
+    (3) Or fix the cloud network policy: https://code.claude.com/docs/en/claude-code-on-the-web
+  DONE: actions=FAILED (A800 unreachable day 37+)
