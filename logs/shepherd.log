@@ -109,3 +109,9 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Actions taken: none (cannot assess system state without A800 access).
   Recommendation: Check A800 network/firewall; verify SSH port 50507 is open.
   DONE: actions=FAILED
+[2026-06-20T02:02:51Z] SHEPHERD RUN — FAILED
+  Reason: SSH client binary (openssh-client) not present in this remote execution container.
+  sshpass installed but `ssh` not found at /usr/bin/ssh or elsewhere.
+  apt-get install openssh-client partially failed (404 on ubuntu security mirror).
+  A800 (117.74.66.181:50507) unreachable — no state read, no actions taken.
+  DONE: actions=none
