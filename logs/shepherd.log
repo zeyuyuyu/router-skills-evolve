@@ -17,3 +17,14 @@
     (2) Expose state.json via HTTPS on A800 (e.g. python3 -m http.server 8080 + nginx/auth).
     (3) Fix cloud network policy: https://code.claude.com/docs/en/claude-code-on-the-web
   DONE: actions=FAILED (A800 unreachable day 37+)
+
+[2026-06-20T08:03:09Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) TCP timeout — cloud execution environment has no
+  outbound route to this IP on non-standard port 50507. paramiko SSH attempt timed out.
+  PushNotification tool not present in this session; no phone/email alert sent.
+  All steps A/B/C/D/E skipped. Actions taken: none.
+  STRUCTURAL FIX REQUIRED (same as prior runs):
+    (1) Run shepherd cron on A800 itself (no outbound routing needed).
+    (2) Expose A800 state via authenticated HTTPS so cloud containers can read it.
+    (3) Or adjust cloud network policy to allow outbound TCP to 117.74.66.181:50507.
+  DONE: actions=FAILED (A800 unreachable — persistent infrastructure issue)
