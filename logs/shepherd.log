@@ -69,3 +69,16 @@
   Actions taken: none (cannot assess state, queue, GPU, or experiments).
   Recommendation: Check if A800 is down, network path is broken, or port 50507 is blocked.
   Next shepherd should retry; if still unreachable, escalate.
+
+[2026-06-20T20:05:43Z] SHEPHERD RUN — FAILED (run #11 today, day 37+ of persistent outage)
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH timed out (ConnectTimeout).
+  sshpass + openssh-client installed; both TCP attempts failed with 'Connection timed out'.
+  All steps A/B/C/D/E skipped. No state read. PushNotification tool not available.
+  Actions taken: none.
+  STATUS: This shepherd cron has failed on EVERY run today and for 37+ days continuously.
+  The cloud execution environment cannot reach A800 on port 50507. This is a fundamental
+  infrastructure mismatch — the auto-research system cannot be monitored from this runner.
+  STRONG RECOMMENDATION: Stop scheduling this shepherd routine until one of the following
+  is in place: (1) Run shepherd cron on A800 itself. (2) Expose state.json via HTTPS.
+  (3) Fix the cloud network policy to permit outbound TCP to 117.74.66.181:50507.
+  DONE: actions=FAILED (A800 unreachable — day 37+, run 11+ today)
