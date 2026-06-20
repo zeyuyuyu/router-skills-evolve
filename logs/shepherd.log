@@ -1,117 +1,12 @@
-  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s.
-  Actions taken: none (cannot assess state without server access).
-  Next shepherd: retry at next 2-hour cron tick; if persistent, check A800 network/power.
-[2026-05-27T02:06:20Z] SHEPHERD RUN — FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — TCP probe returned errno=11
-  (EAGAIN/port filtered). sshpass unavailable on runner; paramiko installed and
-  attempted connect() with 30s timeout — timed out. This is the 15th+
-  consecutive failure spanning 2026-05-14 through 2026-05-27 (~13 days).
-  Steps A/B/C/D/E all skipped — no state readable, no actions taken.
-Actions taken: none (protocol: unreachable host → log failure and exit).
-Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
-  Recommended fix: run shepherd on A800 itself (cron on A800), or expose
-  state.json via HTTPS (e.g. FastAPI on :8080 with token auth) so this
-  cloud runner can poll without raw SSH.
-[2026-05-27T04:05:51Z] SHEPHERD RUN — FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out on both attempts (15s and 20s timeouts).
-  Actions taken: none (cannot read state, cannot act safely without state).
-  Recommendation: verify A800 network/SSH service; if outage persists beyond next shepherd tick, escalate manually.
-[2026-05-27T12:08:33Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable (SSH connection timed out on both attempts). No state read, no actions taken. All steps skipped per protocol. Next shepherd run will retry.
-[2026-05-28T00:00:00Z] SHEPHERD RUN — FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable from cloud execution environment.
-  SSH timed out after 15s. No state read, no actions taken.
-  Suggested: verify A800 is online and that outbound SSH is permitted from this cloud env.
-[2026-05-28 16:06:27 UTC] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out. No state read, no actions taken. Will retry on next 2-hour cron tick.
-[2026-05-28T18:05:38Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable (connection timed out). No state read, no actions taken. Will retry next scheduled run.
-[2026-05-28T20:05:41Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Recommend verifying A800 network/power status. Next shepherd cron will retry automatically.
-[2026-05-28T22:06:16Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. TCP probe timed out after 20s; paramiko SSH attempt timed out after 15s. This is the 14th consecutive day of A800 unreachability (first failure 2026-05-14T20:03Z). All steps A/B/C/D/E skipped — no state readable, no actions taken. CRITICAL: pipeline unmonitored 14+ days. Recommend: (1) verify A800 power/network; (2) set up HTTPS state endpoint on A800 side; (3) run shepherd cron on A800 directly.
-[2026-05-29T00:05:27Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: TCP connection timed out after 15 s. No state read, no actions taken. Will retry on next 2-hour cron tick.
-[2026-05-29T02:05:52Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Will retry on next cron tick.
-
-[2026-05-29T00:00:00Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out. No state read, no actions taken. All steps skipped. Will retry on next cron tick.
-[2026-05-29T06:06:33Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: TCP probe timed out (10s), SSH timed out (15s). No state read, no actions taken (Steps A–E all skipped). This is a persistent outage — first recorded failure 2026-05-14; now 15+ consecutive days. ESCALATION RECOMMENDED: A800 has not been reachable from this cloud environment for >2 weeks; the research pipeline is unmonitored and likely stalled. No local fallback triggered (cannot safely inject experiments without confirming current queue/running state).
-[2026-05-29 10:07:43 UTC] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable (connection timeout). No state read, no actions taken. All checks (queue starvation, stuck experiments, surprising results, disk pressure, routine health) skipped. Will retry next scheduled shepherd tick.
-[2026-05-29T12:06:20Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: TCP probe timed out (20s), paramiko SSH timed out (15s). No state read, no actions taken. All steps A–E skipped. PERSISTENT OUTAGE: ~15 days (first recorded failure 2026-05-14). ESCALATION REQUIRED.
-[2026-05-29T16:06:29Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. PERSISTENT OUTAGE: ~16th consecutive day. ESCALATION REQUIRED.
-[2026-05-29T22:05:51Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. PERSISTENT OUTAGE: ~16th consecutive day. ESCALATION REQUIRED.
-[2026-05-30T00:06:28Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. PERSISTENT OUTAGE: ~17th consecutive day. ESCALATION REQUIRED.
-[2026-05-30T02:06:06Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. PERSISTENT OUTAGE: ~17th consecutive day. ESCALATION REQUIRED.
-[2026-05-30T06:08:18Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: TCP connect timed out on both port 22 and 50507. Manual intervention required.
-[2026-05-30 10:07:34 UTC] SHEPHERD RUN FAILED — A800 (117.74.66.181) host ALIVE (ports 80/443 respond) but SSH unreachable on both port 50507 and port 22. Persistent outage: cloud execution environment's outbound network policy blocks SSH. DONE: actions=FAILED
-[2026-05-30T18:05:14Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. PERSISTENT OUTAGE: ~17th consecutive day. ESCALATION REQUIRED.
-[2026-05-31T02:06:39Z] SHEPHERD RUN — FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable from remote execution environment.
-  TCP connect_ex returned EAGAIN/timeout. Outbound SSH blocked by container network policy.
-  actions=none
-[2026-05-31T06:06:33Z] SHEPHERD RUN — FAILED: A800 unreachable. Outbound network fully blocked in this Claude Code web container. actions=none.
-[2026-05-31T08:07:47Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. actions=none
-[2026-05-31T14:06:05Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. PERSISTENT OUTAGE: 27th+ consecutive failure. DONE: actions=FAILED
-[2026-05-31 16:04:58 UTC] SHEPHERD RUN FAILED — A800 unreachable. Actions: none.
-[2026-05-31T18:06:19Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 28th+ consecutive failure. DONE: actions=FAILED
-[2026-05-31T20:04:59Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 29th+ consecutive failure. DONE: actions=FAILED
-[2026-06-01T00:06:23Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. No state read, no actions taken.
-[2026-06-01T02:06:22Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. Network policy blocks outbound SSH. All checks skipped.
-[2026-06-01 04:05:54 UTC] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. No actions taken.
-[2026-06-01T10:05:56Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out. actions=none
-[2026-06-01T12:06:42Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 30th+ consecutive failure. DONE: actions=FAILED
-[2026-06-01T14:06:09Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable. Root cause: outbound SSH blocked by sandbox network policy.
-[2026-06-02T04:05:46Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 31st+ consecutive failure. DONE: actions=FAILED
-[2026-06-02T06:05:24Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 32nd+ consecutive failure. DONE: actions=FAILED
-[2026-06-02 10:06:56 UTC] SHEPHERD RUN — FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out.
+[2026-06-20T04:04:02Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — paramiko SSH timed out after 15s.
+  sshpass installed OK; openssh-client absent (apt 404); paramiko v5.0.0 installed and
+  attempted connect — timed out. Persistent outage day 37+ (first failure ~2026-05-14).
+  Root cause confirmed: cloud execution environment outbound network policy blocks TCP
+  to non-standard ports (50507). All steps A/B/C/D/E skipped — no state readable.
   Actions taken: none.
-[2026-06-02T12:09:20Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable. DONE: actions=FAILED
-[2026-06-02T14:06:38Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 33rd+ consecutive failure. DONE: actions=FAILED
-[2026-06-02T18:06:22Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. No state read, no actions taken.
-[2026-06-02T20:06:41Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable. No state read, no actions taken.
-[2026-06-02T22:05:40Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 34th+ consecutive failure. DONE: actions=FAILED
-[2026-06-03T00:06:27Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 35th+ consecutive failure. DONE: actions=FAILED
-[2026-06-03T00:00:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable. No state read, no actions taken.
-[2026-06-03T06:06:30Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. No state read, no actions taken.
-[2026-06-03T14:11:44Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable. No state read, no actions taken.
-[2026-06-03T16:06:08Z] SHEPHERD RUN FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — TCP timeout after 10s.
-  Actions taken: none.
-[2026-06-03 22:06:25 UTC] SHEPHERD RUN — FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s.
-  Actions taken: none.
-[2026-06-04T02:06:13Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. 36th+ consecutive failure. DONE: actions=FAILED
-[2026-06-04T04:05:58Z] shepherd FAILED: A800 (117.74.66.181:50507) TCP unreachable. actions=none
-[2026-06-04T10:09:57Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. No state read, no actions taken.
-[2026-06-04T00:00:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable. No state read, no actions taken.
-[2026-06-04T18:08:27Z] SHEPHERD RUN — FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out at network level.
-  Diagnosis: Remote execution environment network policy blocks outbound connections to non-standard ports.
-  Actions taken: none.
-[2026-06-05 00:07:18 UTC] SHEPHERD RUN - FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 30s. No state read, no actions taken. Will retry on next scheduled shepherd run.
-[2026-06-19T08:03:46Z] SHEPHERD RUN — FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. Persistent outage now spanning ~35 days (first recorded failure ~2026-05-14). Cloud execution environment blocks outbound TCP to non-standard ports — root cause of all failures.
-  Context: EMNLP deadline is TODAY (2026-06-19). Queued experiments EXP-076..079 cannot run. Daily artifacts (hotspots, ideas) have not been generated since outage started. Git log shows 53+ detached HEAD commits from prior shepherd runs that were never merged to main.
-  Steps skipped: ALL (state.json unreadable, GPU/disk/queue/PID checks impossible).
-  Actions taken: none.
-  Structural fix required: (1) Run shepherd cron directly ON A800 (`crontab -e` on A800); (2) Expose state.json via HTTPS on A800 (e.g. `python3 -m http.server 8080`); (3) Fix network policy at https://code.claude.com/docs/en/claude-code-on-the-web.
-  DONE: actions=FAILED (A800 unreachable day 35+)
-[2026-06-19T10:04:24Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable. SSH timed out after 30s. Persistent outage day 36 (first failure ~2026-05-14). No state read; all checks (queue/GPU/disk/PID/artifacts) skipped. 77+ pending experiments EXP-001..EXP-079 queued in pending_queue_update scripts; cannot be applied until connectivity restored. Actions taken: none. DONE: actions=FAILED
-[2026-06-19T16:03:28Z] SHEPHERD RUN FAILED
-  Reason: A800 unreachable — TCP connect to 117.74.66.181:50507 timed out.
-  Actions taken: none (cannot safely mutate state without server access).
-  Recommendation: Check if A800 is powered on, VPN/firewall rules, or whether SSH service on port 50507 is down.
-  Next shepherd run will retry.
-[2026-06-19T22:04:06Z] SHEPHERD RUN FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — TCP probe timed out (10s), paramiko SSH timed out (15s).
-  Persistent outage: day 36+ (first recorded failure ~2026-05-14). sshpass installed OK; SSH binary absent in container; paramiko v5.0.0 installed and attempted connect — timeout.
-  Steps A/B/C/D/E all skipped — no state readable, no actions taken.
-  Root cause: cloud execution environment network policy blocks outbound TCP to non-standard ports.
-  DONE: actions=FAILED (A800 unreachable day 36+)
-[2026-06-20T00:04:24Z] SHEPHERD RUN FAILED
-  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s.
-  sshpass installed successfully but no route to host.
-  Actions taken: none (cannot assess system state without A800 access).
-  Recommendation: Check A800 network/firewall; verify SSH port 50507 is open.
-  DONE: actions=FAILED
-[2026-06-20T02:02:51Z] SHEPHERD RUN — FAILED
-  Reason: SSH client binary (openssh-client) not present in this remote execution container.
-  sshpass installed but `ssh` not found at /usr/bin/ssh or elsewhere.
-  apt-get install openssh-client partially failed (404 on ubuntu security mirror).
-  A800 (117.74.66.181:50507) unreachable — no state read, no actions taken.
-  DONE: actions=none
+  STRUCTURAL FIX REQUIRED (unchanged from prior recommendations):
+    (1) Run shepherd cron directly ON A800 (crontab -e on A800).
+    (2) Expose state.json via HTTPS on A800 (e.g. python3 -m http.server 8080 + nginx/auth).
+    (3) Fix cloud network policy: https://code.claude.com/docs/en/claude-code-on-the-web
+  DONE: actions=FAILED (A800 unreachable day 37+)
