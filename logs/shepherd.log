@@ -28,3 +28,11 @@
     (2) Expose A800 state via authenticated HTTPS so cloud containers can read it.
     (3) Or adjust cloud network policy to allow outbound TCP to 117.74.66.181:50507.
   DONE: actions=FAILED (A800 unreachable — persistent infrastructure issue)
+
+[2026-06-20 10:03:58 UTC] SHEPHERD RUN — FAILED: A800 unreachable.
+  SSH to zeyuwang@117.74.66.181 port 50507 timed out after 20s (two attempts).
+  sshpass was missing and had to be installed (openssh-client fetched from apt); retry also failed with Connection timed out.
+  No state.json read. No GPU/queue/result checks performed.
+  Actions taken: none (A800 unreachable — conservative policy, no blind actions).
+  PushNotification tool not available in this session; writing alert to repo log and pushing to GitHub.
+  Next shepherd: verify A800 connectivity before assuming queue health.
