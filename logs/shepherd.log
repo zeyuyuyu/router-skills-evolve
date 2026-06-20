@@ -82,3 +82,19 @@
   is in place: (1) Run shepherd cron on A800 itself. (2) Expose state.json via HTTPS.
   (3) Fix the cloud network policy to permit outbound TCP to 117.74.66.181:50507.
   DONE: actions=FAILED (A800 unreachable — day 37+, run 11+ today)
+
+[2026-06-20T22:04:14Z] SHEPHERD RUN — FAILED (run #12 today, day 37+ of persistent outage)
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connection timed out.
+  sshpass installed OK; openssh-client installed via apt (partial 404 errors on security mirror);
+  paramiko v5.0.0 installed as fallback; all SSH/TCP attempts confirm port 50507 is
+  unreachable from this cloud execution environment.
+  All steps A/B/C/D/E skipped. No state.json read. PushNotification tool not available.
+  Actions taken: none.
+  STATUS: 12 failed runs today. 37+ days of continuous outage. This routine is non-functional
+  as currently configured. The cloud container has no outbound TCP route to 117.74.66.181:50507.
+  STRONG RECOMMENDATION: DISABLE this scheduler until infrastructure is fixed:
+    (1) [EASIEST] SSH into A800 and run shepherd as local cron: no outbound routing needed.
+    (2) Expose state.json via authenticated HTTPS endpoint on A800.
+    (3) Fix cloud network policy to allow outbound TCP to 117.74.66.181:50507.
+  See: https://code.claude.com/docs/en/claude-code-on-the-web for network policy docs.
+  DONE: actions=FAILED (A800 unreachable — day 37+, run 12 today)
