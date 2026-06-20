@@ -103,3 +103,9 @@ Escalation: CRITICAL/ONGOING. Pipeline unmonitored for 13+ days.
   Steps A/B/C/D/E all skipped — no state readable, no actions taken.
   Root cause: cloud execution environment network policy blocks outbound TCP to non-standard ports.
   DONE: actions=FAILED (A800 unreachable day 36+)
+[2026-06-20T00:04:24Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s.
+  sshpass installed successfully but no route to host.
+  Actions taken: none (cannot assess system state without A800 access).
+  Recommendation: Check A800 network/firewall; verify SSH port 50507 is open.
+  DONE: actions=FAILED
