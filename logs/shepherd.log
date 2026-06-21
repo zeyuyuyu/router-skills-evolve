@@ -12,3 +12,14 @@ GitHub alert issue: https://github.com/zeyuyuyu/router-skills-evolve/issues/17
 Exec summary: Shepherd fired at 2026-06-21 UTC but A800 was unreachable (port 50507 TCP timeout). No state read, no actions taken. Queue/GPU/disk/artifact health unknown. Manual check of A800 is required. Consider exposing an HTTP status endpoint on A800 so future shepherd runs do not depend on SSH reachability from the remote execution environment.
 
 DONE: actions=none | FAILED: A800 unreachable
+
+=== SHEPHERD RUN 2026-06-21T16:04:13Z ===
+Status: FAILED (3rd consecutive tick)
+Outage duration: ≥4 hours (first failure ~12:04 UTC)
+Reason: A800 (117.74.66.181:50507) TCP timeout (30s, paramiko)
+Actions taken: none
+GitHub comment posted: https://github.com/zeyuyuyu/router-skills-evolve/issues/17#issuecomment-4762530578
+
+Exec summary: A800 has been unreachable for 4+ consecutive hours across 3 shepherd ticks (≈12:04, 14:04, 16:04 UTC). Experiment queue unmonitored, crashed PIDs undetected, daily hotspot/idea artifacts unchecked. Manual SSH from workstation required to assess system state.
+
+DONE: actions=none | FAILED: A800 unreachable (3rd consecutive)
