@@ -3,3 +3,11 @@
   No state read, no GPU check, no actions taken.
   Recommendation: verify A800 is powered on, SSH daemon running, firewall allows port 50507 from remote execution environment.
   This run: FAILED (A800 unreachable). No experiments launched or modified.
+
+[2026-06-21T02:03:48Z] SHEPHERD RUN — FAILED
+  A800 (117.74.66.181:50507) unreachable: TCP connect timeout after 10s (2nd consecutive failure).
+  Both sshpass+ssh and nc port-probe confirm host is not responding.
+  No state read, no GPU check, no actions taken.
+  AUTO-RESEARCH PIPELINE IS DARK — experiments may have stopped running.
+  Recommendation: check A800 power/network; verify SSH daemon on port 50507; check if firewall rule dropped the remote-exec egress IP.
+  This run: FAILED (A800 unreachable). No experiments launched or modified.
