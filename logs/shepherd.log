@@ -23,3 +23,19 @@ GitHub comment posted: https://github.com/zeyuyuyu/router-skills-evolve/issues/1
 Exec summary: A800 has been unreachable for 4+ consecutive hours across 3 shepherd ticks (≈12:04, 14:04, 16:04 UTC). Experiment queue unmonitored, crashed PIDs undetected, daily hotspot/idea artifacts unchecked. Manual SSH from workstation required to assess system state.
 
 DONE: actions=none | FAILED: A800 unreachable (3rd consecutive)
+
+=== SHEPHERD RUN 2026-06-21T20:03:15Z ===
+Status: FAILED (4th consecutive tick)
+Outage duration: ≥8 hours (first failure ~12:04 UTC)
+Reason: A800 (117.74.66.181:50507) TCP connect errno 11 (EAGAIN/filtered) — port blocked by remote exec environment outbound network policy
+Actions taken: none
+STEP 1 (read state): FAILED — port unreachable
+STEP 2 (decide actions): SKIPPED
+STEP 3 (write log): partial — repo log only
+STEP 4 (exec summary): DONE
+
+Exec summary: 4th consecutive shepherd failure. A800 at 117.74.66.181:50507 has been unreachable for 8+ hours. The remote execution sandbox's outbound network policy is blocking TCP to that host:port (errno EAGAIN on connect). No queue/GPU/disk/artifact data available. Urgent: manually SSH from workstation to check A800 state, verify orchestrator cron is still ticking, and check for crashed experiments or disk pressure.
+
+RECOMMENDATION: Whitelist outbound TCP from the Claude Code remote exec environment to 117.74.66.181:50507, or set up a lightweight HTTP health endpoint on A800 that the shepherd can poll via a public URL.
+
+DONE: actions=none | FAILED: A800 unreachable (4th consecutive)
