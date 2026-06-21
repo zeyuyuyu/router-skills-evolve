@@ -23,3 +23,9 @@ GitHub comment posted: https://github.com/zeyuyuyu/router-skills-evolve/issues/1
 Exec summary: A800 has been unreachable for 4+ consecutive hours across 3 shepherd ticks (≈12:04, 14:04, 16:04 UTC). Experiment queue unmonitored, crashed PIDs undetected, daily hotspot/idea artifacts unchecked. Manual SSH from workstation required to assess system state.
 
 DONE: actions=none | FAILED: A800 unreachable (3rd consecutive)
+[2026-06-21T18:03:52Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 10s.
+  sshpass was installed (no binary initially); SSH client installed mid-run.
+  Both a 20s and 10s ConnectTimeout attempt failed identically.
+  Actions taken: none (cannot assess state without A800 access).
+  Recommendation: check if A800 is down, the port changed, or network policy blocks outbound SSH from this cloud runner.
