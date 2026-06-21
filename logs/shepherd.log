@@ -11,3 +11,17 @@
   AUTO-RESEARCH PIPELINE IS DARK — experiments may have stopped running.
   Recommendation: check A800 power/network; verify SSH daemon on port 50507; check if firewall rule dropped the remote-exec egress IP.
   This run: FAILED (A800 unreachable). No experiments launched or modified.
+
+[2026-06-21T08:03:54Z] SHEPHERD RUN — FAILED (3RD CONSECUTIVE)
+  A800 (117.74.66.181:50507) unreachable: TCP connect timeout (3rd failure, ~8 hours dark).
+  SSH binary missing from container; installed openssh-client and sshpass but connection still timed out.
+  No state read, no GPU check, no actions taken.
+  CRITICAL: Auto-research pipeline has been unmonitored since ~00:00 UTC.
+  Any running experiments may have crashed silently; queue may be empty; GPU may be idle.
+  Recommendation: manually SSH to A800 from your local machine and check:
+    1. ps aux | grep auto_research  (is orchestrator/experiments running?)
+    2. cat /data0/home/zeyuwang/auto_research/state.json
+    3. nvidia-smi  (GPU utilization)
+    4. Check if firewall/NAT rules allow remote CI egress to port 50507.
+  This run: FAILED (A800 unreachable). No experiments launched or modified.
+  GitHub issue #filed for visibility.
