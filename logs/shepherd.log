@@ -73,3 +73,8 @@ Actions taken: none
 Exec summary: First shepherd tick of 2026-06-22 (00:04 UTC). A800 at 117.74.66.181:50507 remains unreachable — same TCP-blocked state as all of 2026-06-21 (5 prior failures). No new conditions to react to. Artifact check: ideas-2026-06-21.md present; ideas-2026-06-20.md missing (minor anomaly). Too early for today's 06:00/07:00 UTC artifacts. No push notification sent — user already notified via GitHub issue #17 yesterday; situation unchanged.
 
 DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick)
+
+[2026-06-22T04:04:28Z] SHEPHERD RUN FAILED
+  A800 host 117.74.66.181:50507 unreachable — connection timed out after 10s.
+  Actions taken: none (cannot assess state, GPU, disk, or experiment results).
+  Recommendation: verify A800 network/SSH service and re-run shepherd manually.
