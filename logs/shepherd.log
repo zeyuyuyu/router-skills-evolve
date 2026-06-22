@@ -126,3 +126,10 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   No push notification sent — situation unchanged from prior ticks; user notified via issue #17.
   Remote shepherd.log NOT updated (target unreachable); log appended to repo only.
   DONE: actions=none | FAILED: A800 unreachable (persistent, ~13th consecutive tick)
+[2026-06-22T16:03:40Z] SHEPHERD RUN FAILED
+  Reason: A800 unreachable — SSH to zeyuwang@117.74.66.181:50507 timed out after 15s.
+  sshpass installed mid-run (was missing), openssh-client installed via apt-get update.
+  Both connection attempts timed out. Cannot read state.json, check GPU, or manage experiments.
+  Actions taken: none (A800 unreachable).
+  Recommendation: verify A800 network/VPN, check if SSH service is running on port 50507.
+  Next shepherd run should retry; if still unreachable, investigate host status manually.
