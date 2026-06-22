@@ -143,3 +143,4 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   No push notification sent — situation unchanged; user fully notified via issue #17 previously.
   Remote shepherd.log NOT updated (target unreachable); log appended to repo only.
   DONE: actions=none | FAILED: A800 unreachable (persistent, multi-week, ~14th consecutive tick)
+[2026-06-22T22:03:51Z] SHEPHERD RUN FAILED — A800 unreachable (117.74.66.181:50507 connection timed out). SSH binary confirmed present (openssh-client installed this session), sshpass available. Two attempts made with 15s and 20s ConnectTimeout. No state could be read; no actions taken. Manual check required.
