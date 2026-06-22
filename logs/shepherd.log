@@ -106,3 +106,13 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   No new GitHub notification posted — user was fully notified via issue #17 on 2026-06-21; no new information to add.
   Recommendation: SSH from workstation directly; or create a public HTTPS health endpoint on A800.
   DONE: actions=none | FAILED: A800 unreachable (persistent, multi-week)
+
+[2026-06-22T12:05:21Z] SHEPHERD RUN — FAILED: A800 unreachable (persistent)
+  Host: 117.74.66.181:50507
+  Error: SSH connection timed out (ConnectTimeout=15s); sshpass 1.09 + openssh-client 9.6p1-3ubuntu13.16 installed OK this tick.
+  This is the ~12th+ consecutive failure spanning 2026-06-21 and 2026-06-22 (and prior weeks).
+  Outbound TCP to port 50507 remains blocked by the remote execution container's network policy.
+  Steps A–E all SKIPPED (no state.json readable).
+  No push notification sent — situation unchanged from prior ticks; user already fully notified via issue #17.
+  Remote shepherd.log NOT updated (target unreachable); log appended to repo only.
+  DONE: actions=none | FAILED: A800 unreachable (persistent, multi-week)
