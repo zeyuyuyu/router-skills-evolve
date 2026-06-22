@@ -116,3 +116,13 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   No push notification sent — situation unchanged from prior ticks; user already fully notified via issue #17.
   Remote shepherd.log NOT updated (target unreachable); log appended to repo only.
   DONE: actions=none | FAILED: A800 unreachable (persistent, multi-week)
+
+[2026-06-22T14:04:51Z] SHEPHERD RUN — FAILED: A800 unreachable (persistent)
+  Host: 117.74.66.181:50507
+  Error: SSH connection timed out (ConnectTimeout=15s); sshpass 1.09 + openssh-client 9.6p1-3ubuntu13 installed OK this tick.
+  This is the ~13th+ consecutive failure spanning 2026-06-21 and 2026-06-22.
+  Outbound TCP to port 50507 remains blocked by the remote execution container's network policy.
+  Steps A–E all SKIPPED (no state.json readable).
+  No push notification sent — situation unchanged from prior ticks; user notified via issue #17.
+  Remote shepherd.log NOT updated (target unreachable); log appended to repo only.
+  DONE: actions=none | FAILED: A800 unreachable (persistent, ~13th consecutive tick)
