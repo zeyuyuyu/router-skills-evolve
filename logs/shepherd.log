@@ -53,3 +53,23 @@ GitHub issue: #17 already has 3 comments from today (16:04, 18:04, 20:04 UTC); n
 Exec summary: 5th consecutive shepherd failure on 2026-06-21; A800 at 117.74.66.181:50507 has been unreachable for 10+ hours today. The remote execution environment's outbound network policy is blocking TCP to port 50507. Prior shepherd commits from 2026-06-18 reference "day 35 A800 outage", suggesting SSH from this runner has been broken for many weeks — but other routines (idea-gen, paper-pipeline) appear to have continued functioning via different paths. Immediate action required: manual SSH from workstation, plus either whitelist outbound TCP 50507 for this runner or deploy an HTTP health endpoint on A800.
 
 DONE: actions=none | FAILED: A800 unreachable (5th consecutive tick today, multi-week persistent)
+
+=== SHEPHERD RUN 2026-06-22T00:04:27Z ===
+Status: FAILED (1st tick of 2026-06-22; persistent multi-week issue)
+Reason: A800 (117.74.66.181:50507) TCP timeout (10s probe via Python socket + paramiko) — outbound port blocked by remote exec environment network policy
+STEP 1 (read state): FAILED — A800 unreachable; openssh-client unavailable (apt 404), paramiko installed, TCP connect timed out
+STEP 2 (decide actions): SKIPPED
+STEP 3 (write log): partial — repo log only; cannot write to /data0/home/zeyuwang/auto_research/logs/shepherd.log
+STEP 4 (exec summary): DONE
+
+Artifact health (what can be checked locally):
+  reports/ideas-2026-06-22.md — NOT yet expected (06:00/07:00 UTC artifacts; now 00:04 UTC) ✓ N/A
+  reports/ideas-2026-06-21.md — present ✓
+  reports/ideas-2026-06-20.md — MISSING (no file for 2026-06-20; could be a skipped run or sync gap)
+  hotspots/*.json            — cannot verify (A800 unreachable)
+
+Actions taken: none
+
+Exec summary: First shepherd tick of 2026-06-22 (00:04 UTC). A800 at 117.74.66.181:50507 remains unreachable — same TCP-blocked state as all of 2026-06-21 (5 prior failures). No new conditions to react to. Artifact check: ideas-2026-06-21.md present; ideas-2026-06-20.md missing (minor anomaly). Too early for today's 06:00/07:00 UTC artifacts. No push notification sent — user already notified via GitHub issue #17 yesterday; situation unchanged.
+
+DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick)
