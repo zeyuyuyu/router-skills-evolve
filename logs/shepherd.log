@@ -22,6 +22,16 @@ GitHub comment posted: https://github.com/zeyuyuyu/router-skills-evolve/issues/1
 
 Exec summary: A800 has been unreachable for 4+ consecutive hours across 3 shepherd ticks (≈12:04, 14:04, 16:04 UTC). Experiment queue unmonitored, crashed PIDs undetected, daily hotspot/idea artifacts unchecked. Manual SSH from workstation required to assess system state.
 
+[2026-06-03 22:06:25 UTC] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s.
+  Actions taken: none (cannot read state, cannot write remote log, cannot trigger experiments).
+  Note: SSH client was missing from this container; installed openssh-client 9.6p1-3ubuntu13 + sshpass 1.09-1 successfully. The host itself is not responding.
+  Recommendation: Check A800 network/firewall, confirm port 50507 is open and sshd is running.
+[2026-06-04T02:06:13Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: TCP connect timed out. No state.json read; all steps A–E skipped. 36th+ consecutive failure since ~2026-05-14 (~21 days). CRITICAL — user action required. DONE: actions=FAILED
+[2026-06-04T04:05:58Z] shepherd FAILED: A800 (117.74.66.181:50507) TCP unreachable — connection timed out. No state read, no actions taken. actions=none
+[2026-06-04T10:09:57Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH timed out (ConnectTimeout=15s). No state read. Triggers NOT fired.
+[2026-06-04T18:08:27Z] SHEPHERD RUN — FAILED: A800 TCP timeout. Remote exec env blocks outbound to non-standard ports. No actions taken.
+[2026-06-05 00:07:18 UTC] SHEPHERD RUN - FAILED: A800 (117.74.66.181:50507) unreachable — SSH timed out after 30s. No state read, no actions taken.
 DONE: actions=none | FAILED: A800 unreachable (3rd consecutive)
 
 === SHEPHERD RUN 2026-06-21T20:03:15Z ===
@@ -78,3 +88,11 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   A800 host 117.74.66.181:50507 unreachable — connection timed out after 10s.
   Actions taken: none (cannot assess state, GPU, disk, or experiment results).
   Recommendation: verify A800 network/SSH service and re-run shepherd manually.
+
+[2026-06-22T08:04:18Z] SHEPHERD RUN — FAILED: A800 unreachable
+  Host: 117.74.66.181:50507
+  Error: SSH connection timed out (ConnectTimeout=15s, tried twice)
+  sshpass installed OK; openssh-client installed OK; network unreachable from remote container.
+  Actions taken: none (cannot reach A800).
+  Remote shepherd.log NOT updated (target unreachable).
+  Recommendation: verify A800 uptime, firewall rules, or port forwarding for 50507.
