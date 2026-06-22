@@ -96,3 +96,13 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   Actions taken: none (cannot reach A800).
   Remote shepherd.log NOT updated (target unreachable).
   Recommendation: verify A800 uptime, firewall rules, or port forwarding for 50507.
+
+[2026-06-22T10:04Z] SHEPHERD RUN — FAILED: A800 unreachable (same persistent issue)
+  Host: 117.74.66.181:50507
+  Error: SSH connection timed out (ConnectTimeout=15s); sshpass+openssh-client installed OK
+  This is the ~10th+ consecutive failure across 2026-06-21 and 2026-06-22.
+  Outbound TCP to port 50507 is blocked by the remote execution environment's network policy.
+  Actions taken: none — no state read possible.
+  No new GitHub notification posted — user was fully notified via issue #17 on 2026-06-21; no new information to add.
+  Recommendation: SSH from workstation directly; or create a public HTTPS health endpoint on A800.
+  DONE: actions=none | FAILED: A800 unreachable (persistent, multi-week)
