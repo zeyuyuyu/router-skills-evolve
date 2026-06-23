@@ -166,3 +166,4 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   Remote shepherd.log NOT updated (target unreachable); log appended to local repo only.
   DONE: actions=none | FAILED: A800 unreachable (persistent, ~17th consecutive tick)
 [2026-06-23T10:04:34Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. sshpass installed (was missing), retried once, port confirmed unreachable via nc probe. No state read, no actions taken. Manual check required.
+[2026-06-23T12:05:42Z] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable. TCP connection timed out after 15s (nc also failed). SSH and sshpass installed fresh in container (openssh-client was missing). Could not read state.json, check GPU util, inspect results, or write to /data0 shepherd log. No actions taken. ACTIONS=none. Manual intervention required to diagnose A800 connectivity.
