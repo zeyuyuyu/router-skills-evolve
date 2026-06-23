@@ -1,0 +1,10 @@
+[2026-06-23 00:04:14 UTC] SHEPHERD RUN — FAILED
+A800 host 117.74.66.181 port 50507: SSH connection timed out (tried twice, 15s and 30s ConnectTimeout).
+No state.json read. No queue/running/history data available.
+No actions taken (Steps 2A–2E all blocked on unreachable host).
+This is an infrastructure outage, not a pipeline issue.
+
+ACTION REQUIRED: Please verify A800 server availability and SSH access.
+Contact: zeyu.wang@0g.ai
+
+DONE: actions=FAILED (A800 unreachable)
