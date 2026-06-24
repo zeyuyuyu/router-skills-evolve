@@ -176,3 +176,9 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   Push notification sent — new day, situation unresolved for 72h+; fresh reminder warranted.
   Remote shepherd.log NOT updated (target unreachable); log appended to local repo only.
   DONE: actions=none | FAILED: A800 unreachable (persistent, day 3, ~20th consecutive tick)
+
+[2026-06-24 16:04:03 UTC] SHEPHERD RUN — FAILED
+  A800 (117.74.66.181:50507) unreachable: all TCP connection attempts timed out (ports 22, 50507, 2222).
+  No state read. No actions taken.
+  Actions: none (connectivity failure).
+  Manual check recommended — server may be down or firewall rules changed.
