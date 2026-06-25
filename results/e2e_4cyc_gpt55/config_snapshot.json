@@ -24,9 +24,9 @@
   "smoke": false,
   "mock": false,
   "skip_llm": false,
-  "run_heldout_eval": false,
+  "run_heldout_eval": true,
   "scaling_num_train_epochs": "2",
-  "resume_from": 1,
-  "git_sha": "7c37b38",
-  "started_at": "2026-06-17T07:14:39Z"
+  "resume_from": 4,
+  "git_sha": "c656831",
+  "started_at": "2026-06-25T05:33:01Z"
 }

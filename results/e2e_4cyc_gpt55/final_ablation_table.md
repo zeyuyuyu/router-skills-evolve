@@ -2,7 +2,9 @@
 
 Cycles: **4**  |  Bench: **humaneval**  |  Model: **05_qwen3_5_4b_273**  |  Schedule: **SLR**
 
-## Final cycle (cycle 3)
+Results are split into the **training split** (used to evolve skills/router/adapter; routing is evaluated in-sample so it is optimistic) and the **held-out test split** (the honest generalization estimate).
+
+## Training split — final cycle (cycle 3)
 
 | System variant | Routing Acc | Large F1 | Fallback | Cost vs Always-Large | Task Pass |
 |---|---:|---:|---:|---:|---:|
@@ -11,7 +13,7 @@ Cycles: **4**  |  Bench: **humaneval**  |  Model: **05_qwen3_5_4b_273**  |  Sche
 | + Router training | 92.68% | 83.33% | 6.10% | 27.56% | 92.68% |
 | Full (+ LLM training) | 92.68% | 83.33% | 6.10% | 27.56% | 92.68% |
 
-## Per-cycle progression (Full variant)
+## Training split — per-cycle progression (Full variant)
 
 | Cycle | Routing Acc | Fallback | Task Pass | Cost vs Large |
 |---:|---:|---:|---:|---:|
@@ -19,6 +21,15 @@ Cycles: **4**  |  Bench: **humaneval**  |  Model: **05_qwen3_5_4b_273**  |  Sche
 | 1 | 90.24% | 4.88% | 92.68% | 40.73% |
 | 2 | 93.90% | 6.10% | 91.46% | 28.66% |
 | 3 | 92.68% | 6.10% | 92.68% | 27.56% |
+
+## Held-out TEST split — final cycle (router trained on train, evaluated here)
+
+| System variant | Routing Acc | Large F1 | Fallback | Cost vs Always-Large | Task Pass |
+|---|---:|---:|---:|---:|---:|
+| Always-large | 37.80% | 54.87% | 0.00% | 100.00% | 96.34% |
+| Small + Skills (always-small + procedure) | 62.20% | 0.00% | 37.80% | 10.00% | 62.20% |
+| + Router training | 60.98% | 5.88% | 36.59% | 13.29% | 63.41% |
+| Full (+ LLM training) | 60.98% | 5.88% | 36.59% | 13.29% | 63.41% |
 
 ## Baseline reference (HumanEval × 1.5B, main branch 2026-05-09)
 

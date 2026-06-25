@@ -126,7 +126,7 @@ fi
 : "${TAU2_DOMAIN:=retail}"
 : "${TAU2_DOMAINS:=$TAU2_DOMAIN}"
 : "${SKIP_LLM:=0}"
-: "${RUN_HELDOUT_EVAL:=0}"
+: "${RUN_HELDOUT_EVAL:=1}"
 : "${SCALING_NUM_TRAIN_EPOCHS:=2}"
 : "${GRPO_N_GENERATIONS:=8}"
 : "${GRPO_EPOCHS:=1}"
@@ -934,10 +934,16 @@ phase6_heldout_eval() {
   local small_arg="$SMALL_MODEL"
   local local_student_ckpt="" local_student_port="" local_student_served=""
   if [[ -d "$final_ckpt" ]]; then
-    local_student_ckpt="$final_ckpt"
-    local_student_port="${TAU2_LOCAL_PORT:-8050}"
-    local_student_served="${TAU2_LOCAL_SERVED_MODEL:-evol-llm-student}"
-    small_arg="openai/$local_student_served"
+    if [[ "$BENCH" == "humaneval" ]]; then
+      # HumanEval loads the LoRA adapter directly (HF in-process) or serves it via
+      # the HumanEval vLLM helper below — same as phase 1, NOT the tau2 student API.
+      small_arg="$final_ckpt"
+    else
+      local_student_ckpt="$final_ckpt"
+      local_student_port="${TAU2_LOCAL_PORT:-8050}"
+      local_student_served="${TAU2_LOCAL_SERVED_MODEL:-evol-llm-student}"
+      small_arg="openai/$local_student_served"
+    fi
   fi
 
   local cmd=(
@@ -991,6 +997,16 @@ phase6_heldout_eval() {
     kill "$vllm_start_pid" 2>/dev/null || true
     wait "$vllm_start_pid" 2>/dev/null || true
     [[ "$rc" -eq 0 ]] || return "$rc"
+  elif [[ "$BENCH" == "humaneval" && "$HE_USE_VLLM" == "1" && "$MOCK" != "true" ]]; then
+    echo "  [Held-out eval] HumanEval vLLM mode (split=eval): serve small adapter + API teacher"
+    start_he_vllm_servers "$out/_vllm" \
+      "$small_arg"   "$HE_VLLM_SMALL_PORT" "$HE_VLLM_SMALL_GPU" \
+      "$LARGE_MODEL" "$HE_VLLM_LARGE_PORT" "$HE_VLLM_LARGE_GPU"
+    echo "  [Held-out eval] HE_VLLM_MAP=$_HE_VLLM_MAP_JSON  workers=$HE_VLLM_WORKERS"
+    HE_VLLM_MAP="$_HE_VLLM_MAP_JSON" \
+    SCALING_TRACE_WORKERS="$HE_VLLM_WORKERS" \
+      "${cmd[@]}" --workers "$HE_VLLM_WORKERS" 2>&1 | tee "$out/collect.log"
+    stop_he_vllm_servers
   else
     "${cmd[@]}" 2>&1 | tee "$out/collect.log"
   fi

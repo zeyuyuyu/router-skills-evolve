@@ -165,15 +165,22 @@ class Adapter:
                 if not line:
                     continue
                 t = json.loads(line)
-                tasks.append({
+                row = {
                     "task_id": t["task_id"],
                     "prompt": t["prompt"],
                     "entry_point": t["entry_point"],
                     "test": t["test"],
                     "_raw": t,
-                })
-        # deterministic split: even-indexed = train, odd = eval (stable across cycles)
-        if split == "eval":
+                }
+                if "split" in t:
+                    row["split"] = t["split"]
+                tasks.append(row)
+        # If rows carry an explicit "split" field (merged HumanEval+MBPP in
+        # data/he_mbpp.jsonl), honor it; otherwise fall back to the deterministic
+        # even=train / odd=eval positional split (plain HumanEval.jsonl).
+        if any("split" in t for t in tasks):
+            tasks = [t for t in tasks if t.get("split") == split]
+        elif split == "eval":
             tasks = tasks[1::2]
         elif split == "train":
             tasks = tasks[0::2]

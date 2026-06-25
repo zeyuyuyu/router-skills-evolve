@@ -51,7 +51,32 @@ def load_cycles(exp_dir: Path, n_cycles: int) -> list[dict]:
     return cycles
 
 
-def emit_markdown(cycles: list[dict], out: Path) -> None:
+def load_heldout(exp_dir: Path) -> dict | None:
+    """Held-out TEST split four-arm result (from phase6_heldout_eval), if present."""
+    p = exp_dir / "heldout_eval" / "e2e_ablation_summary.json"
+    if not p.exists():
+        return None
+    with p.open() as fh:
+        return json.load(fh)
+
+
+def _four_arm_table(summary: dict) -> list[str]:
+    rows = ["| System variant | Routing Acc | Large F1 | Fallback | Cost vs Always-Large | Task Pass |",
+            "|---|---:|---:|---:|---:|---:|"]
+    for v in VARIANT_ORDER:
+        m = _safe_get(summary, "variants", v, default={})
+        rows.append(
+            f"| {VARIANT_LABEL[v]} "
+            f"| {m.get('routing_acc', 0):.2%} "
+            f"| {m.get('large_f1', 0):.2%} "
+            f"| {m.get('fallback', 0):.2%} "
+            f"| {m.get('cost_vs_large', 0):.2%} "
+            f"| {m.get('task_pass', 0):.2%} |"
+        )
+    return rows
+
+
+def emit_markdown(cycles: list[dict], out: Path, heldout: dict | None = None) -> None:
     if not cycles:
         out.write_text("# No cycle data found.\n")
         return
@@ -62,24 +87,17 @@ def emit_markdown(cycles: list[dict], out: Path) -> None:
              f"Model: **{cycles[0].get('model_config', 'unknown')}**  |  "
              f"Schedule: **{cycles[0].get('schedule', 'SLR')}**",
              "",
-             "## Final cycle (cycle " + str(len(cycles)-1) + ")", ""]
+             "Results are split into the **training split** (used to evolve "
+             "skills/router/adapter; routing is evaluated in-sample so it is "
+             "optimistic) and the **held-out test split** (the honest "
+             "generalization estimate).",
+             ""]
 
-    last = cycles[-1]
-    lines.append("| System variant | Routing Acc | Large F1 | Fallback | Cost vs Always-Large | Task Pass |")
-    lines.append("|---|---:|---:|---:|---:|---:|")
-    for v in VARIANT_ORDER:
-        m = _safe_get(last, "variants", v, default={})
-        lines.append(
-            f"| {VARIANT_LABEL[v]} "
-            f"| {m.get('routing_acc', 0):.2%} "
-            f"| {m.get('large_f1', 0):.2%} "
-            f"| {m.get('fallback', 0):.2%} "
-            f"| {m.get('cost_vs_large', 0):.2%} "
-            f"| {m.get('task_pass', 0):.2%} |"
-        )
+    # ── TRAINING split ──────────────────────────────────────────────────────
+    lines += [f"## Training split — final cycle (cycle {len(cycles)-1})", ""]
+    lines += _four_arm_table(cycles[-1])
 
-    # per-cycle progression
-    lines += ["", "## Per-cycle progression (Full variant)", "",
+    lines += ["", "## Training split — per-cycle progression (Full variant)", "",
               "| Cycle | Routing Acc | Fallback | Task Pass | Cost vs Large |",
               "|---:|---:|---:|---:|---:|"]
     for i, c in enumerate(cycles):
@@ -91,6 +109,13 @@ def emit_markdown(cycles: list[dict], out: Path) -> None:
             f"| {m.get('task_pass', 0):.2%} "
             f"| {m.get('cost_vs_large', 0):.2%} |"
         )
+
+    # ── Held-out TEST split ─────────────────────────────────────────────────
+    lines += ["", "## Held-out TEST split — final cycle (router trained on train, evaluated here)", ""]
+    if heldout is not None:
+        lines += _four_arm_table(heldout)
+    else:
+        lines += ["_No held-out eval found (run with `RUN_HELDOUT_EVAL=1`)._"]
 
     lines += ["", "## Baseline reference (HumanEval × 1.5B, main branch 2026-05-09)", "",
               "| System | Routing Acc | Task Pass |",
@@ -142,12 +167,13 @@ def main() -> int:
 
     exp_dir = Path(args.experiment_dir)
     cycles = load_cycles(exp_dir, args.n_cycles)
+    heldout = load_heldout(exp_dir)
 
     md_path = Path(args.output_md)
     png_path = Path(args.output_png)
     md_path.parent.mkdir(parents=True, exist_ok=True)
 
-    emit_markdown(cycles, md_path)
+    emit_markdown(cycles, md_path, heldout)
     emit_plot(cycles, png_path)
     print(f"[aggregate] wrote {md_path}", file=sys.stderr)
     print(f"[aggregate] wrote {png_path}", file=sys.stderr)
