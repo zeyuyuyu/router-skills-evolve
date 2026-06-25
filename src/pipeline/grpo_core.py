@@ -108,10 +108,21 @@ def grpo_update(model, tok, examples, args):
     eps_high = args.clip_high if args.algo == "dapo" else args.clip_low
     token_level = args.algo == "dapo"
 
+    # Gradient accumulation: accumulate grads over `grad_accum` micro-batches
+    # before one optim.step(). Effective batch = batch_size × grad_accum, which
+    # (a) cuts the optimiser-step count by `grad_accum` and (b) stabilises the
+    # advantage-weighted update — with the OOM-forced small batch_size a single
+    # micro-batch rarely spans a full K-rollout group, so the +/- advantages
+    # only balance once accumulated. Default 1 → identical to the old behaviour.
+    grad_accum = max(1, int(getattr(args, "grad_accum", 1) or 1))
+    n_batches = len(loader)
+
     model.train()
     step = 0
     for epoch in range(args.epochs):
-        for ids, attn, cmask, adv in loader:
+        optim.zero_grad()
+        pending = 0  # micro-batches with grads not yet applied
+        for bi, (ids, attn, cmask, adv) in enumerate(loader):
             ids, attn, cmask, adv = (ids.to(device), attn.to(device),
                                      cmask.to(device), adv.to(device))
             # Old log-probs: recomputed from the current (pre-update) policy —
@@ -143,13 +154,21 @@ def grpo_update(model, tok, examples, args):
                 seq = (per_tok * m).sum(dim=1) / m.sum(dim=1).clamp(min=1.0)
                 loss = seq.mean()
 
-            optim.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(
-                [p for p in model.parameters() if p.requires_grad], 1.0)
-            optim.step()
-            step += 1
-            if step % args.logging_steps == 0:
-                print(f"[grpo] epoch={epoch} step={step} loss={loss.item():.4f} "
-                      f"mean_adv={adv.mean().item():+.3f}", flush=True)
+            # Scale by 1/grad_accum so the accumulated grad ≈ mean over the
+            # effective batch (not the sum), keeping the LR meaning unchanged.
+            (loss / grad_accum).backward()
+            pending += 1
+            # Step at every accumulation boundary, and flush the remainder at
+            # the end of the epoch so no micro-batch's grad is silently dropped.
+            if pending == grad_accum or (bi + 1) == n_batches:
+                torch.nn.utils.clip_grad_norm_(
+                    [p for p in model.parameters() if p.requires_grad], 1.0)
+                optim.step()
+                optim.zero_grad()
+                pending = 0
+                step += 1
+                if step % args.logging_steps == 0:
+                    print(f"[grpo] epoch={epoch} step={step} "
+                          f"loss={loss.item():.4f} mean_adv={adv.mean().item():+.3f} "
+                          f"(grad_accum={grad_accum})", flush=True)
     return step

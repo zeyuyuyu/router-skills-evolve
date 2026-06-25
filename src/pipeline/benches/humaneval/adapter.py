@@ -157,7 +157,12 @@ class Adapter:
     # ------------------------------------------------------------------ load
     def load_tasks(self, n: int, split: str = "train") -> list[dict]:
         import json
-        path = Path(os.environ.get("HE_DATA", str(HUMANEVAL_PATH)))
+        _he_data = os.environ.get("HE_DATA")
+        path = Path(_he_data) if _he_data else HUMANEVAL_PATH
+        # A relative HE_DATA (e.g. "data/he_mbpp.jsonl" from config) resolves
+        # against the repo root, not the caller's cwd.
+        if _he_data and not path.is_absolute():
+            path = REPO_ROOT / path
         tasks = []
         with open(path) as f:
             for line in f:
@@ -204,8 +209,14 @@ class Adapter:
         if self.mock:
             return self._mock_run(task, small_model, large_model, sig, cycle, force_both)
 
-        # Small model gets the procedure prefix (matches SFT training format).
-        # Large model always runs on the raw prompt — it never saw SFT training.
+        # Both models get the procedure prefix (DEFAULT). This matches the SFT
+        # training format (procedure+problem) for the small model, and for the large
+        # (teacher) model it makes the teacher demonstration's prompt match the SFT
+        # input — removing a teacher-forcing prompt/target mismatch — and can help on
+        # format-heavy tasks. Cycle 0 has no skillbook yet (procedure=""), so this is
+        # a no-op there and naturally takes effect from cycle 1 onward. Set
+        # LARGE_USE_SKILLS=0 to restore raw-prompt teacher.
+        large_proc = "" if os.environ.get("LARGE_USE_SKILLS") == "0" else procedure
         s_ok, s_code, s_turns = self._gen_and_test(small_model, task, procedure=procedure)
         large_skipped = False
         if s_ok and not force_both:
@@ -213,7 +224,7 @@ class Adapter:
             decision = "probe:small->small_OK"
             final_model, final_success = small_model, True
         else:
-            l_ok, l_code, l_turns = self._gen_and_test(large_model, task)
+            l_ok, l_code, l_turns = self._gen_and_test(large_model, task, procedure=large_proc)
             if s_ok:
                 decision = "oracle:small_OK+large_run"
                 final_model, final_success = small_model, True

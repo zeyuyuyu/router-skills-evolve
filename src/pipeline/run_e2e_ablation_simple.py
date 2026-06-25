@@ -27,6 +27,10 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+# Repo root on path so joblib can unpickle an EmbeddingRouter
+# (src.pipeline.router_emb) saved by train_router_simple.py.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 
 def load_traces(path: Path) -> list[dict]:
     rows = []

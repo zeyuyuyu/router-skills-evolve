@@ -49,7 +49,7 @@ import json
 import os
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 # Make `src.pipeline.benches` importable when invoked as a script.
@@ -381,11 +381,13 @@ def main() -> int:
                     fh.flush()
         else:
             force_both = closed_loop or args.force_both
-            with ProcessPoolExecutor(
-                max_workers=max(1, args.workers),
-                initializer=_init_trace_worker,
-                initargs=(args.bench, args.skillbook),
-            ) as pool:
+            # Threads, not processes: collection is I/O-bound (HTTP to the small
+            # vLLM + the large API) and test execution runs in its own subprocess
+            # (GIL released), so threads give the concurrency without the fork+torch
+            # BrokenProcessPool fragility a ProcessPoolExecutor hits at high worker
+            # counts. Init the shared worker globals ONCE in this (main) thread.
+            _init_trace_worker(args.bench, args.skillbook)
+            with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
                 futures = {
                     pool.submit(
                         _run_trace_worker,

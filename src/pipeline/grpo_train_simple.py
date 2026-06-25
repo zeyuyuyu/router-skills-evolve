@@ -357,12 +357,20 @@ def _repair_rollout_vllm(client, served_model, tok, task, procedure, *, n, max_t
     ok = [False] * n
     done = [False] * n
 
+    _ctx = int(os.environ.get("GRPO_MAX_LEN", "4096"))
+
     def _gen(i):
         msgs = [{"role": "system", "content": SYSTEM}, *convs[i]]
-        r = client.chat.completions.create(
-            model=served_model, messages=msgs,
-            temperature=temperature, max_tokens=max_new_tokens)
-        return i, (r.choices[0].message.content or "")
+        est_in = sum(len(m["content"]) for m in msgs) * 2 // 5
+        for mt in (max(64, min(max_new_tokens, _ctx - est_in - 96)), 96):
+            try:
+                r = client.chat.completions.create(
+                    model=served_model, messages=msgs,
+                    temperature=temperature, max_tokens=mt)
+                return i, (r.choices[0].message.content or "")
+            except Exception:
+                continue
+        return i, ""
 
     for turn_idx in range(max_turns):
         active = [i for i in range(n) if not done[i]]
@@ -415,12 +423,23 @@ def _repair_rollout_vllm_global(client, served_model, tok, tasks, get_procedure,
             units.append({"ti": ti, "conv": [{"role": "user", "content": first}],
                           "turns": [], "ok": False, "done": False})
 
+    _ctx = int(os.environ.get("GRPO_MAX_LEN", "4096"))
+
     def _gen(u):
         msgs = [{"role": "system", "content": SYSTEM}, *u["conv"]]
-        r = client.chat.completions.create(
-            model=served_model, messages=msgs,
-            temperature=temperature, max_tokens=max_new_tokens)
-        return u, (r.choices[0].message.content or "")
+        # Clamp output budget so input+output fits the model context. Long multi-turn
+        # repair prompts (esp. MBPP) otherwise overflow → vLLM 400 → rollout crash.
+        # ~2.5 chars/token (code tokenizes dense); try/except guarantees no crash.
+        est_in = sum(len(m["content"]) for m in msgs) * 2 // 5
+        for mt in (max(64, min(max_new_tokens, _ctx - est_in - 96)), 96):
+            try:
+                r = client.chat.completions.create(
+                    model=served_model, messages=msgs,
+                    temperature=temperature, max_tokens=mt)
+                return u, (r.choices[0].message.content or "")
+            except Exception:
+                continue
+        return u, ""  # give up on this unit this turn rather than crash the rollout
 
     for turn_idx in range(max_turns):
         active = [u for u in units if not u["done"]]
@@ -569,6 +588,7 @@ def _run_repair_grpo(args, tasks, get_procedure) -> int:
                "epochs": args.epochs, "lr": args.lr, "beta": args.beta,
                "clip_low": args.clip_low, "clip_high": args.clip_high if is_dapo else args.clip_low,
                "dapo_dynamic_sampling": is_dapo, "update_steps": n_steps,
+               "batch_size": args.batch_size, "grad_accum": args.grad_accum,
                "n_examples": len(examples), **adv_stats},
               open(out_dir / "grpo_info.json", "w"), indent=2)
     return 0
@@ -595,6 +615,12 @@ def main() -> int:
                     default=float(os.environ.get("GRPO_LR", "5e-6")))
     ap.add_argument("--batch-size", type=int,
                     default=int(os.environ.get("GRPO_BATCH_SIZE", "4")))
+    ap.add_argument("--grad-accum", type=int,
+                    default=int(os.environ.get("GRPO_GRAD_ACCUM", "1")),
+                    help="Accumulate grads over N micro-batches before one "
+                         "optim.step() → effective batch = batch_size × N. "
+                         "Cuts optimiser steps N× and stabilises the update. "
+                         "Env: GRPO_GRAD_ACCUM (default 1 = no accumulation).")
     ap.add_argument("--max-completion-len", type=int, default=768)
     ap.add_argument("--lora-r", type=int, default=16)
     ap.add_argument("--lora-alpha", type=int, default=32)

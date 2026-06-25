@@ -15,6 +15,10 @@
 HE_SMALL_MODEL: Qwen/Qwen2.5-Coder-1.5B-Instruct
 HE_LARGE_MODEL: openai/gpt-5.5
 
+# 数据集:默认用 HumanEval+MBPP 合并集(train 546 / eval 582,每行带 split 字段)。
+# 相对路径会按 repo root 解析(adapter.py)。想只跑原 HumanEval:HE_DATA=data/HumanEval.jsonl 覆盖。
+HE_DATA: data/he_mbpp.jsonl
+
 # skill 蒸馏:用 GPT 总结 procedure;单一全局 skill 下尽量用全部解出的 trace
 DISTILLER_MODEL: openai/gpt-5.5
 SKILL_MAX_EXEMPLARS: 50      # 每个 skill 保留多少 exemplar(旧默认 8 太少)

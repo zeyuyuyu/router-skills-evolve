@@ -145,7 +145,9 @@ fi
 : "${HE_VLLM_LARGE_PORT:=8101}"
 : "${HE_VLLM_SMALL_GPU:=1}"   # Phase-1 small student served here
 : "${HE_VLLM_LARGE_GPU:=2}"   # Phase-1 large teacher served here
-: "${HE_VLLM_WORKERS:=8}"    # parallel trace workers when serving via vLLM/API
+: "${HE_VLLM_WORKERS:=64}"   # parallel trace workers when serving via vLLM/API
+                             # (fire many at once so vLLM continuous-batches, like GRPO's
+                             #  global rollout; 8 left the batcher mostly idle)
 # Phase-3b GRPO rollout via vLLM colocate on the TRAINING gpu (weight auto-sync).
 # Requires vllm importable in the training env → run pipeline with
 # PYTHON=$PWD/.vllm_venv/bin/python. Training gpu = the pipeline's
@@ -736,6 +738,8 @@ phase3b_grpo_train() {
     GRPO_LR="$GRPO_LR" \
     GRPO_BETA="$GRPO_BETA" \
     GRPO_ALGO="$GRPO_ALGO" \
+    GRPO_BATCH_SIZE="${GRPO_BATCH_SIZE:-4}" \
+    GRPO_GRAD_ACCUM="${GRPO_GRAD_ACCUM:-1}" \
     DAPO_CLIP_LOW="$DAPO_CLIP_LOW" \
     DAPO_CLIP_HIGH="$DAPO_CLIP_HIGH" \
       "$PYTHON" "$REPO_ROOT/src/pipeline/grpo_train_simple.py" \

@@ -187,13 +187,27 @@ def make_llm_distiller(model_id: str, use_proxy: bool = False):
                        ("context", "maximum", "too long", "max_tokens", "length",
                         "token limit", "exceed"))
 
+        # NOTE: gpt-5.5 (and other reasoning models) spend completion tokens on
+        # internal reasoning BEFORE the visible answer. With a tight budget the
+        # reasoning eats the whole cap and the content comes back EMPTY (finish
+        # reason=length, no error) → silent fallback to the heuristic procedure.
+        # Give ample headroom (≥2000) so reasoning + the ≤150-word cheatsheet fit.
+        _max_tok = int(os.environ.get("SKILL_DISTILL_MAX_TOKENS", "2000"))
+
         def _call(prompt: str):
             try:
                 r = call_llm(model_id=model_id, prompt=prompt, use_proxy=use_proxy,
-                             temperature=0.3, max_tokens=400)
+                             temperature=0.3, max_tokens=_max_tok)
             except Exception as e:  # noqa: BLE001 — missing key / network
                 return None, str(e)
-            return (r.get("response") or "").strip() or None, r.get("error")
+            resp = (r.get("response") or "").strip() or None
+            if resp is None:
+                import sys as _sys
+                print(f"[skills] WARN distiller LLM returned empty "
+                      f"(completion_tokens={r.get('completion_tokens')}, "
+                      f"err={r.get('error')!r}) — will fall back to heuristic",
+                      file=_sys.stderr)
+            return resp, r.get("error")
 
         def _distill_batch(args) -> Optional[str]:
             """MAP: distil ONE batch independently; halve & retry on ctx overflow."""
