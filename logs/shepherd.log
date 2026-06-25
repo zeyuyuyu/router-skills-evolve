@@ -183,3 +183,4 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
   Actions: none (connectivity failure).
   Manual check recommended — server may be down or firewall rules changed.
 [2026-06-24T22:04:19Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connect timed out on ports 22 and 50507. No actions taken. Could not read state.json, check experiments, or write remote log. Manual investigation required.
+[2026-06-25T16:05:39Z] SHEPHERD RUN FAILED — A800 unreachable. SSH connection to 117.74.66.181:50507 timed out after 15s. No state read; no actions taken. All checks (queue, GPU, disk, results, daily artifacts) skipped. Manual investigation required.
