@@ -187,3 +187,8 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
 [2026-06-26T02:03:41Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) is unreachable from the remote execution environment. TCP connect to port 50507 returned EAGAIN (blocked by network policy). SSH client also unavailable in this container (openssh-client 404 on apt). Paramiko install succeeded but connection timed out / blocked. No state was read; no actions taken. Manual intervention required to verify A800 health. Actions: none.
 [2026-06-26T00:00:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Manual check required.
 [2026-06-26T18:04:30Z] SHEPHERD RUN — FAILED: A800 unreachable (117.74.66.181:50507 connection timed out on two attempts). No state read, no actions taken. GPU/queue/disk status unknown. User should verify A800 network/power status. No routines triggered.
+[2026-06-26 20:04:03 UTC] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connect timeout after 8s.
+  Actions taken: none (cannot assess state without connectivity).
+  Recommendation: Check A800 network/firewall, verify SSH service is running on port 50507.
+  Next: Manual check required; all automated actions skipped per conservative policy.
