@@ -162,6 +162,7 @@ class Adapter:
         cycle: int,
         force_both: bool = False,
         skillbook=None,
+        route_hint=None,
     ) -> dict:
         """Run small (and large) on a task.
 

@@ -521,8 +521,14 @@ def _run_repair_grpo(args, tasks, get_procedure) -> int:
     vllm_client = None
     if vllm_url:
         from openai import OpenAI
+        # Per-request timeout is ESSENTIAL: pool.map blocks on every rollout
+        # request, and a single hung connection (no timeout) stalls the whole
+        # rollout forever (the try/except in _gen only catches errors, not
+        # hangs). With a timeout a stuck request raises → caught → retried/skipped.
+        _rollout_timeout = float(os.environ.get("GRPO_ROLLOUT_TIMEOUT", "240"))
         vllm_client = OpenAI(api_key=os.environ.get("HE_VLLM_API_KEY", "EMPTY"),
-                             base_url=vllm_url)
+                             base_url=vllm_url,
+                             timeout=_rollout_timeout, max_retries=2)
         served = os.environ.get("GRPO_ROLLOUT_VLLM_MODEL", args.model)
         print(f"[grpo] rollout via vLLM @ {vllm_url} (model={served}); "
               f"update in-process. Multi-turn repair preserved.", flush=True)

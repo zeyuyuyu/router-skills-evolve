@@ -72,17 +72,14 @@ def _init_trace_worker(bench: str, skillbook_path: str | None = None) -> None:
     _TRACE_WORKER_SKILLBOOK = _load_skillbook(skillbook_path)
 
 
-def _run_trace_worker(payload: tuple[str, dict, str, str, int, bool]) -> dict:
-    bench, task, small_model, large_model, cycle, force_both = payload
+def _run_trace_worker(payload: tuple) -> dict:
+    bench, task, small_model, large_model, cycle, force_both = payload[:6]
+    route_hint = payload[6] if len(payload) > 6 else None
     adapter = _TRACE_WORKER_ADAPTER or load_adapter(bench)
-    return adapter.run_task_pair(
-        task,
-        small_model=small_model,
-        large_model=large_model,
-        cycle=cycle,
-        force_both=force_both,
-        skillbook=_TRACE_WORKER_SKILLBOOK,
-    )
+    return _run_task_pair_retry(
+        adapter, bench=bench, task=task, small_model=small_model,
+        large_model=large_model, cycle=cycle, force_both=force_both,
+        skillbook=_TRACE_WORKER_SKILLBOOK, route_hint=route_hint)
 
 
 def _is_provider_cap_error(exc: Exception) -> bool:
@@ -94,6 +91,44 @@ def _is_provider_cap_error(exc: Exception) -> bool:
         "error code: 429",
     )
     return any(needle in text for needle in needles)
+
+
+def _is_transient_error(exc: Exception) -> bool:
+    """Network/server blips worth retrying (NOT a provider cap, NOT a real failure).
+    A transient vLLM hiccup must not be recorded as a task failure — otherwise one
+    blip poisons the whole split (cycle-0 eval lost 464/582 tasks this way)."""
+    if _is_provider_cap_error(exc):
+        return False
+    text = str(exc).lower()
+    needles = (
+        "connection error", "connection reset", "connection refused",
+        "remote disconnected", "timed out", "timeout", "econnreset",
+        "temporarily unavailable", "internal server error", "500", "502",
+        "503", "504", "enginecore", "engine encountered",
+    )
+    return any(needle in text for needle in needles)
+
+
+def _run_task_pair_retry(adapter, *, bench, task, small_model, large_model, cycle,
+                         force_both, skillbook, route_hint, retries=4):
+    """Run one task pair, retrying transient server/network errors with backoff so a
+    vLLM hiccup doesn't get recorded as a permanent task failure."""
+    last = None
+    for attempt in range(retries):
+        try:
+            return adapter.run_task_pair(
+                task, small_model=small_model, large_model=large_model,
+                cycle=cycle, force_both=force_both, skillbook=skillbook,
+                route_hint=route_hint)
+        except Exception as e:  # noqa: BLE001
+            if _is_provider_cap_error(e):
+                raise
+            if _is_transient_error(e) and attempt < retries - 1:
+                last = e
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise
+    raise last  # unreachable
 
 
 def _validate_trace_or_abort(trace: dict, task_id: str) -> None:
@@ -272,6 +307,18 @@ def main() -> int:
     router_pipe = _load_router(args.router)
     skillbook = _load_skillbook(args.skillbook)
     closed_loop = router_pipe is not None or skillbook is not None
+
+    def route_hint_for(task: dict) -> str | None:
+        """The cycle-(k-1) router's decision for this task, used to gate whether
+        the large model runs (run large iff small fails OR routed-large). None in
+        open-loop (cycle 0 / no router) → large runs only on small failures."""
+        if not closed_loop:
+            return None
+        r, _, _ = _policy_decision(
+            task.get("prompt", "") or "", router_pipe, skillbook,
+            args.small_model, router_threshold=args.router_threshold)
+        return r
+
     print(f"[collect_traces] bench={args.bench} cycle={args.cycle} split={args.split} "
           f"closed_loop={closed_loop} "
           f"workers={max(1, args.workers)} "
@@ -345,18 +392,17 @@ def main() -> int:
             for completed, (i, task) in enumerate(tasks_to_run, 1):
                 task_id = str(task.get("task_id", f"unknown-{i}"))
                 try:
-                    # closed_loop => force both models so the policy annotation has
-                    # a REAL large outcome even when small also succeeded (review
-                    # round 2, 2026-05-21). Without this, routing to large on a
-                    # small-OK task would bill a fake skip placeholder.
-                    trace = adapter.run_task_pair(
-                        task,
-                        small_model=args.small_model,
-                        large_model=args.large_model,
-                        cycle=args.cycle,
-                        force_both=(closed_loop or args.force_both),
-                        skillbook=skillbook,
-                    )
+                    # Fallback collection (2026-06-26): run small always (free
+                    # label); run large iff force_both, small failed, or the router
+                    # routed this task to large. Skips gpt-5.5 on easy small-solved
+                    # tasks the policy keeps on small — without ever leaving the
+                    # policy outcome unknown (route_hint ensures large ran wherever
+                    # the policy would bill it).
+                    trace = _run_task_pair_retry(
+                        adapter, bench=args.bench, task=task,
+                        small_model=args.small_model, large_model=args.large_model,
+                        cycle=args.cycle, force_both=args.force_both,
+                        skillbook=skillbook, route_hint=route_hint_for(task))
                     handle_trace(fh, i, task, trace, completed)
                 except FatalTraceCollectionError:
                     raise
@@ -380,7 +426,7 @@ def main() -> int:
                     }) + "\n")
                     fh.flush()
         else:
-            force_both = closed_loop or args.force_both
+            force_both = args.force_both
             # Threads, not processes: collection is I/O-bound (HTTP to the small
             # vLLM + the large API) and test execution runs in its own subprocess
             # (GIL released), so threads give the concurrency without the fork+torch
@@ -391,7 +437,8 @@ def main() -> int:
                 futures = {
                     pool.submit(
                         _run_trace_worker,
-                        (args.bench, task, args.small_model, args.large_model, args.cycle, force_both),
+                        (args.bench, task, args.small_model, args.large_model,
+                         args.cycle, force_both, route_hint_for(task)),
                     ): (i, task)
                     for i, task in tasks_to_run
                 }

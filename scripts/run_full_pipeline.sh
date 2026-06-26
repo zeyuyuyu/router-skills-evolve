@@ -423,11 +423,18 @@ phase1_collect_traces() {
   local local_student_ckpt="" local_student_port="" local_student_served=""
   if (( cycle > 0 )); then
     # Prefer GRPO adapter (stronger) over SFT checkpoint when both exist.
+    # train_small_model.py saves the final LoRA at llm_adapter/ (top-level
+    # adapter_model.safetensors), NOT checkpoint-best — accept either, matching
+    # the Phase-3b warm-start logic. (Looking only for checkpoint-best silently
+    # fell back to the BASE model every cycle → SFT never propagated + base-model
+    # cudagraph serving hit the illegal-memory crash.)
     local prev_grpo="$RESULTS_DIR/cycle_$((cycle-1))/grpo_adapter"
-    local prev_sft="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
+    local prev_sft_best="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
+    local prev_sft_top="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter"
     local prev=""
-    if   [[ -d "$prev_grpo" ]]; then prev="$prev_grpo"
-    elif [[ -d "$prev_sft"  ]]; then prev="$prev_sft"
+    if   [[ -f "$prev_grpo/adapter_model.safetensors" ]]; then prev="$prev_grpo"
+    elif [[ -d "$prev_sft_best" ]]; then prev="$prev_sft_best"
+    elif [[ -f "$prev_sft_top/adapter_model.safetensors" ]]; then prev="$prev_sft_top"
     fi
     if [[ -n "$prev" ]]; then
       if [[ "$BENCH" == "humaneval" ]]; then
@@ -657,9 +664,11 @@ phase3_llm_train() {
     # Warm-start from previous GRPO or SFT checkpoint if available.
     local warmstart_model="$SMALL_MODEL"
     local prev_grpo="$RESULTS_DIR/cycle_$((cycle-1))/grpo_adapter"
-    local prev_sft="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
-    if   (( cycle > 0 )) && [[ -d "$prev_grpo" ]]; then warmstart_model="$prev_grpo"
-    elif (( cycle > 0 )) && [[ -d "$prev_sft"  ]]; then warmstart_model="$prev_sft"
+    local prev_sft_best="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter/checkpoint-best"
+    local prev_sft_top="$RESULTS_DIR/cycle_$((cycle-1))/llm_adapter"
+    if   (( cycle > 0 )) && [[ -f "$prev_grpo/adapter_model.safetensors" ]]; then warmstart_model="$prev_grpo"
+    elif (( cycle > 0 )) && [[ -d "$prev_sft_best" ]]; then warmstart_model="$prev_sft_best"
+    elif (( cycle > 0 )) && [[ -f "$prev_sft_top/adapter_model.safetensors" ]]; then warmstart_model="$prev_sft_top"
     fi
     # SFT_LOGGING_STEPS=1 → capture per-step loss so training_curve.png is useful.
     # batch-size 1 + grad-accum: TRL 1.6 + transformers 5.12 produce nan grads on
@@ -694,6 +703,13 @@ phase3b_grpo_train() {
 
   if [[ "$SKIP_GRPO" -eq 1 ]]; then
     echo "  [Phase 3b] GRPO — SKIPPED (SKIP_GRPO=1)"
+    return
+  fi
+
+  # MOCK is a no-GPU dry path: real GRPO would load the model onto every GPU
+  # (the rollout vLLM is already mock-gated, but the gradient trainer was not).
+  if [[ "$MOCK" == "true" ]]; then
+    echo "  [Phase 3b] GRPO — SKIPPED (MOCK; no real training)"
     return
   fi
 
@@ -915,7 +931,11 @@ run_cycle() {
     esac
   done
 
-  phase5_e2e_ablation "$cycle"
+  # Per-cycle honest end-to-end TEST accuracy (deployed router + this cycle's
+  # adapter; gpt-5.5 only on large picks). Replaces the in-sample Phase-5
+  # ablation, which read training-trace labels and could not distinguish
+  # schedules. The full four-arm ablation runs once at the end (phase6, ablation).
+  phase6_heldout_eval "$cycle" deployed
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -925,14 +945,29 @@ run_cycle() {
 phase6_heldout_eval() {
   [[ "$RUN_HELDOUT_EVAL" == "1" ]] || { echo "═══ Held-out eval skipped (RUN_HELDOUT_EVAL=0) ═══"; return; }
 
-  local cycle=$((N_CYCLES-1))
-  local out="$RESULTS_DIR/heldout_eval"
+  # mode=deployed → honest end-to-end eval of THIS cycle's router+adapter on the
+  #   test split, NO force-both (gpt-5.5 only on tasks the router sends to large).
+  #   This is the per-cycle accuracy curve (replaces the misleading in-sample
+  #   Phase-5 ablation). Output → cycle_$cycle/heldout/.
+  # mode=ablation (default, run once at the end) → full four-arm force-both
+  #   ablation (always-large oracle ceiling + skills + router + full).
+  #   Output → heldout_eval/.
+  local cycle="${1:-$((N_CYCLES-1))}"
+  local mode="${2:-ablation}"
+  local out
+  if [[ "$mode" == "deployed" ]]; then out="$RESULTS_DIR/cycle_$cycle/heldout"
+  else                                  out="$RESULTS_DIR/heldout_eval"; fi
   mkdir -p "$out"
-  echo "═══ Held-out eval — split=eval cycle=$cycle ═══"
+  echo "═══ Held-out eval ($mode) — split=eval cycle=$cycle ═══"
 
-  # Prefer GRPO adapter over SFT checkpoint.
+  # Prefer GRPO adapter; else SFT (top-level llm_adapter or checkpoint-best).
+  # (Looking only for checkpoint-best fell back to BASE → deployed eval served
+  # the untrained model, e.g. cycle-1 test pass 1.72%.)
   local final_ckpt="$RESULTS_DIR/cycle_$cycle/grpo_adapter"
-  [[ ! -d "$final_ckpt" ]] && final_ckpt="$RESULTS_DIR/cycle_$cycle/llm_adapter/checkpoint-best"
+  if   [[ -f "$final_ckpt/adapter_model.safetensors" ]]; then :
+  elif [[ -d "$RESULTS_DIR/cycle_$cycle/llm_adapter/checkpoint-best" ]]; then final_ckpt="$RESULTS_DIR/cycle_$cycle/llm_adapter/checkpoint-best"
+  elif [[ -f "$RESULTS_DIR/cycle_$cycle/llm_adapter/adapter_model.safetensors" ]]; then final_ckpt="$RESULTS_DIR/cycle_$cycle/llm_adapter"
+  fi
   local final_router="$RESULTS_DIR/cycle_$cycle/router/router.joblib"
   local final_skillbook="$RESULTS_DIR/cycle_$cycle/skillbook.json"
   local small_arg="$SMALL_MODEL"
@@ -959,8 +994,10 @@ phase6_heldout_eval() {
     --cycle "$cycle"
     --split eval
     --out "$out/traces.jsonl"
-    --force-both
   )
+  # Only the final ablation runs the teacher on every task; the per-cycle
+  # deployed eval lets the router decide (gpt-5.5 only on its large picks).
+  [[ "$mode" == "ablation" ]] && cmd+=(--force-both)
   [[ -e "$final_router" ]] && cmd+=(--router "$final_router")
   [[ -e "$final_skillbook" ]] && cmd+=(--skillbook "$final_skillbook")
   $MOCK && cmd+=(--mock)
@@ -1015,6 +1052,59 @@ phase6_heldout_eval() {
     "${cmd[@]}" 2>&1 | tee "$out/collect.log"
   fi
 
+  if [[ "$mode" == "deployed" ]]; then
+    # Honest end-to-end number = the deployed policy's own outcome on every test
+    # task (router decides; gpt-5.5 only on large picks). Read straight from the
+    # trace's policy_* fields; written in the variants.full shape aggregate reads.
+    "$PYTHON" - <<PY 2>&1 | tee "$out/deployed.log"
+import json
+from pathlib import Path
+rows = [json.loads(l) for l in open("$out/traces.jsonl") if l.strip()]
+n = len(rows) or 1
+succ = sum(1 for r in rows if r.get("policy_final_success"))
+n_large = sum(1 for r in rows if r.get("policy_route") == "large")
+n_small = n - n_large
+# Real deployment cost (1:10 small:large). route=large bills large only (1.0);
+# route=small bills small (0.1) PLUS large (1.0) when the small model failed and
+# the policy fell back to large (large actually ran ⇒ not large_skipped). The old
+# route-only formula ignored the fallback large calls and undercounted ~25 pts.
+_csum = 0.0; n_fallback = 0
+for r in rows:
+    if r.get("policy_route") == "large":
+        _csum += 1.0
+    else:
+        _csum += 0.1
+        if not r.get("large_skipped", True):
+            _csum += 1.0; n_fallback += 1
+cost = _csum / n
+labeled = [r for r in rows if r.get("small_success") is not None]
+# routing accuracy vs the run-both oracle label, when available (force-both off
+# means large_success is only present for large picks, so this is best-effort).
+correct = 0; ntrue = 0
+for r in labeled:
+    s = r.get("small_success"); pred = 0 if r.get("policy_route") == "small" else 1
+    if s is True: lab = 0
+    elif r.get("large_success") is not None: lab = 1
+    else: lab = None
+    if lab is not None: ntrue += 1; correct += int(pred == lab)
+n_large_ran = n_large + n_fallback   # routed-large + small-fail fallback
+summary = {"variants": {"full": {
+    "task_pass": succ / n, "cost_vs_large": cost,
+    "fallback": n_fallback / n, "n_eval": len(rows),
+    "routing_acc": (correct / ntrue) if ntrue else 0}},
+    "deployed": True, "mode": "deployed", "cycle": $cycle, "split": "eval",
+    "bench": "$BENCH", "model_config": "$MODEL_SWEEP", "schedule": "$SCHEDULE",
+    "n_routed_small": n_small, "n_routed_large": n_large,
+    "n_fallback": n_fallback, "n_large_ran": n_large_ran,
+    "n_errored": sum(1 for r in rows if r.get("small_success") is None)}
+Path("$out/e2e_ablation_summary.json").write_text(json.dumps(summary, indent=2))
+print(f"[deployed] cycle=$cycle test task_pass={succ/n:.2%} cost={cost:.2%} "
+      f"large_ran={n_large_ran}/{n} (routed={n_large} +fallback={n_fallback})")
+PY
+    return
+  fi
+
+  # mode=ablation: full four-arm comparison (force-both traces present).
   local thresh=0.5
   if [[ -f "$RESULTS_DIR/cycle_$cycle/router_threshold.json" ]]; then
     thresh=$($PYTHON -c "import json; print(json.load(open('$RESULTS_DIR/cycle_$cycle/router_threshold.json')).get('threshold', 0.5))" 2>/dev/null || echo 0.5)

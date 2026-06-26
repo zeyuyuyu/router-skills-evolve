@@ -36,6 +36,9 @@ class BenchAdapter(Protocol):
         small_model: str,
         large_model: str,
         cycle: int,
+        force_both: bool = False,
+        skillbook=None,
+        route_hint=None,
     ) -> dict: ...
 
 

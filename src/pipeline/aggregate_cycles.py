@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Phase 6: aggregate cycle summaries into a final markdown table + iteration curve.
+"""Phase 6: aggregate per-cycle deployed eval + final ablation into a paper-ready
+markdown table + iteration curve, SPLIT BY DATASET (HumanEval vs MBPP).
 
-Reads:
-    results/$EXPERIMENT_NAME/cycle_0/e2e_ablation_summary.json
-    results/$EXPERIMENT_NAME/cycle_1/e2e_ablation_summary.json
-    ...
+Reads trace files directly (not just summaries) so it can split by task_id:
+  * per-cycle DEPLOYED cascade  ← results/$EXP/cycle_{c}/heldout/traces.jsonl
+        pass = policy_final_success; cost = route=large→1.0,
+        route=small→0.1 (+1.0 if it fell back to large, i.e. not large_skipped).
+  * final four-arm (force-both)  ← results/$EXP/heldout_eval/traces.jsonl
+        always-large = mean(large_success); always-small+skills = mean(small_success);
+        pre-router (no fallback) = per-task routed model's success, route-only cost.
+        The cascade column is taken from the LAST cycle's deployed traces (the
+        force-both file runs large on every task, so its fallback cost is not a
+        real deployment cost).
 
-Writes:
-    results/$EXPERIMENT_NAME/final_ablation_table.md
-    results/$EXPERIMENT_NAME/curve.png
+Writes:  results/$EXP/final_ablation_table.md , results/$EXP/curve.png
 """
 from __future__ import annotations
 
@@ -17,118 +22,120 @@ import json
 import sys
 from pathlib import Path
 
-
-# Single global skill → no signature routing, so there is no separate
-# "base" (always-small, no-procedure) arm. The "skills" arm is always-small
-# WITH the distilled procedure and doubles as the small-only baseline.
-VARIANT_ORDER = ["large", "skills", "router", "full"]
-VARIANT_LABEL = {
-    "large":  "Always-large",
-    "skills": "Small + Skills (always-small + procedure)",
-    "router": "+ Router training",
-    "full":   "Full (+ LLM training)",
-}
+COST_SMALL, COST_LARGE = 0.1, 1.0
 
 
-def _safe_get(d: dict, *path, default=None):
-    cur = d
-    for k in path:
-        if not isinstance(cur, dict) or k not in cur:
-            return default
-        cur = cur[k]
-    return cur
+def _dataset(task_id: str) -> str:
+    return "HumanEval" if str(task_id).startswith("HumanEval") else "MBPP"
 
 
-def load_cycles(exp_dir: Path, n_cycles: int) -> list[dict]:
-    cycles = []
-    for c in range(n_cycles):
-        p = exp_dir / f"cycle_{c}" / "e2e_ablation_summary.json"
-        if not p.exists():
-            print(f"[aggregate] WARN missing {p}", file=sys.stderr)
-            continue
-        with p.open() as fh:
-            cycles.append(json.load(fh))
-    return cycles
+def _load(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    out = []
+    with path.open() as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                try:
+                    out.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+    return out
 
 
-def load_heldout(exp_dir: Path) -> dict | None:
-    """Held-out TEST split four-arm result (from phase6_heldout_eval), if present."""
-    p = exp_dir / "heldout_eval" / "e2e_ablation_summary.json"
-    if not p.exists():
-        return None
-    with p.open() as fh:
-        return json.load(fh)
+def _by_dataset(rows: list[dict]) -> dict[str, list[dict]]:
+    d: dict[str, list[dict]] = {"HumanEval": [], "MBPP": []}
+    for r in rows:
+        d[_dataset(r.get("task_id", ""))].append(r)
+    return d
 
 
-def _four_arm_table(summary: dict) -> list[str]:
-    rows = ["| System variant | Routing Acc | Large F1 | Fallback | Cost vs Always-Large | Task Pass |",
-            "|---|---:|---:|---:|---:|---:|"]
-    for v in VARIANT_ORDER:
-        m = _safe_get(summary, "variants", v, default={})
-        rows.append(
-            f"| {VARIANT_LABEL[v]} "
-            f"| {m.get('routing_acc', 0):.2%} "
-            f"| {m.get('large_f1', 0):.2%} "
-            f"| {m.get('fallback', 0):.2%} "
-            f"| {m.get('cost_vs_large', 0):.2%} "
-            f"| {m.get('task_pass', 0):.2%} |"
-        )
-    return rows
+def cascade_stats(rows: list[dict]) -> dict:
+    """Deployed cascade: router decides; small failure falls back to large."""
+    n = len(rows)
+    if not n:
+        return {"pass": None, "cost": None, "n": 0, "route_large": 0, "fallback": 0}
+    succ = sum(1 for r in rows if r.get("policy_final_success"))
+    cost = 0.0
+    route_large = fallback = 0
+    for r in rows:
+        if r.get("policy_route") == "large":
+            cost += COST_LARGE
+            route_large += 1
+        else:
+            cost += COST_SMALL
+            if not r.get("large_skipped", True):
+                cost += COST_LARGE
+                fallback += 1
+    return {"pass": succ / n, "cost": cost / n, "n": n,
+            "route_large": route_large, "fallback": fallback}
 
 
-def emit_markdown(cycles: list[dict], out: Path, heldout: dict | None = None) -> None:
-    if not cycles:
-        out.write_text("# No cycle data found.\n")
-        return
+def fourarm_stats(rows: list[dict]) -> dict:
+    """From the force-both ablation traces: always-large / always-small+skills /
+    pre-router (no fallback). Cascade is supplied separately (deployed)."""
+    n = len(rows)
+    if not n:
+        return {}
+    large = sum(1 for r in rows if r.get("large_success")) / n
+    small = sum(1 for r in rows if r.get("small_success")) / n
+    pr = prc = 0.0
+    for r in rows:
+        if r.get("policy_route") == "large":
+            pr += 1 if r.get("large_success") else 0
+            prc += COST_LARGE
+        else:
+            pr += 1 if r.get("small_success") else 0
+            prc += COST_SMALL
+    return {"large_pass": large, "small_pass": small,
+            "prerouter_pass": pr / n, "prerouter_cost": prc / n, "n": n}
 
-    lines = ["# Final ablation table", "",
-             f"Cycles: **{len(cycles)}**  |  "
-             f"Bench: **{cycles[0].get('bench', 'unknown')}**  |  "
-             f"Model: **{cycles[0].get('model_config', 'unknown')}**  |  "
-             f"Schedule: **{cycles[0].get('schedule', 'SLR')}**",
+
+def _pct(x):
+    return f"{x:.1%}" if isinstance(x, (int, float)) else "—"
+
+
+def emit_markdown(exp_dir: Path, n_cycles: int, out: Path) -> None:
+    cyc_traces = [_load(exp_dir / f"cycle_{c}" / "heldout" / "traces.jsonl")
+                  for c in range(n_cycles)]
+    final = _load(exp_dir / "heldout_eval" / "traces.jsonl")
+    last = next((c for c in range(n_cycles - 1, -1, -1) if cyc_traces[c]), None)
+
+    lines = ["# Final ablation table — HumanEval + MBPP (held-out test), split by dataset",
              "",
-             "Results are split into the **training split** (used to evolve "
-             "skills/router/adapter; routing is evaluated in-sample so it is "
-             "optimistic) and the **held-out test split** (the honest "
-             "generalization estimate).",
-             ""]
+             "Per-cycle = **deployed end-to-end system** (learned router + that cycle's "
+             "SFT adapter; the large model runs only on the router's large picks and as "
+             "a fallback when the routed-small model fails). Cost is normalized to "
+             "always-large (small:large = 1:10).", ""]
 
-    # ── TRAINING split ──────────────────────────────────────────────────────
-    lines += [f"## Training split — final cycle (cycle {len(cycles)-1})", ""]
-    lines += _four_arm_table(cycles[-1])
+    for dname, ntag in (("HumanEval", "82"), ("MBPP", "500")):
+        lines += [f"## {dname} (held-out test ≈ {ntag} tasks)", "",
+                  "### Per-cycle deployed cascade",
+                  "| Cycle | Task pass | Cost vs large | Routed→large | Fallback |",
+                  "|---:|---:|---:|---:|---:|"]
+        for c in range(n_cycles):
+            s = cascade_stats(_by_dataset(cyc_traces[c])[dname]) if cyc_traces[c] else {}
+            lines.append(
+                f"| {c} | {_pct(s.get('pass'))} | {_pct(s.get('cost'))} "
+                f"| {s.get('route_large','—')} | {s.get('fallback','—')} |")
 
-    lines += ["", "## Training split — per-cycle progression (Full variant)", "",
-              "| Cycle | Routing Acc | Fallback | Task Pass | Cost vs Large |",
-              "|---:|---:|---:|---:|---:|"]
-    for i, c in enumerate(cycles):
-        m = _safe_get(c, "variants", "full", default={})
-        lines.append(
-            f"| {i} "
-            f"| {m.get('routing_acc', 0):.2%} "
-            f"| {m.get('fallback', 0):.2%} "
-            f"| {m.get('task_pass', 0):.2%} "
-            f"| {m.get('cost_vs_large', 0):.2%} |"
-        )
+        # four-arm at the final cycle: 3 arms from force-both, cascade from deployed
+        fa = fourarm_stats(_by_dataset(final)[dname]) if final else {}
+        casc = cascade_stats(_by_dataset(cyc_traces[last])[dname]) if last is not None else {}
+        lines += ["", "### Final four-arm (held-out test)",
+                  "| System arm | Task pass | Cost vs large |",
+                  "|---|---:|---:|",
+                  f"| Always-large (GPT-5.5) | {_pct(fa.get('large_pass'))} | 100.0% |",
+                  f"| Always-small + Skills | {_pct(fa.get('small_pass'))} | 10.0% |",
+                  f"| Pre-router (no fallback) | {_pct(fa.get('prerouter_pass'))} | {_pct(fa.get('prerouter_cost'))} |",
+                  f"| **Cascade (router + fallback)** | **{_pct(casc.get('pass'))}** | **{_pct(casc.get('cost'))}** |",
+                  ""]
 
-    # ── Held-out TEST split ─────────────────────────────────────────────────
-    lines += ["", "## Held-out TEST split — final cycle (router trained on train, evaluated here)", ""]
-    if heldout is not None:
-        lines += _four_arm_table(heldout)
-    else:
-        lines += ["_No held-out eval found (run with `RUN_HELDOUT_EVAL=1`)._"]
-
-    lines += ["", "## Baseline reference (HumanEval × 1.5B, main branch 2026-05-09)", "",
-              "| System | Routing Acc | Task Pass |",
-              "|---|---:|---:|",
-              "| Base | 68.28%| 47%|",
-              "| + Skills | 69.46%| 47%|",
-              "| + Router | **93.04%**  | 47%|",
-              "| Full | **93.04%**  | **49%**  |",
-              ""]
-    out.write_text("\n".join(lines))
+    out.write_text("\n".join(lines) + "\n")
 
 
-def emit_plot(cycles: list[dict], out: Path) -> None:
+def emit_plot(exp_dir: Path, n_cycles: int, out: Path) -> None:
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -136,25 +143,19 @@ def emit_plot(cycles: list[dict], out: Path) -> None:
     except ImportError:
         print("[aggregate] matplotlib not installed, skipping plot", file=sys.stderr)
         return
-    if not cycles:
-        return
-    x = list(range(len(cycles)))
+    cyc = [_load(exp_dir / f"cycle_{c}" / "heldout" / "traces.jsonl") for c in range(n_cycles)]
+    x = list(range(n_cycles))
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 6), sharex=True)
-    for v in VARIANT_ORDER:
-        acc = [_safe_get(c, "variants", v, "routing_acc", default=0) for c in cycles]
-        passes = [_safe_get(c, "variants", v, "task_pass", default=0) for c in cycles]
-        ax1.plot(x, acc, marker="o", label=VARIANT_LABEL[v])
-        ax2.plot(x, passes, marker="o", label=VARIANT_LABEL[v])
-    ax1.set_ylabel("Routing accuracy")
-    ax1.grid(True, alpha=0.3)
-    ax1.legend(fontsize=8, loc="lower right")
-    ax2.set_ylabel("Task pass rate")
-    ax2.set_xlabel("Cycle")
-    ax2.grid(True, alpha=0.3)
-    fig.suptitle(f"Multi-cycle iteration  |  schedule={cycles[0].get('schedule', 'SLR')}")
-    fig.tight_layout()
-    fig.savefig(out, dpi=120)
-    plt.close(fig)
+    for dname, mk in (("HumanEval", "o"), ("MBPP", "s")):
+        p = [cascade_stats(_by_dataset(cyc[c])[dname]).get("pass") if cyc[c] else None for c in x]
+        co = [cascade_stats(_by_dataset(cyc[c])[dname]).get("cost") if cyc[c] else None for c in x]
+        ax1.plot(x, p, marker=mk, label=f"{dname} cascade pass")
+        ax2.plot(x, co, marker=mk, label=f"{dname} cost")
+    ax1.set_ylabel("Cascade task pass"); ax1.grid(True, alpha=0.3); ax1.legend(fontsize=9)
+    ax2.set_ylabel("Cost vs always-large"); ax2.set_xlabel("Cycle")
+    ax2.grid(True, alpha=0.3); ax2.legend(fontsize=9)
+    fig.suptitle("MERA deployed cascade by dataset (held-out test)")
+    fig.tight_layout(); fig.savefig(out, dpi=120); plt.close(fig)
 
 
 def main() -> int:
@@ -164,19 +165,11 @@ def main() -> int:
     ap.add_argument("--output-md", required=True)
     ap.add_argument("--output-png", required=True)
     args = ap.parse_args()
-
     exp_dir = Path(args.experiment_dir)
-    cycles = load_cycles(exp_dir, args.n_cycles)
-    heldout = load_heldout(exp_dir)
-
-    md_path = Path(args.output_md)
-    png_path = Path(args.output_png)
-    md_path.parent.mkdir(parents=True, exist_ok=True)
-
-    emit_markdown(cycles, md_path, heldout)
-    emit_plot(cycles, png_path)
-    print(f"[aggregate] wrote {md_path}", file=sys.stderr)
-    print(f"[aggregate] wrote {png_path}", file=sys.stderr)
+    md = Path(args.output_md); md.parent.mkdir(parents=True, exist_ok=True)
+    emit_markdown(exp_dir, args.n_cycles, md)
+    emit_plot(exp_dir, args.n_cycles, Path(args.output_png))
+    print(f"[aggregate] wrote {md}", file=sys.stderr)
     return 0
 
 

@@ -119,6 +119,7 @@ def grpo_update(model, tok, examples, args):
 
     model.train()
     step = 0
+    nan_skips = 0
     for epoch in range(args.epochs):
         optim.zero_grad()
         pending = 0  # micro-batches with grads not yet applied
@@ -154,6 +155,18 @@ def grpo_update(model, tok, examples, args):
                 seq = (per_tok * m).sum(dim=1) / m.sum(dim=1).clamp(min=1.0)
                 loss = seq.mean()
 
+            # Guard: a non-finite loss (e.g. bf16 padded-token logits when
+            # batch_size>1 — nan*0 survives the completion mask) would, once
+            # back-propagated, poison every weight via optim.step(). Skip the
+            # micro-batch instead. The real fix is batch_size=1 (no padding);
+            # this is defence-in-depth so one bad batch can't nan the run.
+            if not torch.isfinite(loss):
+                nan_skips += 1
+                if (bi + 1) == n_batches and pending > 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        [p for p in model.parameters() if p.requires_grad], 1.0)
+                    optim.step(); optim.zero_grad(); pending = 0; step += 1
+                continue
             # Scale by 1/grad_accum so the accumulated grad ≈ mean over the
             # effective batch (not the sum), keeping the LR meaning unchanged.
             (loss / grad_accum).backward()
@@ -171,4 +184,7 @@ def grpo_update(model, tok, examples, args):
                     print(f"[grpo] epoch={epoch} step={step} "
                           f"loss={loss.item():.4f} mean_adv={adv.mean().item():+.3f} "
                           f"(grad_accum={grad_accum})", flush=True)
+    if nan_skips:
+        print(f"[grpo] WARNING skipped {nan_skips} non-finite-loss micro-batches "
+              f"(use GRPO_BATCH_SIZE=1 to avoid bf16 padding nans)", flush=True)
     return step

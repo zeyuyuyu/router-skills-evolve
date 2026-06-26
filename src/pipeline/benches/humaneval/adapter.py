@@ -194,7 +194,7 @@ class Adapter:
     # ----------------------------------------------------------- run pair
     def run_task_pair(self, task: dict, small_model: str, large_model: str,
                       cycle: int, force_both: bool = False,
-                      skillbook=None) -> dict:
+                      skillbook=None, route_hint: str | None = None) -> dict:
         sig = _extract_signature(task.get("prompt", ""))
         # Look up distilled procedure for this cluster (small model only).
         # Mirrors the SFT training format so the fine-tuned model sees the same
@@ -219,7 +219,14 @@ class Adapter:
         large_proc = "" if os.environ.get("LARGE_USE_SKILLS") == "0" else procedure
         s_ok, s_code, s_turns = self._gen_and_test(small_model, task, procedure=procedure)
         large_skipped = False
-        if s_ok and not force_both:
+        # Run the large model when: force_both (oracle), OR the small model failed
+        # (teacher demo / deployed fallback), OR the router routed THIS task to
+        # large (route_hint). Skip it only when the policy keeps the task on the
+        # small model AND the small model already passed — the one case where the
+        # large outcome can never change the deployed result. This keeps gpt-5.5
+        # off the easy, small-solved tasks without ever leaving policy_final
+        # unknown. route_hint=None (cycle 0 / no router) reduces to small-on-pass.
+        if s_ok and not force_both and route_hint != "large":
             l_ok, l_code, l_turns, large_skipped = False, "", [], True
             decision = "probe:small->small_OK"
             final_model, final_success = small_model, True
