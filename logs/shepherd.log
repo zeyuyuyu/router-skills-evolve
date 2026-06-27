@@ -192,3 +192,4 @@ DONE: actions=none | FAILED: A800 unreachable (persistent, 6th+ consecutive tick
 STATUS: FAILED — A800 (117.74.66.181:50507) unreachable. SSH connection timed out on both attempts (ConnectTimeout=15s, ConnectTimeout=20s).
 ACTIONS TAKEN: none (cannot read state.json, cannot assess experiments).
 RECOMMENDATION: Verify A800 is powered on and the SSH port 50507 is accessible. Check for network outage or firewall change. If machine is down, restart vLLM serve + orchestrator cron manually once recovered.
+[2026-06-27T10:03:28Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: TCP connection timed out after 10s. No state read, no actions taken. Manual check required.
