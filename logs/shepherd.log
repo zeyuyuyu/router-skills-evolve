@@ -207,3 +207,4 @@ RECOMMENDATION: Verify A800 is powered on and the SSH port 50507 is accessible. 
   TCP connect to 117.74.66.181:50507 timed out after 10s. Could not read state.json, nvidia-smi, or recent results.
   No actions taken (cannot act without state). Recommend checking: (1) A800 power/network, (2) SSH daemon on port 50507, (3) firewall rules from this environment.
   DONE: actions=none (A800 unreachable)
+[2026-06-29T08:04:44Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s. No state read, no actions taken. openssh-client was absent in container (now installed); network to A800 remains the blocker. Manual investigation required. DONE: actions=none (A800 unreachable)
