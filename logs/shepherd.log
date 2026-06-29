@@ -202,3 +202,4 @@ RECOMMENDATION: Verify A800 is powered on and the SSH port 50507 is accessible. 
   SSH binary also unavailable (openssh-client 404 from apt mirror).
   Actions taken: none (cannot read state.json, cannot SSH-execute anything).
   Resolution: check A800 network connectivity / firewall for SSH port 50507; verify server is up.
+[2026-06-29T02:03:36Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. sshpass installed but SSH connection rejected (timeout). All shepherd checks (queue/stall/results/disk/artifacts) skipped. Recommend verifying network policy for this remote execution environment or checking if A800 is down.
