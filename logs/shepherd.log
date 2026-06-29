@@ -203,3 +203,7 @@ RECOMMENDATION: Verify A800 is powered on and the SSH port 50507 is accessible. 
   Actions taken: none (cannot read state.json, cannot SSH-execute anything).
   Resolution: check A800 network connectivity / firewall for SSH port 50507; verify server is up.
 [2026-06-29T02:03:36Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. sshpass installed but SSH connection rejected (timeout). All shepherd checks (queue/stall/results/disk/artifacts) skipped. Recommend verifying network policy for this remote execution environment or checking if A800 is down.
+[2026-06-29T04:03:25Z] SHEPHERD RUN — A800 UNREACHABLE
+  TCP connect to 117.74.66.181:50507 timed out after 10s. Could not read state.json, nvidia-smi, or recent results.
+  No actions taken (cannot act without state). Recommend checking: (1) A800 power/network, (2) SSH daemon on port 50507, (3) firewall rules from this environment.
+  DONE: actions=none (A800 unreachable)
