@@ -216,3 +216,7 @@ Reason: A800 (117.74.66.181:50507) unreachable — SSH TCP connection timed out 
 
 [2026-06-30T12:05:07Z] SHEPHERD RUN — FAILED
 A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 20s. TCP probe also failed (curl exit 28). Cannot read state.json, GPU util, experiment results, or disk usage. No actions taken. All STEP 2 checks (queue starvation, stuck experiments, surprising results, disk pressure, routine health) skipped. Next scheduled shepherd run should re-attempt connectivity. If machine remains down, manual intervention may be needed.
+[2026-06-30T18:04:49Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s.
+  Actions taken: none (cannot read state, cannot modify remote files).
+  Next step: verify A800 network/power and rerun shepherd when accessible.
