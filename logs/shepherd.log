@@ -213,3 +213,6 @@ RECOMMENDATION: Verify A800 is powered on and the SSH port 50507 is accessible. 
 
 [2026-06-30T08:03:54Z] SHEPHERD RUN — FAILED
 Reason: A800 (117.74.66.181:50507) unreachable — SSH TCP connection timed out (30s). Cannot read state.json, check running experiments, GPU util, or disk pressure. No actions taken. Remote execution environment may lack outbound access to port 50507. User should verify A800 is up and that the network policy allows SSH from Claude Code cloud containers.
+
+[2026-06-30T12:05:07Z] SHEPHERD RUN — FAILED
+A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 20s. TCP probe also failed (curl exit 28). Cannot read state.json, GPU util, experiment results, or disk usage. No actions taken. All STEP 2 checks (queue starvation, stuck experiments, surprising results, disk pressure, routine health) skipped. Next scheduled shepherd run should re-attempt connectivity. If machine remains down, manual intervention may be needed.
