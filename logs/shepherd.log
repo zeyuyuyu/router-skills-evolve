@@ -220,3 +220,4 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 20s. TCP 
   Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s.
   Actions taken: none (cannot read state, cannot modify remote files).
   Next step: verify A800 network/power and rerun shepherd when accessible.
+[2026-06-30 20:05:32 UTC] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 2 attempts (20s timeout each). No state read, no actions taken. Manual check required.
