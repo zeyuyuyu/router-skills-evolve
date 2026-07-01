@@ -1,0 +1,8 @@
+[2026-07-01T02:05:16Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable from cloud container — TCP connection timed out.
+  No state.json could be fetched; no actions taken.
+  Recommendation: Check if the remote execution environment's network policy permits outbound
+  SSH to 117.74.66.181:50507. If running shepherd from Claude Code on the web, the cloud
+  container may have restricted outbound IPs. Consider running shepherd from a machine with
+  direct network access to the A800, or whitelist this container's egress IP on the A800 firewall.
+  Actions: none
