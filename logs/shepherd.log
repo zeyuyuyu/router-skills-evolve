@@ -228,3 +228,4 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 20s. TCP 
   sshpass installed from apt but openssh-client was missing; installed both. Still no connection.
   Actions taken: none (cannot SSH = cannot read state, check PIDs, check disk, or write remote log).
   Recommendation: verify A800 network/firewall, VPN tunnel, or port 50507 availability.
+[2026-07-02T00:00:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state could be read, no actions taken. Recommend checking: (1) host is powered on, (2) port 50507 is accessible from this network, (3) network policy allows outbound SSH. No queue checks, experiment health checks, or disk checks performed. Will retry next shepherd cycle.
