@@ -1,5 +1,5 @@
 # MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale
-<!-- paper.md v3 — auto-updated 2026-06-19 by weekly paper pipeline -->
+<!-- paper.md v4 — auto-updated 2026-07-03 by weekly paper pipeline -->
 
 **Zeyu Wang**  
 0G.ai / Institute of Artificial Intelligence  
@@ -61,8 +61,16 @@ We contribute:
    rewards, yielding +2pp absolute improvement for Qwen2.5-Coder-1.5B on MBPP.
 4. **End-to-end ablation** (§6): a unified evaluation showing the contribution of each
    component over 848 routing examples and 100 held-out MBPP tasks.
-5. **Failure mode analysis** (§7): identification of winner-takes-all GRPO collapse as the
-   binding constraint on model improvement, with a cooperative policy optimization remedy.
+5. **Multi-cycle MERA evolution** (§5.3): 4-cycle DAPO joint evolution on HumanEval showing
+   skills arm improvement (70.7%→75.6%) and identifying 52.4% zero-variance groups as the
+   primary improvement bottleneck.
+6. **Failure mode analysis** (§7): identification of winner-takes-all GRPO collapse as the
+   binding constraint on model improvement, with theoretical grounding from reward-variance-scaled
+   RFT regularization [arxiv:2507.05386].
+
+Tracks A (HumanEval skills routing), B (MBPP GRPO), C (tau2 joint evolution), and D
+(4-cycle HumanEval DAPO) are ablation studies of MERA components at different
+scales and modalities — not simultaneous deployments of a single system.
 
 ---
 
@@ -91,16 +99,21 @@ to reduce zero-variance collapse. RECRL [Yin et al., 2026; arxiv:2605.00433] app
 difficulty sampling to concentrate gradient on Goldilocks-zone problems (+3.1pp HumanEval on
 Qwen2.5-Coder-1.5B vs. flat GRPO). EGCA [arxiv:2603.16158] localizes GRPO advantage to
 causally responsible token spans via execution-trace divergence (+1.5pp MBPP). TAROT
-[arxiv:2602.15449] introduces intra-problem test-tier curriculum for code RL. We quantify
-zero-variance collapse in our experiments: 73% at G=4 (MBPP) and 52.4% at G=8 DAPO
-(HumanEval multi-turn repair), directly motivating these remedies.
+[arxiv:2602.15449] introduces intra-problem test-tier curriculum for code RL. GMPO
+[arxiv:2507.20673] replaces GRPO's arithmetic-mean token aggregation with a geometric mean,
+bounding gradient distortion from outlier importance ratios at syntactically critical positions
+(+4.1% on math benchmarks). We quantify zero-variance collapse in our experiments: 73% at G=4
+(MBPP) and 52.4% at G=8 DAPO (HumanEval multi-turn repair), directly motivating these remedies.
 
 ### Continual Learning of LLMs
 
 Plasticity loss [Lyle et al., 2023; arxiv:2605.12484] causes degradation when LLMs are
 trained over long RL horizons. We observe this empirically: 400-task GRPO degrades
 (47→46) while 200-task GRPO improves (47→49), consistent with the entropy-collapse
-hypothesis.
+hypothesis. Recent work [arxiv:2507.05386] formalizes why: RFT's implicit regularization is
+theoretically proportional to within-group reward variance, meaning zero-variance groups
+provably receive zero gradient updates — confirming the silent-group failure mode we
+empirically identify.
 
 ---
 
@@ -265,18 +278,25 @@ all-pass groups ([1,1,1,1]). GRPO advantage normalization (A = (r - μ)/σ) prod
 NaN on these groups, clipped to zero. Only the 27% mixed-outcome tasks provide non-zero
 gradient. Scaling to G=8 with DAPO dynamic sampling on HumanEval reduces zero-variance
 to **52.4%** (43/82 groups; see §5.3), confirming DAPO mitigates but does not eliminate
-the bottleneck.
+the bottleneck. Recent theoretical work [arxiv:2507.05386] formalizes this: RFT's
+implicit regularization is proportional to within-group reward variance — when variance
+is zero, parameter updates are provably absent. The 52.4% collapsed groups contribute
+**neither learning nor forgetting**, and their selective masking would leave training
+dynamics unchanged while eliminating 52.4% of rollout compute waste.
 
 **Winner-takes-all collapse (within mixed groups):** On mixed-outcome tasks, GRPO reinforces
 the single passing rollout until it dominates all 4 rollouts in subsequent steps. The group
 advantage then collapses toward zero. The model converges to a single solution mode per task
 rather than exploring diverse valid approaches.
 
-These failure modes motivate two remedies currently in the experiment queue:
+These failure modes motivate three remedies currently in the experiment queue:
 - **REINFORCE++ EMA** [Zeng et al., 2025]: global EMA baseline converts all-fail to −0.47
   signal and all-pass to +0.53 signal, providing gradient on 73% of previously silent groups.
 - **GCPO** [Chen et al., 2026]: team-level coverage credit rewards rollouts with novel AST
   structure, preventing winner-takes-all convergence on mixed groups.
+- **GMPO** [arxiv:2507.20673]: geometric-mean token aggregation bounds gradient distortion
+  from outlier syntactic tokens in the 47.6% of non-collapsed groups — orthogonal to
+  zero-variance mitigation, targeting update quality rather than group coverage.
 
 ### 5.5 Agentic Extension: Tau2 Joint Evolution with 35B
 
@@ -380,6 +400,9 @@ Key findings:
 - **SkillBook provides modest but real routing gain** (+1.18pp accuracy, –5.07pp fallback).
 - **LLM GRPO provides independent code quality gain** (+2pp pass@1) orthogonal to routing.
 - The full system achieves both the best routing quality and the best code quality.
+- **Full=Router routing result explained:** The routing accuracy of Full equals Router
+  because routing is a prompt-level decision; the GRPO adapter improves code accuracy
+  on the tasks it handles but does not shift which prompts require large-model routing.
 
 ---
 
@@ -490,6 +513,12 @@ Divergences for LLM Reasoning (ProbL2-GRPO). Feb 2026.
 [arxiv:2605.09608] Geometry Conflict: Explaining and Controlling Forgetting in LLM
 Continual Post-Training. Wang et al., May 2026.
 
+[arxiv:2507.05386] Reinforcement Fine-Tuning Naturally Mitigates Forgetting in Continual
+Post-Training. Anonymous, July 2026.
+
+[arxiv:2507.20673] Geometric-Mean Policy Optimization (GMPO). Zhao, Yuzhong et al.,
+July 2026.
+
 [tau2-bench] tau2-bench: A Multi-Domain Agentic Customer Service Benchmark. Stage-2
 data and eval protocol. Internal results reported in §5.4 (primary seed, 2026-05-31).
 
@@ -515,5 +544,5 @@ repository. Key paths and configs:
 - **Pending experiment queue:** `auto_research/pending_queue_update.py`
   (45 experiments, ready to apply on A800 restoration)
 
-A800 GPU server: 117.74.66.181:50507 (offline since 2026-05-14; 45 experiments queued).
+A800 GPU server: 117.74.66.181:50507 (offline since 2026-05-14; ~109 experiments queued).
 Tau2 training server: 8× H200, CUDA 13.0 (online; tau2 training and eval active).

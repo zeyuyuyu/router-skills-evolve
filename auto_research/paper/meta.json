@@ -1,5 +1,5 @@
 {
-  "paper_version": 3,
+  "paper_version": 4,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
   "secondary_venue": null,
@@ -14,15 +14,15 @@
     "writing": 7
   },
   "composite": 6.0,
-  "status": "provisional — A800 offline day 36; GRPO results n=1 seed; 4-cycle HumanEval DAPO results added (skills 70.7%→75.6%, Full=Router, 52.4% zero-variance); tau2 held-out router overfitting remains unresolved",
-  "last_updated": "2026-06-19",
+  "status": "provisional — A800 offline day 50; GRPO results n=1 seed; §7 theoretical grounding updated (arxiv:2507.05386, GMPO arxiv:2507.20673); multi-track framing added §1; Full=Router mechanism clarified §6; AAAI deadline 43 days — CRITICAL WINDOW",
+  "last_updated": "2026-07-03",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "queue_size": 81,
+  "queue_size": 113,
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
     "bib": "auto_research/paper/references.bib",
-    "review": "auto_research/paper/reviews/review-2026-06-19.md"
+    "review": "auto_research/paper/reviews/review-2026-07-03.md"
   },
   "strongest_claims": {
     "skills_routing": "99% accuracy, 83% cost reduction on HumanEval 164",
@@ -31,20 +31,29 @@
     "he_4cycle_skills_arm": "Skills arm improves 70.73%->75.61% over 4 DAPO cycles on HumanEval",
     "he_4cycle_routing": "Full system 92.68% routing accuracy at 27.56% cost (cycle 3)",
     "tau2_joint_peak": "89.19% task pass at 22.16% of always-large cost (Cycle 1, joint run)",
-    "tau2_small_dominates": "35B MoE 80% > GPT-5.4 71% on held-out tau2 tasks"
+    "tau2_small_dominates": "35B MoE 80% > GPT-5.4 71% on held-out tau2 tasks",
+    "zero_variance_theory": "52.4% zero-variance DAPO groups = provably zero gradient (arxiv:2507.05386)"
   },
-  "new_findings_2026_06_19": {
-    "he_4cycle_dapo": "4-cycle HumanEval MERA (DAPO G=8): skills arm 70.73%->75.61%, Full=Router at cycle 3",
-    "zero_variance_dapo_g8": "52.4% (43/82) zero-variance groups at G=8 DAPO on HumanEval — bottleneck quantified",
-    "dapo_vs_standard": "DAPO G=8 reduces zero-variance from 73% (G=4 standard) to 52.4% — significant but incomplete",
-    "full_equals_router": "Full variant = Router variant at cycle 3 (92.68%) — GRPO cannot surpass router with 52.4% zero-variance"
+  "new_findings_2026_07_03": {
+    "rft_forgetting_theory": "arxiv:2507.05386 formally proves: RFT gradient ∝ reward variance → zero-variance groups are training no-ops. Theoretically grounds our 52.4% zero-variance finding.",
+    "gmpo_remedy": "arxiv:2507.20673 GMPO geometric mean bounding outlier gradient at syntax-critical tokens — orthogonal remedy for 47.6% non-collapsed groups.",
+    "tau2_sft_forgetting": "New connection: tau2 cycle oscillation (89.19%→70.27%) is consistent with SFT catastrophic forgetting (arxiv:2507.05386) — SFT not RFT used for tau2 adapter.",
+    "multitrack_framing": "Explicit §1 framing: Tracks A-D are ablation studies at different modalities/scales, not simultaneous deployments."
   },
   "critical_blockers": [
-    "EXP-038: multi-seed GRPO (n=3) to verify +2pp claim — blocked on A800",
+    "EXP-099: HumanEval 3-seed (n=3) to verify skills arm 75.61% claim — blocked on A800 (AAAI CRITICAL)",
+    "EXP-100: tau2 3-seed (n=3) for CI on all tau2 tables — blocked on A800 (AAAI CRITICAL)",
     "EXP-066: tau2 router regularization to fix held-out overfitting — blocked on A800",
-    "EXP-076: forgetting_eval cycle-3 grpo_adapter on MBPP — blocked on A800",
+    "EXP-080: multi-seed 4-cycle HumanEval validation — blocked on A800",
     "EXP-077: DAPO G=16 DDT to reduce 52.4% zero-variance — blocked on A800",
-    "EXP-080: multi-seed 4-cycle HumanEval validation — blocked on A800 (new this run)",
-    "EXP-081: zero-variance scaling curve G=4/8/16/32 — blocked on A800 (new this run)"
-  ]
+    "EXP-106: tau2 random-50% routing baseline — blocked on A800 (added this run, W5)",
+    "EXP-107: cross-domain router eval — blocked on A800 (added this run, W4)"
+  ],
+  "aaai_timeline_risk": {
+    "a800_offline_days": 50,
+    "days_to_deadline": 43,
+    "latest_a800_restore_for_minviable": "2026-07-13",
+    "latest_a800_restore_for_full": "2026-07-08",
+    "risk_level": "HIGH — escalate A800 connectivity to admin if not restored by July 10"
+  }
 }

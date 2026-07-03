@@ -1,5 +1,5 @@
 % MERA: Model Evolution and Routing with Skill Adaptation — AAAI 2027 submission
-% paper.tex — auto-generated 2026-06-19 by weekly pipeline
+% paper.tex — auto-updated 2026-07-03 by weekly pipeline (v4)
 % DO NOT edit the %% MANUAL-PIN blocks below.
 
 \documentclass[letterpaper]{article}
@@ -91,12 +91,20 @@ We contribute:
   Qwen2.5-Coder-1.5B.
 \item \textbf{End-to-end ablation} (\S\ref{sec:ablation}): unified evaluation isolating
   each component's contribution.
+\item \textbf{Multi-cycle MERA evolution} (\S\ref{sec:he4cyc}): 4-cycle DAPO joint
+  evolution on HumanEval showing skills arm improvement (70.7\%$\to$75.6\%) and
+  identifying 52.4\% zero-variance groups as the primary improvement bottleneck.
 \item \textbf{Failure mode analysis} (\S\ref{sec:analysis}): identification of
-  winner-takes-all collapse and 73\%-silent-group failure as the binding GRPO constraints.
+  winner-takes-all collapse and 73\%-silent-group failure as the binding GRPO constraints,
+  with theoretical grounding from reward-variance-scaled regularization~\cite{rftforgetting2026}.
 \item \textbf{Agentic extension} (\S\ref{sec:tau2}): 4-cycle joint evolution on tau2-bench
   showing the domain-specialized small model surpasses the frontier model on held-out
   tasks (80\% vs.\ 71\%), and identifying router overfitting in agentic settings.
 \end{enumerate}
+
+Tracks A (HumanEval skills routing), B (MBPP GRPO), C (tau2 joint evolution), and D
+(4-cycle HumanEval DAPO) are ablation studies of MERA components at different
+scales and modalities---not simultaneous deployments of a single system.
 
 %% SECTION 2 %%
 \section{Related Work}
@@ -121,12 +129,18 @@ concentrate gradient on Goldilocks-zone problems.
 EGCA~\cite{egca2026} localizes GRPO advantage to causally responsible token spans via
 execution-trace divergence, yielding $+1.5$pp MBPP.
 TAROT~\cite{tarot2026} introduces intra-problem test-tier curriculum for code RL.
+GMPO~\cite{gmpo2026} replaces GRPO's arithmetic-mean token aggregation with a
+geometric mean, bounding gradient distortion from outlier importance ratios at
+syntactically critical positions and achieving $+4.1\%$ on math benchmarks.
 We apply GRPO to a 1.5B code model and quantify zero-variance collapse: 73\% at
 $G{=}4$ (MBPP), reducing to 52.4\% at $G{=}8$ DAPO (HumanEval).
 
 \paragraph{Continual LLM Adaptation.}
 Plasticity loss~\cite{plasticity2026} causes degradation in long RL training horizons.
 We observe this empirically: 400-task GRPO degrades while 200-task GRPO improves.
+Recent work~\cite{rftforgetting2026} formalizes why: RFT's implicit regularization
+is theoretically scaled by within-group reward variance, meaning zero-variance
+groups provably receive zero gradient updates---confirming the silent-group failure mode.
 
 %% SECTION 3 %%
 \section{SkillBook: Signature-Based Routing Evolution}
@@ -312,7 +326,11 @@ Full & \checkmark & \checkmark & \checkmark & \textbf{93.0\%} & \textbf{2.1\%} &
 \end{tabular}
 \end{table}
 
-Router training is the single largest contributor; LLM GRPO adds orthogonal code quality gain.
+Router training is the single largest contributor; LLM GRPO adds orthogonal code quality gain
+(+2pp MBPP pass@1).
+The Full=Router routing result holds because routing quality is a \emph{prompt-level} decision:
+the GRPO adapter improves code accuracy on the tasks it handles but does not shift the
+distribution of prompts requiring large-model routing.
 
 %% SECTION 6.5 — AGENTIC EXTENSION %%
 \section{Agentic Extension: Tau2-Bench Joint Evolution}
@@ -392,6 +410,11 @@ with non-zero gradient. Scaling to $G{=}8$ with DAPO dynamic sampling on HumanEv
 reduces zero-variance to \textbf{52.4\%} (43/82 groups; §\ref{sec:he4cyc}): DAPO
 mitigates but does not eliminate the bottleneck. Only 39 of 82 HumanEval training tasks
 provide informative gradient at $G{=}8$ DAPO.
+Recent theoretical analysis~\cite{rftforgetting2026} confirms this formally: RFT's
+implicit regularization is proportional to within-group reward variance; when variance
+is zero, parameter updates are provably absent. The 52.4\% collapsed groups therefore
+contribute \emph{neither learning nor forgetting}---they are pure rollout compute waste,
+and their removal (selective masking) would not change training dynamics.
 
 \paragraph{Winner-Takes-All Collapse.}
 On mixed-outcome tasks, GRPO reinforces the single passing rollout until it dominates
@@ -406,6 +429,9 @@ GCPO~\cite{chen2026gcpo} uses team-level AST-diversity coverage credit to preven
 winner-takes-all collapse.
 RECRL~\cite{recrl2026} and MicroCoder~\cite{microcoder2026} address zero-variance via
 adaptive curriculum sampling and diversity-determined temperature respectively.
+GMPO~\cite{gmpo2026} targets the \emph{complementary} problem: improving update quality
+within the 47.6\% non-collapsed groups by replacing arithmetic-mean token aggregation
+with a geometric mean, bounding gradient distortion from outlier syntactic tokens.
 These are queued as priority experiments pending A800 restoration.
 
 %% SECTION 8 %%
