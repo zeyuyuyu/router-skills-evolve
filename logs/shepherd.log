@@ -235,3 +235,4 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 20s. TCP 
   The remote execution environment's network policy blocks outbound port 50507 to this host.
   No state read, no actions taken. All pipeline monitoring skipped this cycle.
   ACTION: Manual check required. Verify A800 is up and port 50507 is open.
+[2026-07-04T00:00:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) is unreachable from the cloud execution environment — TCP connection timed out after 10s. No state was read; no actions were taken. Network policy for this session blocks outbound SSH to the A800 host. Recommend running the shepherd from a machine with direct access, or opening the port in the environment's network policy. Actions=none.
