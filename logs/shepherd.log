@@ -249,3 +249,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
 [2026-07-06T$(date -u +%H:%M:%SZ)] SHEPHERD RUN — FAILED
   Reason: openssh-client not available in remote execution container (apt 404); sshpass installed but ssh binary absent. A800 (117.74.66.181:50507) could not be reached.
   Actions taken: none — per protocol, writing failure to log and exiting.
+[2026-07-06 10:05:18 UTC] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable (Connection timed out after 15s). No state read, no actions taken. Remote shepherd.log not updated. Will retry on next scheduled run.
