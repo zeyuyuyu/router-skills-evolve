@@ -242,3 +242,10 @@ A800 (117.74.66.181:50507) unreachable: SSH connection timed out after 20s. TCP 
 [2026-07-05T08:05:26Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable from Claude Code remote exec environment. Port 50507 and port 22 both filtered/closed. SSH client not installed (openssh-client 404 during install). No state read, no actions taken. Manual check required.
 
 [2026-07-05T08:06:00Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable, day ~53. TCP probe on ports 50507 and 22 both filtered. paramiko SSH timed out. Cloud network policy blocks outbound SSH to this IP unchanged. State.json unread, no experiment results checked, no GPU util. Repo shows EXP-108 (sign-advantage GRPO) + EXP-109 (MOPD peer-conditioned SFT) queued today — frozen on A800. All steps skipped. No notification sent (same persistent failure, no new actionable delta). Actions=none.
+[2026-07-06T04:05:08Z] SHEPHERD RUN FAILED
+Reason: openssh-client not available in remote execution container (404 on apt fetch); sshpass installed but ssh binary missing. Cannot reach A800 (117.74.66.181:50507).
+Actions: none — per protocol, writing failure to shepherd.log and exiting.
+
+[2026-07-06T$(date -u +%H:%M:%SZ)] SHEPHERD RUN — FAILED
+  Reason: openssh-client not available in remote execution container (apt 404); sshpass installed but ssh binary absent. A800 (117.74.66.181:50507) could not be reached.
+  Actions taken: none — per protocol, writing failure to log and exiting.
