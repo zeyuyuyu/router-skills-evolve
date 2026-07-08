@@ -259,3 +259,13 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   DIAGNOSIS: A800 is either down, behind a firewall blocking outbound from this remote env, or the sshpass binary was unavailable initially (resolved via apt). Network policy of this remote execution environment blocks arbitrary outbound SSH — only proxy-governed HTTPS is permitted.
   ACTIONS TAKEN: none (cannot reach host)
   STATUS: FAILED — A800 unreachable; no shepherd actions executed this cycle.
+
+[2026-07-08T04:05:33Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable from cloud execution environment.
+  TCP connect returned errno=11 (EAGAIN). sshpass installed but ssh client missing; 
+  paramiko also timed out. Network policy for this environment does not permit outbound 
+  SSH on port 50507.
+  Actions taken: none (cannot safely act without reading state.json).
+  Recommendation: Ensure A800 port 50507 is accessible from the cloud runner, or switch
+  shepherd to a runner with A800 network access.
+  DONE: FAILED
