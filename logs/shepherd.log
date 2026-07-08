@@ -291,3 +291,8 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   PUSH NOTIFICATION: not sent — user already alerted at 2026-07-07T14:06Z about 2-day stall; no new conditions.
   ACTIONS TAKEN: none (cannot reach A800; no novel alert).
   DONE: FAILED (A800 unreachable day ~55; idea-gen stalled 3d; no new conditions vs prior run)
+[2026-07-08T18:04:41Z] SHEPHERD RUN FAILED
+  Reason: No SSH client available in this execution environment (openssh-client missing, apt 404 errors prevent install).
+  A800 (117.74.66.181:50507) could not be reached.
+  Actions taken: none (cannot access remote state).
+  Recommendation: Ensure openssh-client is pre-installed in the shepherd execution environment or use key-based auth with a pre-configured SSH binary path.
