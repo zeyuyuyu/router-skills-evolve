@@ -275,3 +275,19 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   sshpass was not pre-installed (installed at runtime), but ssh client binary also absent; paramiko TCP likewise failed.
   Actions taken: none (cannot read state, cannot write shepherd.log on A800).
   Recommendation: Configure A800 network policy to allow direct SSH, or expose state.json via HTTPS endpoint accessible through the proxy (http://127.0.0.1:46577).
+[2026-07-08T16:06:00Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connect timed out (ConnectTimeout=15s).
+  Day ~55 of persistent SSH outage (since ~2026-05-14). Cloud network policy blocks outbound on port 50507.
+  STEP 1 SKIPPED: state.json, nvidia-smi, exp_*.result.json — all unreadable.
+  STEP 2 A-D SKIPPED: cannot act on remote state.
+  STEP 2E (local repo artifacts, 16:05 UTC):
+    - reports/ideas-2026-07-08.md: MISSING (expected fire 07:00 UTC; overdue 9h)
+    - reports/ideas-2026-07-07.md: MISSING
+    - reports/ideas-2026-07-06.md: MISSING
+    -> 3 consecutive missed idea-gen days (Jul 6, 7, 8); last successful: 2026-07-05
+    - pending_queue_update_2026_07_05.py is the last queue file (no 07-06..07-08)
+    - hotspots/2026-07-08.json: MISSING (expected fire 06:00 UTC; overdue 10h)
+    - paper/paper.md: last updated 2026-07-07 (1 day stale — within tolerance)
+  PUSH NOTIFICATION: not sent — user already alerted at 2026-07-07T14:06Z about 2-day stall; no new conditions.
+  ACTIONS TAKEN: none (cannot reach A800; no novel alert).
+  DONE: FAILED (A800 unreachable day ~55; idea-gen stalled 3d; no new conditions vs prior run)
