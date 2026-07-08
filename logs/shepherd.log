@@ -269,3 +269,9 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   Recommendation: Ensure A800 port 50507 is accessible from the cloud runner, or switch
   shepherd to a runner with A800 network access.
   DONE: FAILED
+[2026-07-08T14:06:15Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connect timed out.
+  Environment: Claude Code remote container; outbound SSH on non-standard ports is blocked by network policy.
+  sshpass was not pre-installed (installed at runtime), but ssh client binary also absent; paramiko TCP likewise failed.
+  Actions taken: none (cannot read state, cannot write shepherd.log on A800).
+  Recommendation: Configure A800 network policy to allow direct SSH, or expose state.json via HTTPS endpoint accessible through the proxy (http://127.0.0.1:46577).
