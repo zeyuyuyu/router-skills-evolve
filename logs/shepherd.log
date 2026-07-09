@@ -296,3 +296,21 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   A800 (117.74.66.181:50507) could not be reached.
   Actions taken: none (cannot access remote state).
   Recommendation: Ensure openssh-client is pre-installed in the shepherd execution environment or use key-based auth with a pre-configured SSH binary path.
+[2026-07-09T00:04Z] SHEPHERD RUN FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH TCP connect timed out (ConnectTimeout=15s).
+  sshpass (1.09-1) installed OK; openssh-client (9.6p1-3ubuntu13.16) installed OK (apt-get update succeeded this tick); TCP connect to 117.74.66.181:50507 timed out — cloud egress proxy blocks raw TCP on non-standard ports.
+  Day ~56 of persistent SSH outage (since ~2026-05-14).
+  STEP 1 SKIPPED: state.json, nvidia-smi, exp_*.result.json — all unreadable.
+  STEP 2 A-D SKIPPED: cannot act without remote state.
+  STEP 2E (local repo artifacts, 00:04 UTC 2026-07-09):
+    - reports/ideas-2026-07-09.md: NOT YET EXPECTED (fire 07:00 UTC; 7h remaining) — N/A
+    - reports/ideas-2026-07-08.md: MISSING (expected 07:00 UTC yesterday; overdue 17h)
+    - reports/ideas-2026-07-07.md: MISSING
+    - reports/ideas-2026-07-06.md: MISSING
+    -> 4 consecutive missed idea-gen days (Jul 6, 7, 8; and today Jul 9 TBD)
+    - Last successful idea-gen: 2026-07-05
+    - Last successful EXP queue: EXP-108/EXP-109 on 2026-07-05 (4 days ago)
+    - hotspots/2026-07-09.json: NOT YET EXPECTED (fire 06:00 UTC) — N/A
+  PUSH NOTIFICATION SENT: yes — escalation from 2-day stall (last notification 2026-07-07T14:06Z) to 4-day stall warrants alert.
+  ACTIONS TAKEN: none (remote inaccessible); push notification sent.
+  DONE: FAILED (A800 unreachable day ~56; idea-gen stalled 4 days; alert sent)
