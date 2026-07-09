@@ -314,3 +314,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   PUSH NOTIFICATION SENT: yes — escalation from 2-day stall (last notification 2026-07-07T14:06Z) to 4-day stall warrants alert.
   ACTIONS TAKEN: none (remote inaccessible); push notification sent.
   DONE: FAILED (A800 unreachable day ~56; idea-gen stalled 4 days; alert sent)
+[2026-07-09T20:05:14Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP timeout from remote execution environment. No state read; no actions taken. Network policy of cloud sandbox blocks outbound SSH to this host. Steps 2–4 skipped. Recommend running shepherd from a machine with direct A800 network access, or exposing state.json via an HTTP endpoint reachable from the cloud.
