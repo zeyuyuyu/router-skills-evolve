@@ -1,9 +1,9 @@
 {
-  "paper_version": 4,
+  "paper_version": 5,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
   "secondary_venue": null,
-  "rush_mode": false,
+  "rush_mode": true,
   "aaai_deadline": "2026-08-15",
   "emnlp_deadline": "2026-06-19",
   "neurips_deadline": "2026-05-23",
@@ -11,13 +11,13 @@
     "novelty": 6,
     "soundness": 4,
     "significance": 7,
-    "writing": 7
+    "writing": 8
   },
-  "composite": 6.0,
-  "status": "provisional — A800 offline day 50; GRPO results n=1 seed; §7 theoretical grounding updated (arxiv:2507.05386, GMPO arxiv:2507.20673); multi-track framing added §1; Full=Router mechanism clarified §6; AAAI deadline 43 days — CRITICAL WINDOW",
-  "last_updated": "2026-07-03",
+  "composite": 6.25,
+  "status": "provisional — A800 offline day 57; GRPO results n=1 seed; v5: W3/W6/W7/W8 writing fixes; +SRPO/sign-adv/DemoPSD related work; tau2 SFT-forgetting connection; AAAI deadline 36 days — RUSH MODE ACTIVE",
+  "last_updated": "2026-07-10",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "queue_size": 113,
+  "queue_size": 117,
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
@@ -50,10 +50,10 @@
     "EXP-107: cross-domain router eval — blocked on A800 (added this run, W4)"
   ],
   "aaai_timeline_risk": {
-    "a800_offline_days": 50,
-    "days_to_deadline": 43,
+    "a800_offline_days": 57,
+    "days_to_deadline": 36,
     "latest_a800_restore_for_minviable": "2026-07-13",
     "latest_a800_restore_for_full": "2026-07-08",
-    "risk_level": "HIGH — escalate A800 connectivity to admin if not restored by July 10"
+    "risk_level": "CRITICAL — A800 not restored by July 10 as previously planned; escalate immediately; submit with n=1 seed and SE bars if A800 down through July 20"
   }
 }

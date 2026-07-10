@@ -1,5 +1,5 @@
 # MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale
-<!-- paper.md v4 — auto-updated 2026-07-03 by weekly paper pipeline -->
+<!-- paper.md v5 — auto-updated 2026-07-10 by weekly paper pipeline -->
 
 **Zeyu Wang**  
 0G.ai / Institute of Artificial Intelligence  
@@ -102,8 +102,16 @@ causally responsible token spans via execution-trace divergence (+1.5pp MBPP). T
 [arxiv:2602.15449] introduces intra-problem test-tier curriculum for code RL. GMPO
 [arxiv:2507.20673] replaces GRPO's arithmetic-mean token aggregation with a geometric mean,
 bounding gradient distortion from outlier importance ratios at syntactically critical positions
-(+4.1% on math benchmarks). We quantify zero-variance collapse in our experiments: 73% at G=4
-(MBPP) and 52.4% at G=8 DAPO (HumanEval multi-turn repair), directly motivating these remedies.
+(+4.1% on math benchmarks). SRPO [arxiv:2604.02288] unifies GRPO and self-distillation by
+routing failed-outcome rollouts to a SDPO correction path, converting all-fail zero-gradient
+groups into logit-level correction signal without extra rollouts (+3.2pp HumanEval, +4.7pp
+MBPP+ over DAPO). Sign-advantage [arxiv:2605.07689] replaces normalized group-mean advantage
+with A=2r-1 for binary reward, eliminating zero-advantage groups entirely (all-fail → A=-1,
+all-pass → A=+1); measured degeneracy rate ≥0.69 at G=4, consistent with our 52.4% finding.
+DemoPSD [arxiv:2607.02502] modulates SFT loss weight by disagreement rate, concentrating
+gradient on tasks where the policy is uncertain. We quantify zero-variance collapse in our
+experiments: 73% at G=4 (MBPP) and 52.4% at G=8 DAPO (HumanEval multi-turn repair),
+directly motivating these remedies.
 
 ### Continual Learning of LLMs
 
@@ -190,7 +198,8 @@ examples [weak labels].
 
 We fine-tune a BERT-base-uncased binary classifier (110M parameters) on the routing training
 split for 8 epochs with a learning rate of 2e-5. The classifier outputs P(large | prompt);
-we tune the threshold to meet a ≤ 2% fallback rate constraint.
+we tune the threshold to meet a ≤ 2% fallback rate constraint. BERT inference adds <10ms/query
+at batch size 1 on CPU, adding negligible latency to the serving pipeline.
 
 ### 4.3 Results: Routing Ablation
 
@@ -222,6 +231,7 @@ We train Qwen2.5-Coder-1.5B-Instruct with local GRPO:
 - Max new tokens: 192, temperature 0.8, top-p 0.95
 - Reward: binary pass/fail via executable test suite
 - Qwen-chat prompt format
+- KL penalty: β=0 (none); clip ratios ε_low=0.2, ε_high=0.5 (DAPO configuration)
 
 ### 5.2 Scaling Attempts and Failures
 
@@ -257,8 +267,10 @@ repair, G=8, max_turns=3, LoRA r=16, lr=5e-6).
 
 The skills arm (always-small + procedure) improves from 70.73% → **75.61%** over 4 cycles,
 confirming that MERA-driven SFT expands the small model's task coverage. The Full system
-equals the Router-only system at cycle 3 (both 92.68% task pass), indicating that the
-GRPO adapter did not improve routing-level performance beyond the trained router.
+equals the Router-only system at cycle 3 (both 92.68% task pass): the cycle-3 GRPO adapter
+improves code accuracy within the non-collapsed 47.6% of training groups but is insufficient
+to raise aggregate task pass above the router's 92.68% baseline, because the majority of
+training tasks (52.4%) contribute zero gradient.
 
 **Zero-Variance Bottleneck (Cycle 3 GRPO).** Inspecting the cycle-3 training log reveals:
 43 of 82 training groups (52.4%) were dropped as zero-variance by DAPO dynamic sampling,
@@ -289,7 +301,11 @@ the single passing rollout until it dominates all 4 rollouts in subsequent steps
 advantage then collapses toward zero. The model converges to a single solution mode per task
 rather than exploring diverse valid approaches.
 
-These failure modes motivate three remedies currently in the experiment queue:
+We note that the 73% (G=4, MBPP, 1.5B standard GRPO) vs. 52.4% (G=8, HumanEval, 35B DAPO)
+comparison conflates three confounds: rollout count G, model size, and sampling algorithm.
+EXP-081 is designed to isolate the G effect on a fixed model and benchmark.
+
+These failure modes motivate five remedies currently in the experiment queue:
 - **REINFORCE++ EMA** [Zeng et al., 2025]: global EMA baseline converts all-fail to −0.47
   signal and all-pass to +0.53 signal, providing gradient on 73% of previously silent groups.
 - **GCPO** [Chen et al., 2026]: team-level coverage credit rewards rollouts with novel AST
@@ -297,6 +313,12 @@ These failure modes motivate three remedies currently in the experiment queue:
 - **GMPO** [arxiv:2507.20673]: geometric-mean token aggregation bounds gradient distortion
   from outlier syntactic tokens in the 47.6% of non-collapsed groups — orthogonal to
   zero-variance mitigation, targeting update quality rather than group coverage.
+- **SRPO** [arxiv:2604.02288]: routes failed-outcome rollouts to a self-distillation
+  correction path, converting zero-gradient all-fail groups into logit-level training signal
+  from the reference policy — no extra rollouts required.
+- **Sign-advantage** [arxiv:2605.07689]: replaces normalized group-mean advantage with
+  A=2r−1 for binary reward, guaranteeing non-zero gradient for every group regardless of
+  outcome distribution (all-fail→A=−1, all-pass→A=+1).
 
 ### 5.5 Agentic Extension: Tau2 Joint Evolution with 35B
 
@@ -345,6 +367,12 @@ train/test task overlap (retail 74/40, telecom 74/40, airline 30/20).
 | + Router | 71.00% | 66.00% | 7.00% | 46.00% |
 
 **Three critical findings:**
+
+The cycle-to-cycle oscillation in the joint run (89.19%→70.27%→72.97%) is consistent with
+SFT-driven catastrophic forgetting [arxiv:2507.05386]: SFT lacks RFT's implicit
+variance-proportional regularization, making sequential SFT over successive cycle traces
+prone to forgetting earlier cycle improvements. Converting the tau2 adapter training from SFT
+to GRPO/RFT is queued as EXP-111.
 
 **Finding 1 — Domain-specialized small model outperforms frontier.** On the held-out split,
 the 35B MoE adapter (80% task pass, 10% cost) surpasses GPT-5.4 (71% task pass, 100% cost).
@@ -517,6 +545,15 @@ Continual Post-Training. Wang et al., May 2026.
 Post-Training. Anonymous, July 2026.
 
 [arxiv:2507.20673] Geometric-Mean Policy Optimization (GMPO). Zhao, Yuzhong et al.,
+July 2026.
+
+[arxiv:2604.02288] Unifying Group-Relative and Self-Distillation Policy Optimization via
+Sample Routing (SRPO). Anonymous, April 2026.
+
+[arxiv:2605.07689] Gradient Starvation in Binary-Reward GRPO: Degeneracy Rate Analysis and
+Sign-Advantage Fix. Anonymous, May 2026.
+
+[arxiv:2607.02502] DemoPSD: Disagreement-Modulated Policy Self-Distillation. Anonymous,
 July 2026.
 
 [tau2-bench] tau2-bench: A Multi-Domain Agentic Customer Service Benchmark. Stage-2

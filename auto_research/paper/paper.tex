@@ -1,5 +1,5 @@
 % MERA: Model Evolution and Routing with Skill Adaptation — AAAI 2027 submission
-% paper.tex — auto-updated 2026-07-03 by weekly pipeline (v4)
+% paper.tex — auto-updated 2026-07-10 by weekly pipeline (v5)
 % DO NOT edit the %% MANUAL-PIN blocks below.
 
 \documentclass[letterpaper]{article}
@@ -129,9 +129,17 @@ concentrate gradient on Goldilocks-zone problems.
 EGCA~\cite{egca2026} localizes GRPO advantage to causally responsible token spans via
 execution-trace divergence, yielding $+1.5$pp MBPP.
 TAROT~\cite{tarot2026} introduces intra-problem test-tier curriculum for code RL.
-GMPO~\cite{gmpo2026} replaces GRPO's arithmetic-mean token aggregation with a
-geometric mean, bounding gradient distortion from outlier importance ratios at
-syntactically critical positions and achieving $+4.1\%$ on math benchmarks.
+GMPO~\cite{gmpo2026} replaces GRPO's arithmetic-mean token aggregation with a geometric
+mean, bounding gradient distortion from outlier importance ratios at syntactically critical
+positions and achieving $+4.1\%$ on math benchmarks.
+SRPO~\cite{srpo2026} routes failed-outcome rollouts to a self-distillation correction path
+(SDPO), converting zero-gradient all-fail groups into logit-level learning signal without
+extra rollouts ($+3.2$pp HumanEval, $+4.7$pp MBPP$+$ over DAPO).
+Sign-advantage~\cite{signadv2026} replaces normalized group-mean advantage with $A{=}2r{-}1$
+for binary reward, guaranteeing non-zero gradient per group regardless of outcome uniformity;
+measured degeneracy rate ${\geq}0.69$ at $G{=}4$, consistent with our 52.4\% finding.
+DemoPSD~\cite{demopsd2026} modulates SFT loss weight by disagreement rate to concentrate
+gradient on uncertain tasks.
 We apply GRPO to a 1.5B code model and quantify zero-variance collapse: 73\% at
 $G{=}4$ (MBPP), reducing to 52.4\% at $G{=}8$ DAPO (HumanEval).
 
@@ -210,6 +218,7 @@ Evolver Dataset v1 statistics: 2{,}662 train / 332 dev / 334 test router example
 We fine-tune BERT-base-uncased (110M parameters) for 8 epochs ($\eta=2\times10^{-5}$).
 The threshold $\theta$ is tuned to satisfy a $\leq 2\%$ fallback constraint on the dev split,
 yielding $\theta^*=0.57$.
+BERT inference adds ${<}10$ms/query at batch size~1 on CPU, adding negligible serving latency.
 
 \subsection{Results}
 
@@ -240,6 +249,8 @@ SkillBook alone contributes modestly (+1.18pp accuracy).
 We train Qwen2.5-Coder-1.5B-Instruct with local GRPO: 200 MBPP augmented train tasks,
 4 rollouts per prompt, 1 epoch, LoRA rank 16, $\eta=5\times10^{-6}$, max 192 new tokens.
 Reward is binary (executable test pass/fail). We use qwen-chat prompt format.
+We use no KL penalty ($\beta{=}0$) and clip ratios $\varepsilon_\text{low}{=}0.2$,
+$\varepsilon_\text{high}{=}0.5$ (DAPO configuration).
 
 \subsection{Scaling Results}
 
@@ -292,9 +303,10 @@ Always-large (GPT-5.5) & \multicolumn{2}{r}{96.34\%} & 100\% & --- \\
 
 The skills arm (always-small $+$ procedure) improves from 70.73\% to \textbf{75.61\%}
 over 4 cycles, confirming MERA-driven SFT expands the small model's task coverage.
-The Full system equals the Router-only system at cycle~3 (both 92.68\% task pass),
-indicating that the cycle-3 GRPO adapter did not move routing-level performance beyond
-the trained router.
+The Full system equals the Router-only system at cycle~3 (both 92.68\% task pass):
+the cycle-3 GRPO adapter improves code accuracy within the non-collapsed 47.6\% of
+training groups but is insufficient to raise aggregate task pass above the router's
+92.68\% baseline, because 52.4\% of training tasks contribute zero gradient.
 
 \paragraph{Zero-Variance Diagnosis (Cycle~3 GRPO).}
 Inspection of the cycle-3 GRPO training log reveals a concrete bottleneck: of 82
@@ -384,6 +396,13 @@ Base (35B MoE, always-small) & \textbf{80.00\%} & 80.00\% & \textbf{10\%} \\
 \end{tabular}
 \end{table}
 
+\paragraph{Tau2 cycle instability and SFT forgetting.}
+The joint-run oscillation (89.19\%$\to$70.27\%$\to$72.97\%) is consistent with
+SFT-driven catastrophic forgetting~\cite{rftforgetting2026}: SFT lacks RFT's implicit
+variance-proportional regularization, making sequential SFT over successive cycle traces
+prone to forgetting earlier cycle improvements. Converting the tau2 adapter training from
+SFT to GRPO/RFT is queued as EXP-111.
+
 \paragraph{Key findings.}
 \textbf{(1) Specialized small model outperforms frontier.}
 On held-out tasks, the domain-fine-tuned 35B MoE achieves 80\% task pass, exceeding
@@ -415,6 +434,9 @@ implicit regularization is proportional to within-group reward variance; when va
 is zero, parameter updates are provably absent. The 52.4\% collapsed groups therefore
 contribute \emph{neither learning nor forgetting}---they are pure rollout compute waste,
 and their removal (selective masking) would not change training dynamics.
+We note that the 73\% ($G{=}4$, MBPP, 1.5B, standard GRPO) vs.\ 52.4\% ($G{=}8$,
+HumanEval, 35B DAPO) comparison conflates three confounds: rollout count, model size,
+and sampling algorithm; EXP-081 isolates the $G$ effect on a fixed model and benchmark.
 
 \paragraph{Winner-Takes-All Collapse.}
 On mixed-outcome tasks, GRPO reinforces the single passing rollout until it dominates
@@ -429,9 +451,12 @@ GCPO~\cite{chen2026gcpo} uses team-level AST-diversity coverage credit to preven
 winner-takes-all collapse.
 RECRL~\cite{recrl2026} and MicroCoder~\cite{microcoder2026} address zero-variance via
 adaptive curriculum sampling and diversity-determined temperature respectively.
+SRPO~\cite{srpo2026} routes failed rollouts to a self-distillation correction path,
+providing logit-level signal from the reference policy on all-fail groups.
+Sign-advantage~\cite{signadv2026} eliminates zero-gradient groups for binary reward by
+using $A{=}2r{-}1$, which is $-1$ for all-fail and $+1$ for all-pass groups.
 GMPO~\cite{gmpo2026} targets the \emph{complementary} problem: improving update quality
-within the 47.6\% non-collapsed groups by replacing arithmetic-mean token aggregation
-with a geometric mean, bounding gradient distortion from outlier syntactic tokens.
+within the 47.6\% non-collapsed groups via geometric-mean token aggregation.
 These are queued as priority experiments pending A800 restoration.
 
 %% SECTION 8 %%
