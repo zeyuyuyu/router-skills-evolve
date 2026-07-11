@@ -23,3 +23,17 @@
     3. Push state.json to this GitHub repo periodically from A800, so shepherd reads it via GitHub MCP tools.
     4. Use a tunnel/reverse-proxy to make A800 reachable from public cloud.
   Actions: none (cannot reach A800)
+
+[2026-07-11T12:05Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable, day ~58 of persistent SSH outage since 2026-05-14.
+  Connectivity: sshpass installed; paramiko pip-installed; nc -w5 timed out; SSH ConnectTimeout=15s timed out via paramiko — cloud network policy blocks all outbound TCP to this host, confirmed for 58th+ consecutive day.
+  STEP 1 SKIPPED: state.json unread, nvidia-smi skipped, exp_*.result.json unread.
+  STEP 2 A-E SKIPPED: queue/running/crashed counts unknown; no PID liveness checks; disk/GPU unchecked.
+  ROUTINE HEALTH (STEP E, local repo — 12:05 UTC):
+    ideas-2026-07-11.md PRESENT ✓ (idea-gen recovered; EXP-110 RECRL curriculum GRPO + EXP-111 forgetting eval added; queue ~115)
+    ideas-2026-07-06 through 2026-07-10 MISSING — 5-day idea-gen stall confirmed (prior shepherd 2026-07-07T14:06Z noted "stalled 2 days"; 2026-07-09T00:04Z noted "stalled 4 days"); recovered today.
+    hotspots/2026-07-11.json MISSING (no hotspots/ dir — normal, A800 offline throughout).
+    weekly paper-drafter: last run 2026-06-14 (27 days ago) — SEVERELY OVERDUE for a weekly routine. paper v5 committed 2026-07-10 by paper-pipeline (rush mode activated, AAAI deadline 35 days, composite 6.25/10), so paper content is current, but the separate weekly report has not fired.
+    paper review: review-2026-07-10.md PRESENT ✓ (most recent).
+  CONTEXT: ~115 experiments queued in pending_queue_update chain (unexecuted since 2026-05-14, day ~58); best HumanEval 4-cycle result: router 92.68% acc, 27.56% cost, skills 75.61%; GRPO bottleneck: ACR=52.4% (zero-variance groups). AAAI 2027 deadline 2026-08-15 (35 days) — RUSH MODE active.
+  No triggers fired. No code modified.
+  DONE: actions=FAILED (A800 unreachable, day ~58); ALERT: idea-gen recovered after 5-day gap; weekly paper-drafter stalled 27 days; AAAI deadline 35 days.
