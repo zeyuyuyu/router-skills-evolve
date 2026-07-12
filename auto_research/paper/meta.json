@@ -14,8 +14,8 @@
     "writing": 8
   },
   "composite": 6.25,
-  "status": "provisional — A800 offline day 57; GRPO results n=1 seed; v5: W3/W6/W7/W8 writing fixes; +SRPO/sign-adv/DemoPSD related work; tau2 SFT-forgetting connection; AAAI deadline 36 days — RUSH MODE ACTIVE",
-  "last_updated": "2026-07-10",
+  "status": "provisional — A800 offline day 59; GRPO results n=1 seed; v5.1 (2026-07-12): +EXP-110/111/112/113 in §5.4/§7.3; +arxiv:2605.12483 related work; AAAI deadline 34 days — RUSH MODE ACTIVE",
+  "last_updated": "2026-07-12",
   "a800_outage_since": "2026-05-14T20:03Z",
   "queue_size": 117,
   "paper_files": {
@@ -50,10 +50,10 @@
     "EXP-107: cross-domain router eval — blocked on A800 (added this run, W4)"
   ],
   "aaai_timeline_risk": {
-    "a800_offline_days": 57,
-    "days_to_deadline": 36,
-    "latest_a800_restore_for_minviable": "2026-07-13",
+    "a800_offline_days": 59,
+    "days_to_deadline": 34,
+    "latest_a800_restore_for_minviable": "2026-07-20",
     "latest_a800_restore_for_full": "2026-07-08",
-    "risk_level": "CRITICAL — A800 not restored by July 10 as previously planned; escalate immediately; submit with n=1 seed and SE bars if A800 down through July 20"
+    "risk_level": "CRITICAL — A800 offline 59 days; July 13 minviable date passed; now targeting July 20 as latest viable restore for n=3 seed CI; submit with n=1 seed + SE uncertainty language if A800 down through July 20"
   }
 }
