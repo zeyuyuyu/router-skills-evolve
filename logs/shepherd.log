@@ -321,3 +321,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   No state read, no actions taken. Network policy in the remote execution environment may be blocking outbound SSH.
   Actions: none
   DONE: FAILED: A800 unreachable
+[2026-07-17T00:00:00Z SHEPHERD] FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s. sshpass installed OK but no route to host. No state read, no actions taken. Manual check required.
