@@ -1,5 +1,5 @@
 {
-  "paper_version": 5,
+  "paper_version": 6,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
   "secondary_venue": null,
@@ -14,10 +14,10 @@
     "writing": 8
   },
   "composite": 6.25,
-  "status": "provisional — A800 offline day 59; GRPO results n=1 seed; v5.1 (2026-07-12): +EXP-110/111/112/113 in §5.4/§7.3; +arxiv:2605.12483 related work; AAAI deadline 34 days — RUSH MODE ACTIVE",
-  "last_updated": "2026-07-12",
+  "status": "provisional — A800 offline day 64; GRPO results n=1 seed; v6 (2026-07-17): +groupsd2026/zpddistill2026 in §2/§7; §7 Zero-Var expanded with Group-SD Identity + Skills Gap paragraph; +EXP-122/123; AAAI deadline 29 days — RUSH MODE ACTIVE",
+  "last_updated": "2026-07-17",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "queue_size": 117,
+  "queue_size": 133,
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
@@ -40,6 +40,12 @@
     "tau2_sft_forgetting": "New connection: tau2 cycle oscillation (89.19%→70.27%) is consistent with SFT catastrophic forgetting (arxiv:2507.05386) — SFT not RFT used for tau2 adapter.",
     "multitrack_framing": "Explicit §1 framing: Tracks A-D are ablation studies at different modalities/scales, not simultaneous deployments."
   },
+  "new_findings_2026_07_17": {
+    "group_sd_identity": "arxiv:2607.00152 (Bay & Yearick) proves GRPO/Dr.GRPO/DAPO are three operations on σ. Dr.GRPO drops the 1/σ division → update ∝ p*(1-p), naturally weighting informative prompts. Our 52.4% zero-variance finding corresponds exactly to the σ=0 regime. Added to §2 Related Work, §7 Zero-Variance analysis, Abstract. New bib key: groupsd2026.",
+    "zpd_sft": "arxiv:2507.00054 reward-guided distillation proposes ZPD filtering (r_small ∈ [0.2, 0.8]) to target teacher traces where student has partial capability. Directly addresses our 20.7pp skills gap. Added to §2 Related Work, §7 Skills Gap paragraph, §7 Remedies. New bib key: zpddistill2026.",
+    "exp_122_queued": "EXP-122: Joint ZPD-SFT + Dr.GRPO hybrid test — addresses A+C simultaneously; first experiment to test interaction of two orthogonal fixes. Expected: if skills arm ≥78%, joint fix narrative is paper's strongest new result.",
+    "exp_123_queued": "EXP-123: Group-SD ceiling analysis — use per-cycle σ distribution to compute theoretical max gradient contribution under Dr.GRPO vs GRPO; zero-GPU data analysis on existing trace logs."
+  },
   "critical_blockers": [
     "EXP-099: HumanEval 3-seed (n=3) to verify skills arm 75.61% claim — blocked on A800 (AAAI CRITICAL)",
     "EXP-100: tau2 3-seed (n=3) for CI on all tau2 tables — blocked on A800 (AAAI CRITICAL)",
@@ -50,10 +56,11 @@
     "EXP-107: cross-domain router eval — blocked on A800 (added this run, W4)"
   ],
   "aaai_timeline_risk": {
-    "a800_offline_days": 59,
-    "days_to_deadline": 34,
+    "a800_offline_days": 64,
+    "days_to_deadline": 29,
     "latest_a800_restore_for_minviable": "2026-07-20",
     "latest_a800_restore_for_full": "2026-07-08",
-    "risk_level": "CRITICAL — A800 offline 59 days; July 13 minviable date passed; now targeting July 20 as latest viable restore for n=3 seed CI; submit with n=1 seed + SE uncertainty language if A800 down through July 20"
+    "risk_level": "CRITICAL — A800 offline 64 days; July 13 AND July 20 minviable dates either passed or 3 days away; August 1 is the absolute latest for any new GPU results to make it into the submission; paper is submittable NOW with n=1 seed + SE caveats. With 29 days to deadline, plan for submit-ready draft August 8 (one week buffer before Aug 15).",
+    "recommended_action": "Prepare submit-ready version with current n=1 seed results by August 1. If A800 restores before July 20: EXP-108 first (sign-advantage MBPP), then EXP-099 (3-seed HumanEval). If A800 down through July 25: submit as-is with explicit SE uncertainty bars in tables."
   }
 }

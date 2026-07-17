@@ -1,5 +1,5 @@
 % MERA: Model Evolution and Routing with Skill Adaptation — AAAI 2027 submission
-% paper.tex — auto-updated 2026-07-10 by weekly pipeline (v5)
+% paper.tex — auto-updated 2026-07-17 by weekly pipeline (v6)
 % DO NOT edit the %% MANUAL-PIN blocks below.
 
 \documentclass[letterpaper]{article}
@@ -52,6 +52,9 @@ the skills arm improves from 70.7\% to 75.6\% task pass; a mechanistic analysis
 reveals that \textbf{52.4\% of training groups produce zero gradient} even with DAPO
 dynamic sampling, identifying zero-variance collapse as the binding improvement bottleneck.
 A standalone GRPO pass on MBPP yields +2pp pass@1 for Qwen2.5-Coder-1.5B ($n{=}1$ seed).
+The Group-Standard-Deviation Identity~\cite{groupsd2026} provides formal grounding:
+GRPO, Dr.~GRPO, and DAPO differ only in how they treat within-group $\sigma$; our
+52.4\% zero-variance finding corresponds precisely to the $\sigma{=}0$ regime.
 Extended to three-domain agentic tau2-bench tasks with a Qwen3.6-35B-A3B adapter,
 MERA achieves \textbf{89.19\% task pass at 22.16\% of always-large cost} at peak;
 a held-out evaluation shows the domain-specialized 35B model (80\%) surpassing the
@@ -140,6 +143,16 @@ for binary reward, guaranteeing non-zero gradient per group regardless of outcom
 measured degeneracy rate ${\geq}0.69$ at $G{=}4$, consistent with our 52.4\% finding.
 DemoPSD~\cite{demopsd2026} modulates SFT loss weight by disagreement rate to concentrate
 gradient on uncertain tasks.
+The Group-Standard-Deviation Identity~\cite{groupsd2026} unifies GRPO, Dr.~GRPO, and DAPO
+as three operations on $\sigma$: GRPO divides by $\sigma$ (unstable at $\sigma{\to}0$),
+Dr.~GRPO drops the division (update $\propto p(1{-}p)$, natural informativeness weighting),
+and DAPO filters $\sigma{=}0$ groups entirely.
+For binary rewards with $K$ rollouts and per-prompt pass-rate $p$, Dr.~GRPO update magnitude
+is $K/(K{-}1)\cdot p(1{-}p)$, providing gradient to all groups while scaling updates by
+actual prompt informativeness.
+Reward-guided dataset distillation~\cite{zpddistill2026} proposes filtering SFT traces to the
+zone of proximal development (ZPD): tasks where the student pass-rate $r_\text{small}\in[lo, hi]$,
+yielding $+3.1$--$5.6$pp over naive SFT at identical example counts.
 We apply GRPO to a 1.5B code model and quantify zero-variance collapse: 73\% at
 $G{=}4$ (MBPP), reducing to 52.4\% at $G{=}8$ DAPO (HumanEval).
 
@@ -429,14 +442,40 @@ with non-zero gradient. Scaling to $G{=}8$ with DAPO dynamic sampling on HumanEv
 reduces zero-variance to \textbf{52.4\%} (43/82 groups; §\ref{sec:he4cyc}): DAPO
 mitigates but does not eliminate the bottleneck. Only 39 of 82 HumanEval training tasks
 provide informative gradient at $G{=}8$ DAPO.
-Recent theoretical analysis~\cite{rftforgetting2026} confirms this formally: RFT's
-implicit regularization is proportional to within-group reward variance; when variance
-is zero, parameter updates are provably absent. The 52.4\% collapsed groups therefore
-contribute \emph{neither learning nor forgetting}---they are pure rollout compute waste,
-and their removal (selective masking) would not change training dynamics.
+Two complementary theoretical analyses confirm this.
+\citet{rftforgetting2026} show that RFT's implicit regularization is proportional to
+within-group reward variance; zero-variance groups therefore contribute
+\emph{neither learning nor forgetting}---pure rollout compute waste.
+The Group-Standard-Deviation Identity~\cite{groupsd2026} unifies GRPO/Dr.~GRPO/DAPO
+as three operations on $\sigma$: our 52.4\% collapsed groups correspond precisely to
+the $\sigma{=}0$ regime.
+Under Dr.~GRPO (no $1/\sigma$ division), the update magnitude per prompt is
+$K/(K{-}1)\cdot p(1{-}p)$---zero for $p\in\{0,1\}$ (collapsed) and maximal at $p{=}0.5$
+(informative)---providing a principled natural curriculum without external scheduling.
 We note that the 73\% ($G{=}4$, MBPP, 1.5B, standard GRPO) vs.\ 52.4\% ($G{=}8$,
 HumanEval, 35B DAPO) comparison conflates three confounds: rollout count, model size,
 and sampling algorithm; EXP-081 isolates the $G$ effect on a fixed model and benchmark.
+Analysis of the cycle-3 GRPO log reveals the breakdown of collapsed groups:
+33/82 are all-pass ($k{=}8$, 40.2\%) and 10/82 are all-fail ($k{=}0$, 12.2\%).
+The all-pass groups are learning-saturated; DAPO correctly drops them.
+The all-fail groups are candidates for sign-advantage ($A{=}{-}1$).
+Dr.~GRPO with sign-advantage fallback covers 49/82 groups (59.8\%) vs.\ 39/82 (47.6\%)
+under standard GRPO~$+$~DAPO---a $+$12.2pp increase in gradient-bearing groups via
+the 10 all-fail tasks, with no change for the 33 all-pass tasks.
+
+\paragraph{Skills Gap.}
+The skills arm (always-small $+$ procedure) achieves 75.61\% pass@1 on HumanEval,
+a 20.7pp gap below always-large (96.34\%).
+The bottleneck is SFT data quality: current training uses all ~77 teacher traces
+including tasks the small model already solves ($r_\text{small}{>}0.8$) and tasks
+beyond its reach ($r_\text{small}{<}0.2$).
+Reward-guided dataset distillation~\cite{zpddistill2026} addresses this by filtering
+traces to the zone of proximal development ($r_\text{small}\in[0.2, 0.8]$), reporting
+$+3.1$--$5.6$pp over naive SFT on code benchmarks.
+Applying ZPD filtering to our HumanEval pipeline would retain ${\approx}47$ of 77
+traces (removing ${\approx}18$ trivially solved and ${\approx}12$ intractable tasks),
+concentrating teacher supervision where the student can most benefit.
+This is queued as EXP-121 (ZPD-SFT) and EXP-122 (Joint ZPD-SFT $+$ Dr.~GRPO).
 
 \paragraph{Winner-Takes-All Collapse.}
 On mixed-outcome tasks, GRPO reinforces the single passing rollout until it dominates
@@ -455,8 +494,14 @@ SRPO~\cite{srpo2026} routes failed rollouts to a self-distillation correction pa
 providing logit-level signal from the reference policy on all-fail groups.
 Sign-advantage~\cite{signadv2026} eliminates zero-gradient groups for binary reward by
 using $A{=}2r{-}1$, which is $-1$ for all-fail and $+1$ for all-pass groups.
+Dr.~GRPO~\cite{groupsd2026} drops the $1/\sigma$ division entirely, yielding update
+magnitude $\propto p(1{-}p)$ which is zero for collapsed groups and maximal at $p{=}0.5$;
+this is the minimal implementation change consistent with avoiding $1/\sigma$ instability.
 GMPO~\cite{gmpo2026} targets the \emph{complementary} problem: improving update quality
 within the 47.6\% non-collapsed groups via geometric-mean token aggregation.
+For the skills gap, ZPD reward-guided distillation~\cite{zpddistill2026} filters SFT
+traces to the zone of proximal development, targeting the 20.7pp gap orthogonally to
+all GRPO-collapse fixes.
 These are queued as priority experiments pending A800 restoration.
 
 %% SECTION 8 %%
