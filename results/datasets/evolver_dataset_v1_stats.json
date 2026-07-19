@@ -1,0 +1,52 @@
+{
+  "code_tasks": {
+    "total": 590,
+    "by_source": {
+      "humaneval": 164,
+      "hard_traces": 6,
+      "mbpp": 420
+    },
+    "by_source_split": {
+      "humaneval:all": 164,
+      "hard_traces:all": 6,
+      "mbpp:train": 120,
+      "mbpp:validation": 43,
+      "mbpp:test": 257
+    },
+    "by_task_type": {
+      "code_generation": 590
+    },
+    "has_tests": 590,
+    "has_reference": 590
+  },
+  "router_tasks": {
+    "total": 3328,
+    "by_source": {
+      "uncommonroute_bench": 3328
+    },
+    "by_source_split": {
+      "uncommonroute_bench:all": 3328
+    },
+    "by_task_type": {
+      "router_supervision": 3328
+    },
+    "has_tests": 0,
+    "has_reference": 0,
+    "router_labels": {
+      "small": 2258,
+      "large": 1070
+    }
+  },
+  "splits": {
+    "code_tasks": {
+      "train": 472,
+      "dev": 59,
+      "test": 59
+    },
+    "router_tasks": {
+      "train": 2662,
+      "dev": 332,
+      "test": 334
+    }
+  }
+}
