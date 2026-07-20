@@ -324,3 +324,16 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
 [2026-07-17T00:00:00Z SHEPHERD] FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 20s. sshpass installed OK but no route to host. No state read, no actions taken. Manual check required.
 [2026-07-19T00:00:00Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable: SSH connection timed out. sshpass installed successfully but host not responding on port 50507. No state read, no actions taken. Next run will retry.
 [2026-07-20T00:06:36Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 2 attempts. No state read. No actions taken. Pipeline status unknown.
+[2026-07-20T14:07:42Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable, day ~67 of persistent SSH outage (since ~2026-05-14). sshpass (1.09-1) + openssh-client (9.6p1-3ubuntu13) installed OK this tick; SSH ConnectTimeout=15s timed out on both attempts. Cloud network policy blocks outbound TCP to port 50507, unchanged.
+  STEP 1 SKIPPED: state.json/nvidia-smi/exp_*.result.json unreadable.
+  STEP 2 A-D SKIPPED: remote inaccessible.
+  STEP 2E (local repo, 14:07 UTC):
+    - reports/ideas-2026-07-20.md: MISSING (expected fire 07:00 UTC; overdue 7h) — possible 1-day gap
+    - reports/ideas-2026-07-19.md: PRESENT ✓
+    - reports/paper_draft-2026-07-19.md: PRESENT ✓ (paper pipeline v7 fired 2026-07-19 09:19 UTC)
+    - reports/weekly-2026-07-19.md: PRESENT ✓
+    - AAAI 2027 deadline: 2026-08-15 (26 days) — RUSH MODE
+    - Queue: ~133 pending experiments (EXP-001 to EXP-125+), all frozen on A800
+  No push notification sent: idea-gen 1-day gap is within tolerance (compare Jul 6-10 5-day stall);
+  no novel condition vs prior runs. Paper pipeline healthy (v7 yesterday). No triggers fired.
+  DONE: actions=none | FAILED: A800 unreachable (persistent, day ~67)
