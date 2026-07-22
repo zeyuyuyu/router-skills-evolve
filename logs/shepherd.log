@@ -337,3 +337,15 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   No push notification sent: idea-gen 1-day gap is within tolerance (compare Jul 6-10 5-day stall);
   no novel condition vs prior runs. Paper pipeline healthy (v7 yesterday). No triggers fired.
   DONE: actions=none | FAILED: A800 unreachable (persistent, day ~67)
+[2026-07-22T14:09Z] SHEPHERD RUN FAILED — A800 (117.74.66.181:50507) unreachable, day ~69 of persistent SSH outage (since ~2026-05-14). paramiko installed OK; TCP connect timed out (15s). Cloud network policy blocks outbound TCP to port 50507, unchanged.
+  STEP 1 SKIPPED: state.json/nvidia-smi/exp_*.result.json unreadable.
+  STEP 2 A-D SKIPPED: remote inaccessible.
+  STEP 2E (local repo, 14:09 UTC 2026-07-22):
+    - reports/ideas-2026-07-22.md: MISSING (expected fire 07:00 UTC; overdue 7h) — 1-day gap, within tolerance (same pattern as 2026-07-20)
+    - reports/ideas-2026-07-21.md: PRESENT ✓ (idea-gen fired yesterday)
+    - hotspots/2026-07-22.json: not trackable from this environment (dir not in repo)
+    - Paper pipeline: last run 2026-07-19 (v7); biweekly cadence; next due ~2026-08-02 — within tolerance
+    - AAAI 2027 deadline: 2026-08-15 (24 days) — RUSH MODE; paper pipeline healthy
+    - Queue: EXP-126/127 queued 2026-07-21 (last commit); ~135 pending experiments frozen on A800
+  No push notification sent: 1-day idea-gen gap is within tolerance; no novel condition vs prior run (2026-07-20T14:07Z); paper healthy.
+  DONE: actions=none | FAILED: A800 unreachable (persistent, day ~69)
