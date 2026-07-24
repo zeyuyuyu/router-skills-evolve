@@ -1,5 +1,5 @@
 {
-  "paper_version": 6,
+  "paper_version": 7,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
   "secondary_venue": null,
@@ -11,13 +11,23 @@
     "novelty": 6,
     "soundness": 4,
     "significance": 7,
-    "writing": 8
+    "writing": 8.5
   },
-  "composite": 6.25,
-  "status": "provisional — A800 offline day 64; GRPO results n=1 seed; v6 (2026-07-17): +groupsd2026/zpddistill2026 in §2/§7; §7 Zero-Var expanded with Group-SD Identity + Skills Gap paragraph; +EXP-122/123; AAAI deadline 29 days — RUSH MODE ACTIVE",
-  "last_updated": "2026-07-17",
+  "composite": 6.375,
+  "status": "provisional — A800 offline day 71; GRPO results n=1 seed; v7 (2026-07-24): +Algorithm 1 MERA Cycle box (closes W7); +per-cycle skills arm and ACR in Table 9 (new data); +Hypothesis D (GRPO forgetting, arxiv:2607.04364) in §5.4; +rise-and-collapse (arxiv:2606.21090) in §2; +EXP-132/133 queued; §9 Reproducibility paths fixed; AAAI deadline 22 days — RUSH MODE ACTIVE. July 20 minviable restore date PASSED.",
+  "last_updated": "2026-07-24",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "queue_size": 133,
+  "queue_size": 143,
+  "new_findings_2026_07_24": {
+    "algorithm1_box": "Algorithm 1 MERA Cycle box added to §3.4 — closes W7 from review history. Formal pseudocode covering: signature extraction, router routing on raw prompt, procedure-augmented generation, SkillBook update, Phase 3a SFT, Phase 3b GRPO with DAPO dynamic sampling, Phase 4 router update. 4 design invariants annotated.",
+    "per_cycle_skills_and_acr": "Table 9 expanded: per-cycle skills arm added for ALL cycles (was only cycle 0 and 3). Cycle 1 skills arm = 65.85% (dip from 70.73% in cycle 0) — non-monotonic behavior not previously reported. Per-cycle ACR from grpo_info.json: 51.2% (c0), 47.6% (c1), 46.3% (c2), 52.4% (c3). Data shows ACR and skills arm improvement are anti-correlated in cycle 1, weakening pure ACR explanation.",
+    "hypothesis_d_grpo_forgetting": "Hypothesis D added to §5.4: arxiv:2607.04364 (CPO 'RL Forgets!') grounds GRPO forgetting of SFT gains as complementary Full=Router explanation. Easy tasks with all-pass rollouts (advantage=0) receive no GRPO gradient but can have their SFT-trained weights degraded by hard-task GRPO updates. L2-SP regularization (EXP-130) tests this directly.",
+    "hypothesis_e_rise_collapse": "Hypothesis E added to §5.4: arxiv:2606.21090 documents pass@1 peaking at step 10-20 and collapsing within the same GRPO run. If cycle adapters are final-step collapsed checkpoints, Full=Router regardless of algorithm. EXP-132 tests this with per-step eval logging — zero algorithm change fix if confirmed.",
+    "rise_collapse_related_work": "§2 Continual Learning subsection expanded: +CPO (arxiv:2607.04364) formal forgetting proof, +rise-and-collapse (arxiv:2606.21090) failure mode. Both ground two new hypotheses D/E that deepen the Full=Router analysis.",
+    "reproducibility_paths_fixed": "§9 Reproducibility: outdated paths to removed experiments/ tree corrected to current src/pipeline/ layout. Added grpo_info.json citation and smoke test command.",
+    "exp_132_queued": "EXP-132: Rise-and-Collapse Diagnostic (priority=8, gpu=~3h) — per-step GRPO eval logging + best-epoch checkpoint selection. Tests Hypothesis E.",
+    "exp_133_queued": "EXP-133: Per-Cycle ACR-vs-Improvement Correlation Analysis (priority=7, gpu=0h) — offline analysis using existing grpo_info.json data. Tests whether ACR predicts skills arm improvement; preliminary data suggests anti-correlation in cycle 1."
+  },
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
@@ -49,18 +59,19 @@
   "critical_blockers": [
     "EXP-099: HumanEval 3-seed (n=3) to verify skills arm 75.61% claim — blocked on A800 (AAAI CRITICAL)",
     "EXP-100: tau2 3-seed (n=3) for CI on all tau2 tables — blocked on A800 (AAAI CRITICAL)",
+    "EXP-132: Rise-and-collapse diagnostic — save per-step GRPO checkpoints and eval; tests Hypothesis E; ~3h GPU — blocked on A800 (AAAI HIGH)",
     "EXP-066: tau2 router regularization to fix held-out overfitting — blocked on A800",
     "EXP-080: multi-seed 4-cycle HumanEval validation — blocked on A800",
     "EXP-077: DAPO G=16 DDT to reduce 52.4% zero-variance — blocked on A800",
-    "EXP-106: tau2 random-50% routing baseline — blocked on A800 (added this run, W5)",
-    "EXP-107: cross-domain router eval — blocked on A800 (added this run, W4)"
+    "EXP-106: tau2 random-50% routing baseline — blocked on A800 (W5)",
+    "EXP-107: cross-domain router eval — blocked on A800 (W4)"
   ],
   "aaai_timeline_risk": {
     "a800_offline_days": 64,
     "days_to_deadline": 29,
     "latest_a800_restore_for_minviable": "2026-07-20",
     "latest_a800_restore_for_full": "2026-07-08",
-    "risk_level": "CRITICAL — A800 offline 64 days; July 13 AND July 20 minviable dates either passed or 3 days away; August 1 is the absolute latest for any new GPU results to make it into the submission; paper is submittable NOW with n=1 seed + SE caveats. With 29 days to deadline, plan for submit-ready draft August 8 (one week buffer before Aug 15).",
-    "recommended_action": "Prepare submit-ready version with current n=1 seed results by August 1. If A800 restores before July 20: EXP-108 first (sign-advantage MBPP), then EXP-099 (3-seed HumanEval). If A800 down through July 25: submit as-is with explicit SE uncertainty bars in tables."
+    "risk_level": "CRITICAL — A800 offline 71 days; July 20 minviable restore date PASSED. August 1 (8 days) is the ABSOLUTE latest for new GPU results to reach the submission. Paper is submittable NOW with n=1 seed + SE caveats. 22 days to deadline: submit-ready draft August 8, buffer to Aug 15.",
+    "recommended_action": "Final GPU experiment window closes August 1. If A800 restores before August 1: EXP-132 first (2h, rise-and-collapse diagnostic, no algorithm change), then EXP-099 (3-seed HumanEval, 4h). If A800 down through August 1: submit with n=1 seed + explicit SE bars (±5.4pp at 82 tasks, ±5pp at 100 tasks). Begin final submission polish now — target complete draft August 8."
   }
 }
