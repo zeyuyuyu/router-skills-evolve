@@ -349,3 +349,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
     - Queue: EXP-126/127 queued 2026-07-21 (last commit); ~135 pending experiments frozen on A800
   No push notification sent: 1-day idea-gen gap is within tolerance; no novel condition vs prior run (2026-07-20T14:07Z); paper healthy.
   DONE: actions=none | FAILED: A800 unreachable (persistent, day ~69)
+[2026-07-25T04:05:04Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No actions taken. All state checks, GPU util, queue inspection, and log writes skipped. DONE: actions=FAILED
