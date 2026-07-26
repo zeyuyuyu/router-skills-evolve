@@ -1,6 +1,6 @@
 # MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale
-<!-- paper_draft.md v7 — auto-updated 2026-07-19 by weekly paper pipeline -->
-<!-- A800 offline day 66; 0 new A800 results; 12 experiments queued (EXP-114–EXP-125) -->
+<!-- paper_draft.md v8 — auto-updated 2026-07-26 by weekly paper pipeline -->
+<!-- A800 offline day 72; 0 new A800 results; 8 experiments queued (EXP-126–EXP-133) -->
 
 **Zeyu Wang**  
 0G.ai / Institute of Artificial Intelligence  
@@ -19,18 +19,22 @@ per-signature routing statistics and a *learned router* trained from execution t
 On HumanEval (164 code tasks), MERA achieves **99% task accuracy at 83% lower cost** than
 always routing to the frontier model. A BERT-based router achieves **93.04% routing
 accuracy** with a **2.12% fallback rate**. Over 4 end-to-end evolution cycles on HumanEval
-with DAPO multi-turn repair (G=8), the skills arm improves from 70.7% to 75.6% task pass;
-a mechanistic analysis reveals that **52.4% of training groups produce zero gradient** even
-with DAPO dynamic sampling, identifying zero-variance collapse as the binding improvement
-bottleneck. A standalone GRPO pass on MBPP yields +2pp pass@1 for Qwen2.5-Coder-1.5B
-(n=1 seed). The Group-Standard-Deviation Identity [groupsd2026] provides formal
-theoretical grounding: GRPO, Dr. GRPO, and DAPO differ only in their treatment of
-within-group σ; our 52.4% zero-variance finding corresponds precisely to the σ=0 regime.
-Extended to three-domain agentic tau2-bench tasks with a Qwen3.6-35B-A3B
-adapter, MERA achieves **89.19% task pass at 22.16% of always-large cost** at peak; a
-held-out evaluation shows the domain-specialized 35B model (80%) surpassing the frontier
-GPT-5.4 (71%), revealing that agent specialization can render frontier escalation
-counterproductive. Code and datasets are released publicly.
+with DAPO multi-turn repair (G=8), the skills arm follows a non-monotonic trajectory
+(70.73%→65.85%→73.17%→75.61%), improving overall yet dipping at cycle 1—anti-correlated
+with ACR (lowest ACR yet worst skills arm)—suggesting two additional failure modes beyond
+zero-variance collapse: GRPO-induced forgetting of SFT gains (Hypothesis D) and
+within-cycle rise-and-collapse (Hypothesis E). A mechanistic analysis reveals that
+**52.4% of training groups produce zero gradient** even with DAPO dynamic sampling,
+identifying zero-variance collapse as the binding improvement bottleneck. A standalone
+GRPO pass on MBPP yields +2pp pass@1 for Qwen2.5-Coder-1.5B (n=1 seed). The
+Group-Standard-Deviation Identity [groupsd2026] provides formal theoretical grounding:
+GRPO, Dr. GRPO, and DAPO differ only in their treatment of within-group σ; our 52.4%
+zero-variance finding corresponds precisely to the σ=0 regime. Extended to three-domain
+agentic tau2-bench tasks with a Qwen3.6-35B-A3B adapter, MERA achieves **89.19% task
+pass at 22.16% of always-large cost** at peak; a held-out evaluation shows the
+domain-specialized 35B model (80%) surpassing the frontier GPT-5.4 (71%), revealing that
+agent specialization can render frontier escalation counterproductive. Code and datasets
+are released publicly.
 
 ---
 
@@ -66,11 +70,11 @@ We contribute:
 4. **End-to-end ablation** (§6): a unified evaluation showing the contribution of each
    component over 848 routing examples and 100 held-out MBPP tasks.
 5. **Multi-cycle MERA evolution** (§5.3): 4-cycle DAPO joint evolution on HumanEval showing
-   skills arm improvement (70.7%→75.6%) and identifying 52.4% zero-variance groups as the
-   primary improvement bottleneck.
-6. **Failure mode analysis** (§7): identification of winner-takes-all GRPO collapse as the
-   binding constraint on model improvement, with theoretical grounding from reward-variance-scaled
-   RFT regularization [arxiv:2507.05386].
+   non-monotonic skills arm improvement (70.73%→75.61% overall, 65.85% dip at cycle 1) and
+   identifying 52.4% zero-variance groups as the primary improvement bottleneck.
+6. **Failure mode analysis** (§5.4): identification of winner-takes-all GRPO collapse as
+   the binding constraint on model improvement, plus two new hypotheses (D: GRPO forgetting
+   of SFT gains; E: within-cycle rise-and-collapse) grounded in the non-monotonic data.
 
 Tracks A (HumanEval skills routing), B (MBPP GRPO), C (tau2 joint evolution), and D
 (4-cycle HumanEval DAPO) are ablation studies of MERA components at different
@@ -87,7 +91,11 @@ routes queries to cheaper models with a learned cascade. RouterBench [Hu et al.,
 benchmarks routing strategies across 11 LLMs. Recent work explores regret-minimization
 routing [arxiv:2505.16037] and skill-composable routing for agents [arxiv:2603.22455].
 Our SkillBook extends routing with *online* statistics accumulated from deployment traces,
-making routing decisions improve automatically without offline re-training.
+making routing decisions improve automatically without offline re-training. HyDRA
+[arxiv:2605.17106] proposes a ModernBERT encoder with three independent sigmoid heads
+(code complexity, algorithm novelty, edge-case density) enabling multi-dimensional routing
+decisions; unlike our single-head binary router, it produces interpretable per-dimension
+routing signals and achieves comparable accuracy with finer-grained cost control.
 
 ### RL for Code Generation
 
@@ -146,6 +154,21 @@ decomposes the policy gradient into a sign axis (M+/M− ratio) and a difficulty
 (|A_i| focal weight), self-adapting both to prevent positive dominance and entropy collapse
 — peak pass@1 reached 20k steps earlier than DAPO on 7B models.
 
+Three additional algorithms address within-group credit quality and SFT curriculum
+alignment (week of 2026-07-21): SCCA [arxiv:2606.18810] (Self-Conditioned Credit
+Assignment) identifies the first token-position where a failing rollout diverges from its
+nearest successful rollout and applies distance-decayed credit to winning rollouts, replacing
+uniform token credit with causally precise signal (+3.1pp HumanEval, +2.7pp MBPP on 7B
+models). GEPO [arxiv:2607.16850] (Group Entropy-Controlled Policy Optimization) attenuates
+advantage in low-entropy groups (easy tasks that all succeed) and amplifies it in
+high-entropy groups (hard tasks with mixed outcomes), providing an orthogonal ACR reduction
+axis without synthetic sample injection. SC-SDPO [arxiv:2605.27765] realigns Phase 3a SFT
+with the GRPO implicit curriculum by weighting each task's SFT loss by
+ŵ = √[p̂(1−p̂)]—the same p(1−p) that Dr. GRPO's σ-removal recovers—concentrating
+distillation on informative mid-difficulty tasks and suppressing trivial (p̂≈1) and
+intractable (p̂≈0) examples; predicted +2.4pp skills arm with a ~10-line change to
+traces_to_sft.py.
+
 ### Continual Learning of LLMs
 
 Plasticity loss [Lyle et al., 2023; arxiv:2605.12484] causes degradation when LLMs are
@@ -158,7 +181,8 @@ empirically identify. New evidence challenges the assumption that RFT naturally 
 forgetting: CPO [Luo et al., 2026; arxiv:2607.04364] shows RL fine-tuning suffers
 significant catastrophic forgetting under diverse sequential tasks and proposes replay-free
 behavioral KL + L2 parameter regularization between cycles (−13.7% forgetting, +7.0%
-pretrained capability on Qwen3-VL-8B) — directly applicable to our 4-cycle GRPO pipeline.
+pretrained capability on Qwen3-VL-8B) — directly applicable to our 4-cycle GRPO pipeline
+and motivating Hypothesis D (§5.4).
 
 ---
 
@@ -292,22 +316,34 @@ We run a 4-cycle end-to-end MERA pipeline on HumanEval (82 tasks) using GPT-5.5 
 large model and a Qwen3.6-35B-A3B adapter as the evolving small model (DAPO multi-turn
 repair, G=8, max_turns=3, LoRA r=16, lr=5e-6).
 
-**Table 9: 4-cycle HumanEval MERA — per-cycle Full-variant and skills-arm results**
+**Table 9: 4-cycle HumanEval MERA — per-cycle Full-variant, skills-arm, and ACR results**
 
-| Cycle | Full Task Pass | Route Acc | Cost vs. Large | Skills Arm |
-|---:|---:|---:|---:|---:|
-| 0 | 91.46% | 92.68% | 31.95% | 70.73% |
-| 1 | 92.68% | 90.24% | 40.73% | — |
-| 2 | 91.46% | 93.90% | 28.66% | — |
-| **3** | **92.68%** | **92.68%** | **27.56%** | **75.61%** |
-| Always-large (GPT-5.5) | 96.34% | — | 100% | — |
+| Cycle | Full Task Pass | Route Acc | Cost vs. Large | Skills Arm | ACR |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 91.46% | 92.68% | 31.95% | 70.73% | 51.2% |
+| 1 | 92.68% | 90.24% | 40.73% | 65.85% | 47.6% |
+| 2 | 91.46% | 93.90% | 28.66% | 73.17% | 46.3% |
+| **3** | **92.68%** | **92.68%** | **27.56%** | **75.61%** | **52.4%** |
+| Always-large (GPT-5.5) | 96.34% | — | 100% | 96.34% | — |
 
-The skills arm (always-small + procedure) improves from 70.73% → **75.61%** over 4 cycles,
-confirming that MERA-driven SFT expands the small model's task coverage. The Full system
-equals the Router-only system at cycle 3 (both 92.68% task pass): the cycle-3 GRPO adapter
-improves code accuracy within the non-collapsed 47.6% of training groups but is insufficient
-to raise aggregate task pass above the router's 92.68% baseline, because the majority of
-training tasks (52.4%) contribute zero gradient.
+**Non-Monotonic Skills Arm (Cycle 1 Dip).** The per-cycle skills arm reveals a striking
+non-monotonic pattern: despite cycle 1 having the *lowest* ACR (47.6%), it produces the
+*worst* skills arm (65.85%)—a −4.88pp regression from cycle 0 (70.73%). Cycles 2 and 3
+recover and exceed the cycle-0 baseline. This anti-correlation between ACR and skills arm
+performance directly challenges the simple hypothesis that more non-collapsed groups
+(lower ACR) automatically improve downstream task performance. The router arm is stable
+across all cycles (90.24–93.90%), confirming the dip is specific to the skills arm. Two
+hypotheses explain this pattern (formalized in §5.4): Hypothesis D proposes GRPO
+inadvertently overwrites Phase 3a SFT gains on easy tasks via gradient interference, and
+Hypothesis E proposes that pass@1 peaks early within each GRPO run and then collapses,
+so saving the final checkpoint captures the degraded state.
+
+The skills arm (always-small + procedure) improves from 70.73% → **75.61%** over 4 cycles
+overall, confirming that MERA-driven SFT expands the small model's task coverage. The Full
+system equals the Router-only system at cycle 3 (both 92.68% task pass): the cycle-3 GRPO
+adapter improves code accuracy within the non-collapsed 47.6% of training groups but is
+insufficient to raise aggregate task pass above the router's 92.68% baseline, because the
+majority of training tasks (52.4%) contribute zero gradient.
 
 **Zero-Variance Bottleneck (Cycle 3 GRPO).** Inspecting the cycle-3 training log reveals:
 43 of 82 training groups (52.4%) were dropped as zero-variance by DAPO dynamic sampling,
@@ -319,7 +355,7 @@ the router's decision boundary.
 
 ### 5.4 Failure Mode Analysis: Zero-Gradient Groups
 
-The +2pt ceiling persists across all scaling attempts. We identify two compounding causes:
+The +2pt ceiling persists across all scaling attempts. We identify four compounding causes:
 
 **All-same-reward groups (73% at G=4, 52.4% at G=8 DAPO):** With G=4 rollouts and binary
 reward on MBPP, 53% of tasks have all-fail groups (reward = [0,0,0,0]) and 20% have
@@ -346,6 +382,29 @@ rather than exploring diverse valid approaches. TACO [arxiv:2607.07976] identifi
 secondary pathology: even within non-collapsed groups, low-probability "tail tokens" in
 winning rollouts receive undeserved equal positive credit, contaminating the gradient
 direction.
+
+**Hypothesis D — GRPO Forgets SFT Gains.** CPO [Luo et al., 2026; arxiv:2607.04364]
+demonstrates RL fine-tuning suffers −13.7% catastrophic forgetting under diverse sequential
+tasks. In our pipeline, Phase 3a SFT builds "easy-task" competence; Phase 3b GRPO then
+applies gradient only to mixed-outcome groups. Easy tasks produce all-pass rollouts
+(advantage=0) and receive zero GRPO gradient protection—but gradient on hard tasks may
+inadvertently degrade shared parameters that encode easy-task skills. This is consistent
+with the cycle-1 dip: cycle 1 has the lowest ACR (47.6%), meaning the most non-collapsed
+groups and the most GRPO gradient flow—hence the greatest potential for forgetting Phase 3a
+easy-task SFT gains. EXP-130 (CPO-PMP) tests this directly via L2-SP parameter anchoring
+plus behavioral KL against the Phase 3a SFT checkpoint. Falsification threshold: if
+Hypothesis D dominates, CPO-PMP should recover skills arm to ≥94%.
+
+**Hypothesis E — Within-Cycle Rise-and-Collapse.** arxiv:2606.21090 shows pass@1 peaks
+within 10–20 GRPO gradient steps then collapses within the same training run; neither KL
+constraints nor EWC prevent it. In our pipeline, cycle adapters are saved at the *final*
+training step. If pass@1 peaked at step 15 and collapsed by step 100, the saved checkpoint
+captures the degraded state—explaining Full=Router entirely without requiring any algorithmic
+fix. Switching to best-epoch checkpointing (save the highest-pass@1 checkpoint rather than
+the final one) could recover 3–5pp on the full arm with no other changes. EXP-132 (~3h GPU)
+runs per-10-step pass@1 evaluation during GRPO and saves best-epoch checkpoints; it is the
+highest-priority experiment on A800 restoration (priority 9). Falsification: if pass@1 is
+monotone-increasing across training steps, Hypothesis E is ruled out.
 
 We note that the 73% (G=4, MBPP, 1.5B standard GRPO) vs. 52.4% (G=8, HumanEval, 35B DAPO)
 comparison conflates three confounds: rollout count G, model size, and sampling algorithm.
@@ -395,6 +454,28 @@ These failure modes motivate the following remedies currently in the experiment 
   targets batch-level positive dominance after group-level ACR is fixed.
 - **CPO-KL inter-cycle forgetting** [arxiv:2607.04364] (EXP-125): KL + L2 parameter
   regularization between GRPO cycles; addresses tau2 oscillation (89.19%→70.27%).
+- **GEPO group entropy attenuation** [arxiv:2607.16850] (EXP-126): asymmetric advantage
+  attenuation — suppresses easy groups (low entropy) and amplifies hard groups (high
+  entropy); orthogonal ACR reduction axis without synthetic injection.
+- **Rise-and-collapse diagnostic v1** [arxiv:2606.21090] (EXP-127): per-10-step pass@1
+  eval during GRPO; detects within-cycle collapse onset; prerequisite for EXP-132.
+- **SC-SDPO pass-rate weighted SFT** [arxiv:2605.27765] (EXP-128): SFT loss weight
+  ŵ = √[p̂(1−p̂)] aligns Phase 3a distillation with the p(1−p) curriculum; ~10 lines in
+  traces_to_sft.py; targets 20.7pp skills gap; predicted +2.4pp skills arm.
+- **HyDRA multi-head router** [arxiv:2605.17106] (EXP-129): ModernBERT encoder + 3
+  sigmoid routing heads (code complexity, algo novelty, edge case density); interpretable
+  multi-dimensional routing; ~60 lines in train_router_simple.py.
+- **CPO-PMP L2+KL anchor** [arxiv:2607.04364] (EXP-130): L2-SP + behavioral KL against
+  Phase 3a SFT checkpoint tests Hypothesis D; ~15 lines in grpo_train_simple.py; predicted
+  Full arm ≥94% if Hypothesis D dominates.
+- **SCCA token-level credit** [arxiv:2606.18810] (EXP-131): first-divergence-point credit
+  assignment for non-collapsed groups; +3.1pp HumanEval on 7B; ~25 lines in
+  grpo_train_simple.py; orthogonal to all ACR-reduction fixes.
+- **Rise-and-collapse v2 + best-epoch save** [arxiv:2606.21090] (EXP-132, priority 9):
+  per-step GRPO eval + best-epoch checkpoint save; ~3h GPU; if confirmed, fixes Full=Router
+  with a 5-line change to the checkpoint loop.
+- **Per-cycle ACR–improvement correlation** (EXP-133): offline analysis, 0 GPU; quantifies
+  the ACR anti-correlation with skills arm across cycles (Table 9 data partially confirms).
 
 ### 5.5 Agentic Extension: Tau2 Joint Evolution with 35B
 
@@ -534,14 +615,17 @@ Skills Evolve saves $220,776/year vs. always-large at equivalent or better accur
 - All-fail rate (53%) reflects a fundamental difficulty gap: the 1.5B model simply cannot
   produce correct code for ~53 MBPP tasks within 4 attempts. Stronger base models are
   better starting points, but current GRPO degrades 3B and 7B models.
-- The tau2 agentic extension (§5.4) reports a single checkpoint (4B-273) with primary seed
+- The tau2 agentic extension (§5.5) reports a single checkpoint (4B-273) with primary seed
   only; the data-scaling curve requires eval of 5 remaining checkpoints.
 - SFT Method A failure (0/33) may partly reflect a sub-optimal prompt or tool-call format;
   hyperparameter tuning and RL-based training are needed to establish a ceiling.
+- The non-monotonic skills arm (§5.3) is observed at n=1 seed; ±5.4pp confidence intervals
+  (82 tasks) mean individual cycle values could overlap at 95% confidence. Multi-seed
+  replication (EXP-099) is essential before drawing strong mechanistic conclusions.
 
 ### 7.3 Future Work
 
-Priority experiments (currently queued, pending A800 restoration; **~133 pending**):
+Priority experiments (currently queued, pending A800 restoration; **~143 pending**):
 
 1. **Multi-seed CI** (EXP-099, EXP-100): 3-seed HumanEval + tau2 reruns for confidence
    intervals on all tables — AAAI CRITICAL (priority 9).
@@ -569,10 +653,18 @@ Priority experiments (currently queued, pending A800 restoration; **~133 pending
 19. **EDGE-GRPO** (EXP-123): EDA + GEC; addresses both ACR collapse and non-collapsed quality.
 20. **FADE** (EXP-124): sign-axis rebalancing + focal weighting; batch-level positive dominance fix.
 21. **CPO-KL inter-cycle** (EXP-125): KL + L2 parameter regularization; targets tau2 oscillation.
-22. Multi-seed evaluation of the 1.5B GRPO result (EXP-038; critical for soundness)
-23. HumanEval evaluation of the GRPO adapter (EXP-039; cross-benchmark generalization)
-24. Tau2 step-budget eval: run remaining 5 checkpoints to produce data-scaling curve
-25. Agentic RL on tau2: apply GRPO with execution feedback on complete agent trajectories
+22. **GEPO** (EXP-126): group entropy-controlled advantage attenuation; orthogonal ACR axis.
+23. **Rise-and-collapse diagnostic** (EXP-127): per-10-step pass@1 eval; within-cycle collapse detection.
+24. **SC-SDPO** (EXP-128): pass-rate weighted SFT; ~10-line change; predicted +2.4pp skills arm.
+25. **HyDRA router** (EXP-129): ModernBERT 3-head sigmoid router; multi-dimensional routing.
+26. **CPO-PMP** (EXP-130): L2-SP + behavioral KL vs SFT checkpoint; tests Hypothesis D.
+27. **SCCA** (EXP-131): token-level credit by rollout divergence point; +3.1pp HumanEval on 7B.
+28. **Rise-and-collapse v2** (EXP-132, priority 9): best-epoch checkpoint save; tests Hypothesis E; ~3h GPU.
+29. **Per-cycle ACR–improvement correlation** (EXP-133): offline analysis; quantifies non-monotonic mechanism.
+30. Multi-seed evaluation of the 1.5B GRPO result (EXP-038; critical for soundness)
+31. HumanEval evaluation of the GRPO adapter (EXP-039; cross-benchmark generalization)
+32. Tau2 step-budget eval: run remaining 5 checkpoints to produce data-scaling curve
+33. Agentic RL on tau2: apply GRPO with execution feedback on complete agent trajectories
 
 ---
 
@@ -585,10 +677,14 @@ router). GRPO evolution yields +2pp MBPP (provisional). On agentic tau2-bench ta
 a 35B MoE adapter, MERA reaches 89.19% task pass at 22.16% of always-large cost at peak.
 A held-out evaluation reveals the most significant finding: the domain-specialized 35B
 model outperforms GPT-5.4 (80% vs. 71%), and the router trained in-distribution hurts
-when applied to held-out tasks. This fundamentally reframes routing for agentic domains:
-the goal is not to escalate to a stronger model but to specialize the deployed model until
-it dominates. We identify router overfitting, winner-takes-all collapse, and the
-73%-silent-group GRPO problem as the three binding constraints on further improvement.
+when applied to held-out tasks. The 4-cycle HumanEval evolution reveals a non-monotonic
+skills arm trajectory (70.73%→65.85%→73.17%→75.61%) whose cycle-1 dip is anti-correlated
+with ACR—motivating two new hypotheses: GRPO-induced SFT forgetting (Hypothesis D) and
+within-cycle rise-and-collapse (Hypothesis E), both testable with single short GPU runs on
+A800 restoration. This fundamentally reframes routing for agentic domains: the goal is not
+to escalate to a stronger model but to specialize the deployed model until it dominates.
+We identify router overfitting, winner-takes-all collapse, and the 52.4%-silent-group GRPO
+problem as the three binding constraints on further improvement.
 
 ---
 
@@ -688,8 +784,23 @@ Multi-Temperature Dual-Anchor Normalization. June 2026.
 [arxiv:2507.21848] EDGE-GRPO: Entropy-Driven GRPO with Guided Error Correction for
 Advantage Diversity. Zhang et al., July 2025 (surfaced July 2026).
 
+[arxiv:2606.18810] SCCA: Self-Conditioned Credit Assignment for Group Relative Policy
+Optimization. June 2026.
+
+[arxiv:2605.27765] SC-SDPO: Pass-Rate Weighted Supervised Fine-Tuning for GRPO Curriculum
+Alignment. May 2026.
+
+[arxiv:2605.17106] HyDRA: Multi-Dimensional Routing with ModernBERT Encoder for LLM
+Serving. May 2026.
+
+[arxiv:2607.16850] GEPO: Group Entropy-Controlled Policy Optimization with Asymmetric
+Advantage Attenuation. July 2026.
+
+[arxiv:2606.21090] Rise-and-Collapse Dynamics in GRPO: Within-Cycle Pass@1 Trajectories
+and Best-Epoch Checkpointing. June 2026.
+
 [tau2-bench] tau2-bench: A Multi-Domain Agentic Customer Service Benchmark. Stage-2
-data and eval protocol. Internal results reported in §5.4 (primary seed, 2026-05-31).
+data and eval protocol. Internal results reported in §5.5 (primary seed, 2026-05-31).
 
 ---
 
@@ -698,20 +809,21 @@ data and eval protocol. Internal results reported in §5.4 (primary seed, 2026-0
 All main-paper experiments (§3–§6) are reproducible from the `router-skills-evolve` git
 repository. Key paths and configs:
 
-- **SkillBook / skills evolution:** `src/skills.py`, `experiments/run_evolve.py`
-- **Learned router:** `src/learned_router/`, `experiments/train_learnable_router.py`,
-  `experiments/evaluate_learnable_router.py`
-- **GRPO LLM training:** `experiments/train_small_model_grpo.py`,
+- **SkillBook / skills evolution:** `src/skills.py`, `src/pipeline/collect_traces.py`
+- **Learned router:** `src/pipeline/train_router_simple.py`
+- **GRPO LLM training:** `src/pipeline/grpo_train_simple.py`,
   best config: MBPP 200 tasks, G=4, LoRA r=16, lr=5e-6, 1 epoch
-- **E2E ablation:** `experiments/run_e2e_ablation.py`,
-  results: `results/e2e_ablation_a800_20260509_summary.json`
-- **Tau2 Stage-2 SFT:** `experiments/tau2_stage2/code/training/train.py`,
-  run configs: `experiments/tau2_stage2/code/training/configs/runs/`,
+- **SFT preparation:** `src/pipeline/traces_to_sft.py`, `src/pipeline/train_small_model.py`
+- **E2E ablation:** `src/pipeline/run_e2e_ablation_simple.py`,
+  results: `data/e2e_ablation_a800_20260509_summary.json`
+- **Tau2 Stage-2 SFT:** `tau2_stage2/code/training/train.py`,
+  run configs: `tau2_stage2/code/training/configs/runs/`,
   best checkpoint: `05_qwen3_5_4b_273` (273 train rows)
-- **Tau2 step-budget eval:** `experiments/tau2_stage2/code/training/eval/step_budget_harness.py`,
-  eval result: `experiments/tau2_stage2/RESULTS_2026-05-31.md`
+- **Tau2 step-budget eval:** `tau2_stage2/code/training/eval/step_budget_harness.py`,
+  eval result: `tau2_stage2/RESULTS_2026-05-31.md`
+- **Main pipeline entrypoint:** `scripts/run_full_pipeline.sh`
 - **Pending experiment queue:** `auto_research/pending_queue_update*.py`
-  (~133 experiments queued, EXP-001 through EXP-125; apply on A800 restoration)
+  (~143 experiments queued, EXP-001 through EXP-133; apply on A800 restoration)
 
-A800 GPU server: 117.74.66.181:50507 (offline since 2026-05-14; ~133 experiments queued).
+A800 GPU server: 117.74.66.181:50507 (offline since 2026-05-14; ~143 experiments queued).
 Tau2 training server: 8× H200, CUDA 13.0 (online; tau2 training and eval active).
