@@ -353,3 +353,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
 [2026-07-26T04:06:23Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connection timed out on all 3 attempts. Unable to read state.json, check GPU util, or take any automated actions. No experiments were triggered or modified. Next shepherd run will retry connectivity.
 
 [2026-07-26T14:08:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. sshpass installed OK, openssh-client installed OK; network path blocked. Push notification sent to user. DONE: actions=FAILED
+[2026-07-26 20:05:24 UTC] SHEPHERD RUN: A800 (117.74.66.181:50507) UNREACHABLE — TCP timeout. No state read, no actions taken. All checks skipped. FAILED: A800 unreachable.
