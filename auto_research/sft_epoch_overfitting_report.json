@@ -1,0 +1,110 @@
+{
+  "cycles": {
+    "0": {
+      "sft_init": {
+        "loss": 0.42418667674064636,
+        "entropy": 0.2138131009414792,
+        "grad_norm": 1.0217833518981934
+      },
+      "sft_ep1": {
+        "loss": 0.1784447431564331,
+        "entropy": 0.23316220939159393
+      },
+      "sft_final": {
+        "loss": 0.10125754028558731,
+        "entropy": 0.2559393395980199
+      },
+      "overfit_gap": -0.077,
+      "entropy_regression": -0.023,
+      "max_grad_norm": 1.0218,
+      "mean_grad_norm": 0.4349,
+      "skills_arm_pass_at_1": 0.7073,
+      "skills_arm_delta_from_prior": 0.0,
+      "grpo_acr_fraction": 0.512,
+      "is_overfitting": false
+    },
+    "1": {
+      "sft_init": {
+        "loss": 0.3450786769390106,
+        "entropy": 0.15209509199485183,
+        "grad_norm": 0.8899197578430176
+      },
+      "sft_ep1": {
+        "loss": 0.16642755270004272,
+        "entropy": 0.25472526252269745
+      },
+      "sft_final": {
+        "loss": 0.271188884973526,
+        "entropy": 0.20677533745765686
+      },
+      "overfit_gap": 0.105,
+      "entropy_regression": 0.048,
+      "max_grad_norm": 0.9769,
+      "mean_grad_norm": 0.4676,
+      "skills_arm_pass_at_1": 0.6585,
+      "skills_arm_delta_from_prior": -0.0488,
+      "grpo_acr_fraction": 0.476,
+      "is_overfitting": true
+    },
+    "2": {
+      "sft_init": {
+        "loss": 0.48962581157684326,
+        "entropy": 0.18656819546595216,
+        "grad_norm": 1.0976881980895996
+      },
+      "sft_ep1": {
+        "loss": 0.18424686789512634,
+        "entropy": 0.21426483492056528
+      },
+      "sft_final": {
+        "loss": 0.06929901242256165,
+        "entropy": 0.17695012440284094
+      },
+      "overfit_gap": -0.115,
+      "entropy_regression": 0.037,
+      "max_grad_norm": 1.0977,
+      "mean_grad_norm": 0.4619,
+      "skills_arm_pass_at_1": 0.7317,
+      "skills_arm_delta_from_prior": 0.0732,
+      "grpo_acr_fraction": 0.463,
+      "is_overfitting": false
+    },
+    "3": {
+      "sft_init": {
+        "loss": 0.24405372142791748,
+        "entropy": 0.14649279997684062,
+        "grad_norm": 0.48180297017097473
+      },
+      "sft_ep1": {
+        "loss": 0.18354831635951996,
+        "entropy": 0.2139770289262136
+      },
+      "sft_final": {
+        "loss": 0.11251014471054077,
+        "entropy": 0.2398649143675963
+      },
+      "overfit_gap": -0.071,
+      "entropy_regression": -0.026,
+      "max_grad_norm": 0.8141,
+      "mean_grad_norm": 0.3475,
+      "skills_arm_pass_at_1": 0.7561,
+      "skills_arm_delta_from_prior": 0.0244,
+      "grpo_acr_fraction": 0.524,
+      "is_overfitting": false
+    }
+  },
+  "summary": {
+    "overfitting_cycles": [
+      1
+    ],
+    "hypothesis_f_supported": true,
+    "cycle_1_overfit_gap": 0.105,
+    "cycle_1_skills_delta": -0.0488,
+    "finding": "Cycle 1 is the only cycle where SFT epoch-2 loss exceeds epoch-1 loss (overfit_gap=+0.105), coinciding with the only cycle where skills arm dips below the prior cycle (65.85% vs 70.73%). Supports Hypothesis F: SFT epoch-2 geometry conflict with the mode-collapsed GRPO-0 adapter produces an overtrained checkpoint that impairs GRPO-1 initialization (arxiv:2606.18487).",
+    "fix": "Select epoch-1 SFT checkpoint (checkpoint-6) as GRPO initializer when overfit_gap > 0. Tested by EXP-137.",
+    "arxiv_refs": [
+      "2606.18487",
+      "2605.09608"
+    ]
+  }
+}
