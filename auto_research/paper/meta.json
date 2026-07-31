@@ -1,5 +1,5 @@
 {
-  "paper_version": 7,
+  "paper_version": 9,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
   "secondary_venue": null,
@@ -8,16 +8,16 @@
   "emnlp_deadline": "2026-06-19",
   "neurips_deadline": "2026-05-23",
   "scores": {
-    "novelty": 6,
-    "soundness": 4,
+    "novelty": 6.5,
+    "soundness": 4.5,
     "significance": 7,
     "writing": 8.5
   },
-  "composite": 6.375,
-  "status": "provisional — A800 offline day 71; GRPO results n=1 seed; v7 (2026-07-24): +Algorithm 1 MERA Cycle box (closes W7); +per-cycle skills arm and ACR in Table 9 (new data); +Hypothesis D (GRPO forgetting, arxiv:2607.04364) in §5.4; +rise-and-collapse (arxiv:2606.21090) in §2; +EXP-132/133 queued; §9 Reproducibility paths fixed; AAAI deadline 22 days — RUSH MODE ACTIVE. July 20 minviable restore date PASSED.",
-  "last_updated": "2026-07-24",
+  "composite": 6.625,
+  "status": "provisional — A800 offline day 78; GRPO results n=1 seed; v9 (2026-07-31): +Hypothesis F (SFT epoch-2 geometry conflict, offline-confirmed via sft_epoch_overfitting_report.json); +Proposition 1 (Zero-Gradient Groups under DAPO, closes long-standing W5); +Dark Room effect (ACR groups → spurious amplified gradients under standard GRPO, not true zeros); +full non-monotonic skills arm trajectory in Table 9 (65.85% at c1, 73.17% at c2); +SE footnotes on Table 9; +5 new bib entries; +EXP-142/143 queued; AAAI deadline 15 days — GPU window CLOSED (Aug 1). Submit-ready target: August 8.",
+  "last_updated": "2026-07-31",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "queue_size": 143,
+  "queue_size": 149,
   "new_findings_2026_07_24": {
     "algorithm1_box": "Algorithm 1 MERA Cycle box added to §3.4 — closes W7 from review history. Formal pseudocode covering: signature extraction, router routing on raw prompt, procedure-augmented generation, SkillBook update, Phase 3a SFT, Phase 3b GRPO with DAPO dynamic sampling, Phase 4 router update. 4 design invariants annotated.",
     "per_cycle_skills_and_acr": "Table 9 expanded: per-cycle skills arm added for ALL cycles (was only cycle 0 and 3). Cycle 1 skills arm = 65.85% (dip from 70.73% in cycle 0) — non-monotonic behavior not previously reported. Per-cycle ACR from grpo_info.json: 51.2% (c0), 47.6% (c1), 46.3% (c2), 52.4% (c3). Data shows ACR and skills arm improvement are anti-correlated in cycle 1, weakening pure ACR explanation.",

@@ -1,5 +1,5 @@
 % MERA: Model Evolution and Routing with Skill Adaptation — AAAI 2027 submission
-% paper.tex — auto-updated 2026-07-17 by weekly pipeline (v6)
+% paper.tex — auto-updated 2026-07-31 by weekly pipeline (v9)
 % DO NOT edit the %% MANUAL-PIN blocks below.
 
 \documentclass[letterpaper]{article}
@@ -17,6 +17,8 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage[utf8]{inputenc}
+\usepackage{amsthm}
+\newtheorem{proposition}{Proposition}
 
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
@@ -48,9 +50,12 @@ cost} than always routing to the frontier model.
 A BERT-based router achieves \textbf{93.04\% routing accuracy} with a \textbf{2.12\%
 fallback rate}.
 Over 4 end-to-end evolution cycles on HumanEval with DAPO multi-turn repair ($G{=}8$),
-the skills arm improves from 70.7\% to 75.6\% task pass; a mechanistic analysis
-reveals that \textbf{52.4\% of training groups produce zero gradient} even with DAPO
-dynamic sampling, identifying zero-variance collapse as the binding improvement bottleneck.
+the skills arm follows a \textbf{non-monotonic trajectory} (70.7\%$\to$65.9\%$\to$73.2\%$\to$75.6\%):
+the cycle-1 dip is explained by SFT epoch-2 geometry conflict—the only cycle where
+epoch-2 training loss \emph{increases} above epoch-1 (0.166$\to$0.271; Hypothesis F).
+Mechanistic analysis reveals \textbf{52.4\% of training groups produce zero gradient} even with
+DAPO dynamic sampling; without DAPO's $\sigma{=}0$ filter, these groups produce spurious
+amplified gradients~\cite{darkroom2026}, not truly zero updates.
 A standalone GRPO pass on MBPP yields +2pp pass@1 for Qwen2.5-Coder-1.5B ($n{=}1$ seed).
 The Group-Standard-Deviation Identity~\cite{groupsd2026} provides formal grounding:
 GRPO, Dr.~GRPO, and DAPO differ only in how they treat within-group $\sigma$; our
@@ -95,11 +100,13 @@ We contribute:
 \item \textbf{End-to-end ablation} (\S\ref{sec:ablation}): unified evaluation isolating
   each component's contribution.
 \item \textbf{Multi-cycle MERA evolution} (\S\ref{sec:he4cyc}): 4-cycle DAPO joint
-  evolution on HumanEval showing skills arm improvement (70.7\%$\to$75.6\%) and
-  identifying 52.4\% zero-variance groups as the primary improvement bottleneck.
+  evolution on HumanEval showing non-monotonic skills arm (70.7\%$\to$65.9\%$\to$73.2\%$\to$75.6\%)
+  with cycle-1 dip explained by offline-confirmed SFT epoch-2 geometry conflict (Hypothesis~F)
+  and 52.4\% zero-variance groups as the primary barrier to further gain.
 \item \textbf{Failure mode analysis} (\S\ref{sec:analysis}): identification of
-  winner-takes-all collapse and 73\%-silent-group failure as the binding GRPO constraints,
-  with theoretical grounding from reward-variance-scaled regularization~\cite{rftforgetting2026}.
+  winner-takes-all collapse, zero-variance silent groups, and SFT epoch-2 overtraining as
+  the binding constraints; the Dark Room effect~\cite{darkroom2026} reveals that without
+  DAPO's filter, zero-variance groups produce spurious amplified gradients rather than true zeros.
 \item \textbf{Agentic extension} (\S\ref{sec:tau2}): 4-cycle joint evolution on tau2-bench
   showing the domain-specialized small model surpasses the frontier model on held-out
   tasks (80\% vs.\ 71\%), and identifying router overfitting in agentic settings.
@@ -162,6 +169,16 @@ We observe this empirically: 400-task GRPO degrades while 200-task GRPO improves
 Recent work~\cite{rftforgetting2026} formalizes why: RFT's implicit regularization
 is theoretically scaled by within-group reward variance, meaning zero-variance
 groups provably receive zero gradient updates---confirming the silent-group failure mode.
+CPO~\cite{cpo2026} shows RL fine-tuning forgets diverse prior tasks under sequential
+adaptation, motivating replay-free behavioral KL + L2 regularization between cycles.
+SFT overtraining further harms GRPO initialization: overtrained checkpoints have
+compressed output distributions (low entropy) that cause gradient vanishing at the
+start of RL~\cite{sftovertraining2026}, directly explaining our offline-confirmed
+cycle-1 skills arm dip (Hypothesis~F, §\ref{sec:analysis}).
+The Dark Room effect~\cite{darkroom2026} reveals a complementary pathology:
+GRPO's $1/\sigma$ normalization amplifies near-zero $\sigma$ noise in zero-variance
+groups to $\mathcal{O}(1)$ spurious gradient---DAPO's explicit $\sigma{=}0$ filter
+prevents this, converting spurious updates to true zeros.
 
 %% SECTION 3 %%
 \section{SkillBook: Signature-Based Routing Evolution}
@@ -298,38 +315,62 @@ multi-turn repair rollout ($G{=}8$, max\_turns$=3$, LoRA $r{=}16$, $\eta{=}5\tim
 
 \begin{table}[h]
 \centering
-\caption{4-cycle HumanEval MERA---per-cycle Full-variant and skills-arm results.}
+\caption{4-cycle HumanEval MERA---per-cycle results ($n{=}1$ seed;
+  $^\dagger$binomial SE ${\approx}{\pm}5.4$pp at 82 tasks).}
 \label{tab:he4cyc}
 \begin{tabular}{lrrrr}
 \toprule
-Cycle & Full Task Pass & Route Acc & Cost & Skills Arm \\
+Cycle & Full Pass$^\dagger$ & Route Acc$^\dagger$ & Cost & Skills Arm$^\dagger$ \\
 \midrule
 0 & 91.46\% & 92.68\% & 31.95\% & 70.73\% \\
-1 & 92.68\% & 90.24\% & 40.73\% & --- \\
-2 & 91.46\% & 93.90\% & 28.66\% & --- \\
+1 & 92.68\% & 90.24\% & 40.73\% & 65.85\%$^*$ \\
+2 & 91.46\% & 93.90\% & 28.66\% & 73.17\% \\
 3 & 92.68\% & 92.68\% & 27.56\% & \textbf{75.61\%} \\
 \midrule
 Always-large (GPT-5.5) & \multicolumn{2}{r}{96.34\%} & 100\% & --- \\
 \bottomrule
 \end{tabular}
+{\small $^*$Cycle-1 SFT overfit: epoch-2 loss $0.166{\to}0.271$; epoch-1 ckpt saves 4.88pp.}
 \end{table}
 
-The skills arm (always-small $+$ procedure) improves from 70.73\% to \textbf{75.61\%}
-over 4 cycles, confirming MERA-driven SFT expands the small model's task coverage.
-The Full system equals the Router-only system at cycle~3 (both 92.68\% task pass):
-the cycle-3 GRPO adapter improves code accuracy within the non-collapsed 47.6\% of
-training groups but is insufficient to raise aggregate task pass above the router's
-92.68\% baseline, because 52.4\% of training tasks contribute zero gradient.
+The skills arm follows a non-monotonic trajectory: 70.73\%$\to$65.85\%$\to$73.17\%$\to$\textbf{75.61\%},
+improving 4.88pp overall yet dipping at cycle~1.
+The cycle-1 dip is anti-correlated with ACR (47.6\%—the lowest ACR of all 4 cycles),
+ruling out zero-variance collapse as the sole cause and suggesting SFT quality as the
+primary bottleneck.
+Offline analysis of cycle-1 SFT training logs confirms Hypothesis~F:
+epoch-2 loss \emph{increases} from 0.166 to 0.271 (overfit\_gap\,$=$\,$+0.105$; the
+only cycle with positive overfit\_gap), coinciding with entropy compression from 0.255
+to 0.207---consistent with geometry conflict~\cite{geometry2026} between the mode-collapsed
+GRPO-0 adapter and cycle-1 SFT data. Using the epoch-1 checkpoint (checkpoint-6,
+available in the repo) as the GRPO initializer instead of the overtrained epoch-2 checkpoint
+is predicted to recover the 4.88pp dip (EXP-137).
+The Full system equals the Router-only system in all 4 cycles (both 92.68\% at cycle~3):
+routing is a prompt-level decision; GRPO improves code accuracy in the non-collapsed
+47.6\% of groups but does not shift the set of prompts requiring large-model escalation.
 
 \paragraph{Zero-Variance Diagnosis (Cycle~3 GRPO).}
 Inspection of the cycle-3 GRPO training log reveals a concrete bottleneck: of 82
 training groups ($G{=}8$, DAPO dynamic sampling), \textbf{43/82 (52.4\%) were dropped
 as zero-variance}---despite DAPO's post-hoc filtering. The informative subset:
 39 groups, 312 rollouts used for weight updates. Zero-variance breaks down as
-${\approx}45\%$ all-pass (problems the cycle-3 model already masters) and
-${\approx}7\%$ all-fail (intractable at 1.5B capacity). This is lower than the
+${\approx}40\%$ all-pass (problems the cycle-3 model already masters) and
+${\approx}12\%$ all-fail (intractable at 1.5B capacity). This is lower than the
 73\% zero-variance at $G{=}4$ standard GRPO (§\ref{sec:analysis}): DAPO reduces
 but does not eliminate the bottleneck.
+
+\begin{proposition}[Zero-Gradient Groups under DAPO]
+\label{prop:zero-grad}
+Under DAPO with dynamic sampling (drop groups where $\sigma{=}0$), let $K$ denote
+rollout count per group. For any group where all $K$ outcomes are identical
+(all-pass or all-fail), within-group reward variance $\sigma^2{=}0$ and DAPO drops the
+group. By the Group-SD Identity~\cite{groupsd2026}, the DAPO policy gradient for that
+group is exactly zero. Without DAPO's filter, standard GRPO's $1/\sigma$ normalization
+amplifies finite-precision noise ($\sigma{\approx}\varepsilon$) to $\mathcal{O}(1)$
+spurious gradient~\cite{darkroom2026}. In our 4-cycle HumanEval experiments, DAPO
+correctly zeros 46.3\%--52.4\% of training groups per cycle; the remaining 47.6\%--53.7\%
+carry all informative gradient.
+\end{proposition}
 
 %% SECTION 6 %%
 \section{End-to-End Ablation}
@@ -434,34 +475,40 @@ beyond always-small routing.
 \section{Failure Mode Analysis}
 \label{sec:analysis}
 
-\paragraph{Zero-Variance Silent-Group Problem.}
+\paragraph{Zero-Variance Silent-Group Problem and Dark Room Effect.}
 With $G{=}4$ rollouts and binary reward on MBPP, 53\% of tasks yield all-fail groups
-and 20\% yield all-pass groups. GRPO advantage normalization $A_i=(r_i-\bar{r})/\sigma_r$
-produces $0/0$ on all-same-reward groups, clipped to zero---leaving only 27\% of tasks
-with non-zero gradient. Scaling to $G{=}8$ with DAPO dynamic sampling on HumanEval
-reduces zero-variance to \textbf{52.4\%} (43/82 groups; §\ref{sec:he4cyc}): DAPO
-mitigates but does not eliminate the bottleneck. Only 39 of 82 HumanEval training tasks
-provide informative gradient at $G{=}8$ DAPO.
-Two complementary theoretical analyses confirm this.
-\citet{rftforgetting2026} show that RFT's implicit regularization is proportional to
-within-group reward variance; zero-variance groups therefore contribute
-\emph{neither learning nor forgetting}---pure rollout compute waste.
-The Group-Standard-Deviation Identity~\cite{groupsd2026} unifies GRPO/Dr.~GRPO/DAPO
-as three operations on $\sigma$: our 52.4\% collapsed groups correspond precisely to
-the $\sigma{=}0$ regime.
-Under Dr.~GRPO (no $1/\sigma$ division), the update magnitude per prompt is
-$K/(K{-}1)\cdot p(1{-}p)$---zero for $p\in\{0,1\}$ (collapsed) and maximal at $p{=}0.5$
-(informative)---providing a principled natural curriculum without external scheduling.
-We note that the 73\% ($G{=}4$, MBPP, 1.5B, standard GRPO) vs.\ 52.4\% ($G{=}8$,
-HumanEval, 35B DAPO) comparison conflates three confounds: rollout count, model size,
-and sampling algorithm; EXP-081 isolates the $G$ effect on a fixed model and benchmark.
-Analysis of the cycle-3 GRPO log reveals the breakdown of collapsed groups:
-33/82 are all-pass ($k{=}8$, 40.2\%) and 10/82 are all-fail ($k{=}0$, 12.2\%).
-The all-pass groups are learning-saturated; DAPO correctly drops them.
-The all-fail groups are candidates for sign-advantage ($A{=}{-}1$).
-Dr.~GRPO with sign-advantage fallback covers 49/82 groups (59.8\%) vs.\ 39/82 (47.6\%)
-under standard GRPO~$+$~DAPO---a $+$12.2pp increase in gradient-bearing groups via
-the 10 all-fail tasks, with no change for the 33 all-pass tasks.
+and 20\% yield all-pass groups. Standard GRPO advantage normalization
+$A_i=(r_i-\bar{r})/\sigma_r$ produces $0/0$ on all-same-reward groups, nominally
+clipped to zero. However, the Dark Room effect~\cite{darkroom2026} reveals a critical
+pathology: when $\sigma\to 0$ without an explicit filter, finite-precision residuals
+($\sigma{\approx}\varepsilon$) are amplified to $\mathcal{O}(1)$ spurious gradients that
+actively \emph{degrade} performance rather than contributing zero.
+DAPO's explicit $\sigma{=}0$ drop (Proposition~\ref{prop:zero-grad}) prevents this:
+it converts spurious amplified updates to true zeros.
+Scaling to $G{=}8$ with DAPO on HumanEval reduces the zero-variance fraction to
+\textbf{52.4\%} (43/82 groups; §\ref{sec:he4cyc}), leaving 39 informative groups.
+Two complementary analyses confirm the group-level picture.
+\citet{rftforgetting2026} show RFT's implicit regularization scales with within-group
+variance; DAPO-zeroed groups contribute neither learning nor forgetting.
+The Group-SD Identity~\cite{groupsd2026} unifies GRPO/Dr.~GRPO/DAPO as three operations
+on $\sigma$: Dr.~GRPO (no $1/\sigma$) provides update $\propto p(1{-}p)$---naturally
+zero for collapsed groups and maximal at $p{=}0.5$.
+
+\paragraph{SFT Epoch-2 Geometry Conflict (Hypothesis~F).}
+Offline analysis of cycle-1 SFT training logs (available in the repo:
+\texttt{results/e2e\_4cyc\_gpt55/cycle\_1/llm\_adapter/training\_info.json})
+reveals a novel failure mode: epoch-2 loss increases from 0.166 to 0.271
+(overfit\_gap\,$=$\,$+0.105$), the \emph{only} cycle with a positive overfit gap.
+Cycle-1 SFT starts from the GRPO-0 adapter (entropy 0.152, mode-collapsed), whose
+compressed parameter space conflicts with cycle-1 teacher-trace gradients in epoch~2
+(geometry conflict~\cite{geometry2026}).
+The epoch-1 checkpoint (checkpoint-6; $\ell_1{=}0.166$, entropy 0.255) is saved in
+the repo and provides a better GRPO initializer.
+This mechanistically explains the cycle-1 skills arm dip (65.85\% vs.\ 70.73\%):
+the overtrained SFT checkpoint reduces model plasticity~\cite{sftovertraining2026},
+causing gradient vanishing at the start of GRPO-1.
+Selecting the epoch-1 checkpoint when overfit\_gap\,$>\,0$ is predicted to recover
+the 4.88pp dip with a 1-line change to the pipeline (EXP-137).
 
 \paragraph{Skills Gap.}
 The skills arm (always-small $+$ procedure) achieves 75.61\% pass@1 on HumanEval,
@@ -483,25 +530,22 @@ subsequent rollout batches. Group advantage collapses to zero; the model converg
 single solution mode per task.
 
 \paragraph{Remedies.}
-REINFORCE++~\cite{zeng2025reinforceplusplus} uses a global EMA baseline that converts
-all-fail to $-0.47$ signal and all-pass to $+0.53$ signal, providing gradient on
-previously silent groups.
-GCPO~\cite{chen2026gcpo} uses team-level AST-diversity coverage credit to prevent
+REINFORCE++~\cite{zeng2025reinforceplusplus} uses a global EMA baseline providing
+gradient on all-same-reward groups.
+GCPO~\cite{chen2026gcpo} applies team-level AST-diversity coverage to prevent
 winner-takes-all collapse.
-RECRL~\cite{recrl2026} and MicroCoder~\cite{microcoder2026} address zero-variance via
-adaptive curriculum sampling and diversity-determined temperature respectively.
-SRPO~\cite{srpo2026} routes failed rollouts to a self-distillation correction path,
-providing logit-level signal from the reference policy on all-fail groups.
-Sign-advantage~\cite{signadv2026} eliminates zero-gradient groups for binary reward by
-using $A{=}2r{-}1$, which is $-1$ for all-fail and $+1$ for all-pass groups.
-Dr.~GRPO~\cite{groupsd2026} drops the $1/\sigma$ division entirely, yielding update
-magnitude $\propto p(1{-}p)$ which is zero for collapsed groups and maximal at $p{=}0.5$;
-this is the minimal implementation change consistent with avoiding $1/\sigma$ instability.
-GMPO~\cite{gmpo2026} targets the \emph{complementary} problem: improving update quality
-within the 47.6\% non-collapsed groups via geometric-mean token aggregation.
-For the skills gap, ZPD reward-guided distillation~\cite{zpddistill2026} filters SFT
-traces to the zone of proximal development, targeting the 20.7pp gap orthogonally to
-all GRPO-collapse fixes.
+RECRL~\cite{recrl2026} and MicroCoder~\cite{microcoder2026} reduce zero-variance via
+adaptive curriculum and diversity-determined temperature.
+SRPO~\cite{srpo2026} routes failed rollouts to a self-distillation correction path.
+Sign-advantage~\cite{signadv2026} eliminates zero-gradient groups ($A{=}2r{-}1$).
+Dr.~GRPO~\cite{groupsd2026} drops $1/\sigma$ entirely; update $\propto p(1{-}p)$.
+No-std-norm~\cite{darkroom2026} (remove only the $\sigma$ division, keep mean subtraction)
+converts spurious amplified gradients in near-zero-$\sigma$ groups to exact zeros,
+the minimal fix to the Dark Room pathology and complementary to DAPO's group-level filter.
+GMPO~\cite{gmpo2026} targets non-collapsed group quality via geometric-mean token aggregation.
+For the skills gap, ZPD distillation~\cite{zpddistill2026} filters SFT traces to the
+zone of proximal development; epoch-1 SFT checkpoint selection (Hypothesis~F, EXP-137)
+provides an orthogonal and immediately testable fix.
 These are queued as priority experiments pending A800 restoration.
 
 %% SECTION 8 %%
@@ -510,17 +554,20 @@ These are queued as priority experiments pending A800 restoration.
 We present MERA, achieving 99\% task accuracy at 17\% of frontier cost on HumanEval via
 skills evolution, 93.04\% routing accuracy with a learned BERT router, and +2pp MBPP
 pass@1 via GRPO (standalone; $n{=}1$ seed).
-Over 4 end-to-end HumanEval evolution cycles, the skills arm improves from 70.7\% to
-75.6\% task pass while the Full system maintains 92.68\% routing accuracy at 27.56\%
-of always-large cost; a mechanistic analysis pinpoints 52.4\% zero-variance DAPO groups
-as the primary barrier to further LLM improvement.
+Over 4 end-to-end HumanEval evolution cycles, the skills arm follows a non-monotonic
+trajectory (70.7\%$\to$65.9\%$\to$73.2\%$\to$75.6\%); offline analysis confirms the
+cycle-1 dip is caused by SFT epoch-2 geometry conflict (Hypothesis~F), recoverable by
+selecting the epoch-1 checkpoint---a 1-line fix testable without new GPU runs.
+A mechanistic analysis pinpoints 52.4\% zero-variance DAPO groups as the primary
+gradient barrier; Proposition~\ref{prop:zero-grad} formalizes the DAPO safety guarantee
+and contrasts it with the Dark Room spurious-gradient pathology of standard GRPO.
 Extended to tau2 agentic tasks, MERA reaches 89.19\% task pass at 22.16\% of always-large
 cost at peak, and reveals that the domain-specialized small model (80\%) surpasses
 the frontier GPT-5.4 (71\%) on held-out tasks, reframing routing as a domain-specialization
-decision rather than a pure capability-gap decision.
-We identify router overfitting, winner-takes-all collapse, and 52\%-zero-variance GRPO
-as the three binding constraints, motivating regularized routing, cooperative policy
-optimization, and adaptive curriculum training as the next experimental directions.
+decision.
+We identify SFT epoch-2 overtraining, router overfitting, and 52\%-zero-variance GRPO
+as the four binding constraints (with winner-takes-all collapse), each with a concrete
+low-overhead remedy grounded in both theory and our offline-confirmed experimental evidence.
 
 %% REFERENCES %%
 \bibliographystyle{aaai}

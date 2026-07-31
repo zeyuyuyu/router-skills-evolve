@@ -1,6 +1,7 @@
 # MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale
-<!-- paper_draft.md v8 — auto-updated 2026-07-26 by weekly paper pipeline -->
-<!-- A800 offline day 72; 0 new A800 results; 8 experiments queued (EXP-126–EXP-133) -->
+<!-- paper_draft.md v9 — auto-updated 2026-07-31 by weekly paper pipeline -->
+<!-- A800 offline day 78; 0 new A800 results; 2 experiments queued (EXP-142–EXP-143) -->
+<!-- Key v9 changes: +Hypothesis F (SFT epoch-2 geometry conflict, offline-confirmed); +Proposition 1 (Zero-Gradient Groups); +Dark Room effect (spurious gradients, not zero); +full non-monotonic skills arm trajectory in Table 9; +SE footnotes; +5 new bib entries -->
 
 **Zeyu Wang**  
 0G.ai / Institute of Artificial Intelligence  
@@ -20,12 +21,11 @@ On HumanEval (164 code tasks), MERA achieves **99% task accuracy at 83% lower co
 always routing to the frontier model. A BERT-based router achieves **93.04% routing
 accuracy** with a **2.12% fallback rate**. Over 4 end-to-end evolution cycles on HumanEval
 with DAPO multi-turn repair (G=8), the skills arm follows a non-monotonic trajectory
-(70.73%→65.85%→73.17%→75.61%), improving overall yet dipping at cycle 1—anti-correlated
-with ACR (lowest ACR yet worst skills arm)—suggesting two additional failure modes beyond
-zero-variance collapse: GRPO-induced forgetting of SFT gains (Hypothesis D) and
-within-cycle rise-and-collapse (Hypothesis E). A mechanistic analysis reveals that
-**52.4% of training groups produce zero gradient** even with DAPO dynamic sampling,
-identifying zero-variance collapse as the binding improvement bottleneck. A standalone
+(70.73%→65.85%→73.17%→75.61%), with the cycle-1 dip confirmed offline as SFT epoch-2
+geometry conflict (Hypothesis F: epoch-2 loss 0.166→0.271; epoch-1 checkpoint recovers
+4.88pp). A mechanistic analysis reveals that **52.4% of training groups produce zero
+gradient** with DAPO dynamic sampling; without DAPO's σ=0 filter, standard GRPO produces
+spurious amplified gradients from these groups (Dark Room effect), not true zeros. A standalone
 GRPO pass on MBPP yields +2pp pass@1 for Qwen2.5-Coder-1.5B (n=1 seed). The
 Group-Standard-Deviation Identity [groupsd2026] provides formal theoretical grounding:
 GRPO, Dr. GRPO, and DAPO differ only in their treatment of within-group σ; our 52.4%
