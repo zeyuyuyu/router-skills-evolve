@@ -361,3 +361,15 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   Actions taken: none (cannot reach host).
   Next step: verify A800 network / SSH daemon status before next shepherd tick.
 [2026-08-01T00:05:31Z] SHEPHERD RUN FAILED: A800 unreachable (117.74.66.181:50507). TCP connection timed out and no SSH client binary available in execution environment. No state read, no actions taken. This may indicate: (1) A800 is down or network policy blocks outbound SSH, (2) the container environment lacks openssh-client (confirmed: dpkg shows 'un' status). Manual check required. DONE: actions=none (FAILED: A800 unreachable)
+[2026-08-01T10:08Z] SHEPHERD RUN — FAILED (A800 unreachable, day ~79)
+  A800 (117.74.66.181:50507): TCP connect timed out; openssh-client not installable (404 in apt). Network policy blocks outbound SSH — persistent since ~2026-05-14.
+  STEP 1 SKIPPED: state.json, nvidia-smi, exp_*.result.json unreadable (no remote access).
+  STEP 2 A-D SKIPPED: cannot reach host.
+  STEP 2E (local repo, 10:08 UTC 2026-08-01):
+    - auto_research/reports/ideas-2026-08-01.md: PRESENT ✓ (idea-gen fired at 07:12 UTC — EXP-144/145: GRSD skill reflection + forgetting probe)
+    - hotspots/2026-08-01.json: not trackable from this env (dir not in cloned repo)
+    - Paper: v9 committed 2026-07-31 (within biweekly cadence; next paper-pipeline due ~2026-08-02)
+    - AAAI 2027 deadline: 2026-08-15 (14 days) — RUSH MODE; no new condition vs prior runs
+    - Queue: ~149 pending experiments, all frozen on A800 (A800 offline)
+  No push notification sent: A800 outage already flagged in prior runs; idea-gen PRESENT; no novel condition.
+  DONE: actions=none | FAILED: A800 unreachable (persistent, day ~79)
