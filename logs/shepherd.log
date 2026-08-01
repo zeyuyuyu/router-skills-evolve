@@ -361,3 +361,8 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   Actions taken: none (cannot reach host).
   Next step: verify A800 network / SSH daemon status before next shepherd tick.
 [2026-08-01T00:05:31Z] SHEPHERD RUN FAILED: A800 unreachable (117.74.66.181:50507). TCP connection timed out and no SSH client binary available in execution environment. No state read, no actions taken. This may indicate: (1) A800 is down or network policy blocks outbound SSH, (2) the container environment lacks openssh-client (confirmed: dpkg shows 'un' status). Manual check required. DONE: actions=none (FAILED: A800 unreachable)
+[2026-08-01T16:04:59Z] SHEPHERD RUN — A800 UNREACHABLE
+  Host: 117.74.66.181:50507 — TCP connection timed out (10s).
+  No state read, no experiments checked, no actions taken.
+  Recommendation: verify A800 network/SSH service; check if host IP or port changed.
+  Status: FAILED — A800 unreachable
