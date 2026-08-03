@@ -366,3 +366,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   No state read, no experiments checked, no actions taken.
   Recommendation: verify A800 network/SSH service; check if host IP or port changed.
   Status: FAILED — A800 unreachable
+[2026-08-03 14:10:55 UTC] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connection timed out. No state read, no actions taken. Claude remote execution environment cannot reach the A800 host directly; outbound SSH to arbitrary hosts appears blocked by the cloud network policy. Manual check required.
