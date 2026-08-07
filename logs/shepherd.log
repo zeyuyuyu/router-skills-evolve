@@ -369,3 +369,8 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
 [2026-08-03 14:10:55 UTC] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connection timed out. No state read, no actions taken. Claude remote execution environment cannot reach the A800 host directly; outbound SSH to arbitrary hosts appears blocked by the cloud network policy. Manual check required.
 [2026-08-05T14:10:00Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — TCP connection timed out. No state read, no GPU stats, no experiment checks, no actions taken. Persistent failure: A800 has been unreachable from this cloud execution environment since ~2026-07-20 (day ~16). Outbound SSH to arbitrary hosts is blocked by network policy. Manual verification of A800 status strongly recommended; auto-research system has been running unmonitored for 2+ weeks. DONE: actions=FAILED
 [2026-08-07T12:06:38Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. Manual intervention may be needed to verify A800 is up and the auto_research orchestrator is running.
+[2026-08-07 16:09:01 UTC] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 10s.
+  Actions taken: none (cannot assess state without server access).
+  Steps skipped: state.json read, GPU check, queue/running inspection, disk check, artifact health check.
+  Recommendation: Verify A800 network/firewall, check if SSH daemon is running on port 50507.
