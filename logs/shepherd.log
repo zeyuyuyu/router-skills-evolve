@@ -374,3 +374,17 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   Actions taken: none (cannot assess state without server access).
   Steps skipped: state.json read, GPU check, queue/running inspection, disk check, artifact health check.
   Recommendation: Verify A800 network/firewall, check if SSH daemon is running on port 50507.
+[2026-08-09T00:00:00Z] SHEPHERD RUN — FAILED
+  Reason: A800 (117.74.66.181:50507) unreachable — TCP connect timed out (code 11).
+  Installed paramiko via pip and attempted direct TCP + SSH — both blocked.
+  This cloud execution environment only permits outbound HTTPS via proxy; raw SSH
+  to arbitrary hosts is blocked by network policy.
+  No state read, no queue/running/disk/artifact checks performed.
+  Actions taken: none (cannot reach host).
+  Persistent failure: A800 has been unreachable from this environment since ~2026-07-20
+  (every shepherd run since has failed the same way). The auto_research system on A800
+  has been running unmonitored for ~20 days.
+  Recommendation: The shepherd cron needs to be relocated to a machine that can reach
+  A800 via SSH (e.g., run it directly on A800, or use a relay/jump host). Alternatively,
+  expose the auto_research state via an HTTPS endpoint so this cloud environment can poll it.
+  DONE: actions=FAILED (A800 unreachable)
