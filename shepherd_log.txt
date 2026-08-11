@@ -37,3 +37,19 @@
   CONTEXT: ~115 experiments queued in pending_queue_update chain (unexecuted since 2026-05-14, day ~58); best HumanEval 4-cycle result: router 92.68% acc, 27.56% cost, skills 75.61%; GRPO bottleneck: ACR=52.4% (zero-variance groups). AAAI 2027 deadline 2026-08-15 (35 days) — RUSH MODE active.
   No triggers fired. No code modified.
   DONE: actions=FAILED (A800 unreachable, day ~58); ALERT: idea-gen recovered after 5-day gap; weekly paper-drafter stalled 27 days; AAAI deadline 35 days.
+
+[2026-08-11T02:05Z] SHEPHERD RUN — A800 (117.74.66.181:50507) unreachable, day 89 of persistent SSH outage since 2026-05-14.
+  Connectivity: sshpass installed; paramiko pip-installed; nc -w10 exit code 1; TCP connection refused/timeout — cloud network policy blocks all outbound TCP to this host, confirmed for 89th consecutive day.
+  STEP 1 SKIPPED: state.json unread (SSH blocked). Falling back to local repo + WebSearch.
+  STEP 2 (Analysis, local repo):
+    ideas-2026-08-10.md: PRESENT ✓ (EXP-156/157 queued, forgetting profile + CRE Pareto).
+    pending_queue_update_2026_08_10.py: PRESENT ✓ (committed by prior run).
+    Queue estimate: ~163 pending experiments (>20 cap → 2 proposals today).
+    AAAI deadline: 2026-08-15 (4 days). GPU window: CLOSED. FINAL POLISH PHASE.
+  STEP 3 (ArXiv search via WebSearch proxy):
+    New papers found: 2605.09608 (Geometry Conflict GCWM), 2605.06350 (Is Escalation Worth It?).
+    Not previously cited in queue scripts.
+  STEPS 4+5 (Local fallback, committed to repo):
+    pending_queue_update_2026_08_11.py: WRITTEN ✓ (EXP-158 priority=9, EXP-159 priority=8; both offline 0h GPU).
+    reports/ideas-2026-08-11.md: WRITTEN ✓.
+  DONE: actions=PARTIAL (A800 unreachable; 2 experiments written to repo as pending_queue_update_2026_08_11.py; ideas report committed).
