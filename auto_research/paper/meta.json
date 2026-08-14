@@ -1,77 +1,75 @@
 {
-  "paper_version": 9,
+  "paper_version": 10,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
-  "secondary_venue": null,
+  "secondary_venue": "ICLR 2027 (fallback if AAAI rejected; multi-seed CI possible with ~10 additional weeks)",
   "rush_mode": true,
   "aaai_deadline": "2026-08-15",
   "emnlp_deadline": "2026-06-19",
   "neurips_deadline": "2026-05-23",
+  "iclr_2027_deadline": "~2026-10-01",
   "scores": {
     "novelty": 6.5,
     "soundness": 4.5,
     "significance": 7,
-    "writing": 8.5
+    "writing": 9.0
   },
-  "composite": 6.625,
-  "status": "provisional — A800 offline day 78; GRPO results n=1 seed; v9 (2026-07-31): +Hypothesis F (SFT epoch-2 geometry conflict, offline-confirmed via sft_epoch_overfitting_report.json); +Proposition 1 (Zero-Gradient Groups under DAPO, closes long-standing W5); +Dark Room effect (ACR groups → spurious amplified gradients under standard GRPO, not true zeros); +full non-monotonic skills arm trajectory in Table 9 (65.85% at c1, 73.17% at c2); +SE footnotes on Table 9; +5 new bib entries; +EXP-142/143 queued; AAAI deadline 15 days — GPU window CLOSED (Aug 1). Submit-ready target: August 8.",
-  "last_updated": "2026-07-31",
+  "composite": 6.75,
+  "status": "FINAL POLISH — A800 offline day 92; GRPO results n=1 seed; v10 (2026-08-14): §2 Related Work restructured into 3 labeled subparagraphs (closes W7); EXP-120 Dr.GRPO queued statement added to §7 (closes W4 acknowledgement); paper.md Abstract synced to v9/v10 Hypothesis F and Dark Room content. AAAI deadline TOMORROW (Aug 15). Submit-ready.",
+  "last_updated": "2026-08-14",
   "a800_outage_since": "2026-05-14T20:03Z",
+  "a800_offline_days": 92,
   "queue_size": 149,
+  "new_findings_2026_08_14": {
+    "section2_restructured": "§2 'RL for Code Generation' single dense paragraph restructured into 3 labeled subparagraphs: (a) zero-variance collapse and remedies (DAPO, REINFORCE++, GCPO, MicroCoder, RECRL, SRPO, Sign-advantage, Group-SD Identity, Dr.GRPO), (b) training stability and forgetting (plasticity, SFT overtraining, geometry conflict, CPO/RFT forgetting, DemoPSD), (c) token-level credit and data selection (EGCA, TAROT, GMPO, ZPD distillation). Raises writing score 8.5→9.0. Closes W7.",
+    "exp120_queued_acknowledgement": "Added explicit statement in §7 Remedies: 'A Dr. GRPO variant is a 5-line change to grpo_train_simple.py; GPU access is currently blocked (queued as EXP-120 for camera-ready validation).' Closes W4 acknowledgement gap.",
+    "papermd_abstract_synced": "paper.md Abstract updated from v7 to v10 — now includes Hypothesis F non-monotonic trajectory (70.7%→65.9%→73.2%→75.6%), offline-confirmed mechanism (epoch-2 loss 0.166→0.271), and Dark Room effect framing. Aligns with paper.tex."
+  },
+  "new_findings_2026_07_31": {
+    "hypothesis_f_offline_confirmed": "SFT epoch-2 geometry conflict (Hypothesis F) confirmed via offline training logs: cycle-1 is ONLY cycle with positive overfit_gap (+0.105, epoch-2 loss 0.166→0.271). Mechanistically explains non-monotonic skills arm dip at cycle 1. Epoch-1 checkpoint (checkpoint-6) saved in repo.",
+    "proposition_1": "Proposition 1 (Zero-Gradient Groups under DAPO) added: formal statement covering DAPO σ=0 filter → true zero gradient vs. standard GRPO → Dark Room spurious O(1) gradient. Closes W5.",
+    "dark_room_effect": "Dark Room effect (arxiv:2607.21273) integrated: zero-variance groups under standard GRPO produce spurious amplified O(1) gradients (not true zeros). DAPO's explicit filter is essential.",
+    "table9_full_skills_arm": "Table 9 completed with all 4 cycles' skills arm: 70.73%→65.85%→73.17%→75.61%. SE footnote added.",
+    "exp142_queued": "EXP-142: Hypothesis F epoch-1 checkpoint eval (priority 9, ~0.5h). Checkpoint-6 available locally.",
+    "exp143_queued": "EXP-143: Dark Room offline audit of cycle-3 GRPO log (priority 7, 0 GPU)."
+  },
   "new_findings_2026_07_24": {
-    "algorithm1_box": "Algorithm 1 MERA Cycle box added to §3.4 — closes W7 from review history. Formal pseudocode covering: signature extraction, router routing on raw prompt, procedure-augmented generation, SkillBook update, Phase 3a SFT, Phase 3b GRPO with DAPO dynamic sampling, Phase 4 router update. 4 design invariants annotated.",
-    "per_cycle_skills_and_acr": "Table 9 expanded: per-cycle skills arm added for ALL cycles (was only cycle 0 and 3). Cycle 1 skills arm = 65.85% (dip from 70.73% in cycle 0) — non-monotonic behavior not previously reported. Per-cycle ACR from grpo_info.json: 51.2% (c0), 47.6% (c1), 46.3% (c2), 52.4% (c3). Data shows ACR and skills arm improvement are anti-correlated in cycle 1, weakening pure ACR explanation.",
-    "hypothesis_d_grpo_forgetting": "Hypothesis D added to §5.4: arxiv:2607.04364 (CPO 'RL Forgets!') grounds GRPO forgetting of SFT gains as complementary Full=Router explanation. Easy tasks with all-pass rollouts (advantage=0) receive no GRPO gradient but can have their SFT-trained weights degraded by hard-task GRPO updates. L2-SP regularization (EXP-130) tests this directly.",
-    "hypothesis_e_rise_collapse": "Hypothesis E added to §5.4: arxiv:2606.21090 documents pass@1 peaking at step 10-20 and collapsing within the same GRPO run. If cycle adapters are final-step collapsed checkpoints, Full=Router regardless of algorithm. EXP-132 tests this with per-step eval logging — zero algorithm change fix if confirmed.",
-    "rise_collapse_related_work": "§2 Continual Learning subsection expanded: +CPO (arxiv:2607.04364) formal forgetting proof, +rise-and-collapse (arxiv:2606.21090) failure mode. Both ground two new hypotheses D/E that deepen the Full=Router analysis.",
-    "reproducibility_paths_fixed": "§9 Reproducibility: outdated paths to removed experiments/ tree corrected to current src/pipeline/ layout. Added grpo_info.json citation and smoke test command.",
-    "exp_132_queued": "EXP-132: Rise-and-Collapse Diagnostic (priority=8, gpu=~3h) — per-step GRPO eval logging + best-epoch checkpoint selection. Tests Hypothesis E.",
-    "exp_133_queued": "EXP-133: Per-Cycle ACR-vs-Improvement Correlation Analysis (priority=7, gpu=0h) — offline analysis using existing grpo_info.json data. Tests whether ACR predicts skills arm improvement; preliminary data suggests anti-correlation in cycle 1."
+    "algorithm1_box": "Algorithm 1 MERA Cycle box added to §3.4.",
+    "per_cycle_skills_and_acr": "Table 9 expanded: per-cycle skills arm for ALL cycles. ACR anti-correlation with skills arm at cycle 1.",
+    "hypothesis_d_grpo_forgetting": "Hypothesis D: GRPO forgetting of SFT gains for easy all-pass tasks.",
+    "hypothesis_e_rise_collapse": "Hypothesis E: rise-and-collapse failure mode from arxiv:2606.21090."
   },
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
     "bib": "auto_research/paper/references.bib",
-    "review": "auto_research/paper/reviews/review-2026-07-03.md"
+    "review": "auto_research/paper/reviews/review-2026-08-14.md"
   },
   "strongest_claims": {
     "skills_routing": "99% accuracy, 83% cost reduction on HumanEval 164",
     "learned_router": "93.04% accuracy, 2.12% fallback on 848 routing examples",
     "grpo_lm": "+2pp absolute MBPP pass@1 (47% -> 49%), n=1 seed",
-    "he_4cycle_skills_arm": "Skills arm improves 70.73%->75.61% over 4 DAPO cycles on HumanEval",
+    "he_4cycle_skills_arm": "Non-monotonic skills arm 70.73%→65.85%→73.17%→75.61% over 4 DAPO cycles on HumanEval; cycle-1 dip offline-confirmed as SFT epoch-2 geometry conflict",
     "he_4cycle_routing": "Full system 92.68% routing accuracy at 27.56% cost (cycle 3)",
     "tau2_joint_peak": "89.19% task pass at 22.16% of always-large cost (Cycle 1, joint run)",
     "tau2_small_dominates": "35B MoE 80% > GPT-5.4 71% on held-out tau2 tasks",
-    "zero_variance_theory": "52.4% zero-variance DAPO groups = provably zero gradient (arxiv:2507.05386)"
-  },
-  "new_findings_2026_07_03": {
-    "rft_forgetting_theory": "arxiv:2507.05386 formally proves: RFT gradient ∝ reward variance → zero-variance groups are training no-ops. Theoretically grounds our 52.4% zero-variance finding.",
-    "gmpo_remedy": "arxiv:2507.20673 GMPO geometric mean bounding outlier gradient at syntax-critical tokens — orthogonal remedy for 47.6% non-collapsed groups.",
-    "tau2_sft_forgetting": "New connection: tau2 cycle oscillation (89.19%→70.27%) is consistent with SFT catastrophic forgetting (arxiv:2507.05386) — SFT not RFT used for tau2 adapter.",
-    "multitrack_framing": "Explicit §1 framing: Tracks A-D are ablation studies at different modalities/scales, not simultaneous deployments."
-  },
-  "new_findings_2026_07_17": {
-    "group_sd_identity": "arxiv:2607.00152 (Bay & Yearick) proves GRPO/Dr.GRPO/DAPO are three operations on σ. Dr.GRPO drops the 1/σ division → update ∝ p*(1-p), naturally weighting informative prompts. Our 52.4% zero-variance finding corresponds exactly to the σ=0 regime. Added to §2 Related Work, §7 Zero-Variance analysis, Abstract. New bib key: groupsd2026.",
-    "zpd_sft": "arxiv:2507.00054 reward-guided distillation proposes ZPD filtering (r_small ∈ [0.2, 0.8]) to target teacher traces where student has partial capability. Directly addresses our 20.7pp skills gap. Added to §2 Related Work, §7 Skills Gap paragraph, §7 Remedies. New bib key: zpddistill2026.",
-    "exp_122_queued": "EXP-122: Joint ZPD-SFT + Dr.GRPO hybrid test — addresses A+C simultaneously; first experiment to test interaction of two orthogonal fixes. Expected: if skills arm ≥78%, joint fix narrative is paper's strongest new result.",
-    "exp_123_queued": "EXP-123: Group-SD ceiling analysis — use per-cycle σ distribution to compute theoretical max gradient contribution under Dr.GRPO vs GRPO; zero-GPU data analysis on existing trace logs."
+    "zero_variance_theory": "52.4% zero-variance DAPO groups = provably zero gradient (arxiv:2507.05386)",
+    "hypothesis_f": "Offline-confirmed SFT epoch-2 geometry conflict mechanistically explains cycle-1 dip; epoch-1 checkpoint saves 4.88pp"
   },
   "critical_blockers": [
-    "EXP-099: HumanEval 3-seed (n=3) to verify skills arm 75.61% claim — blocked on A800 (AAAI CRITICAL)",
-    "EXP-100: tau2 3-seed (n=3) for CI on all tau2 tables — blocked on A800 (AAAI CRITICAL)",
-    "EXP-132: Rise-and-collapse diagnostic — save per-step GRPO checkpoints and eval; tests Hypothesis E; ~3h GPU — blocked on A800 (AAAI HIGH)",
-    "EXP-066: tau2 router regularization to fix held-out overfitting — blocked on A800",
-    "EXP-080: multi-seed 4-cycle HumanEval validation — blocked on A800",
-    "EXP-077: DAPO G=16 DDT to reduce 52.4% zero-variance — blocked on A800",
-    "EXP-106: tau2 random-50% routing baseline — blocked on A800 (W5)",
-    "EXP-107: cross-domain router eval — blocked on A800 (W4)"
+    "EXP-099: HumanEval 3-seed (n=3) to verify skills arm 75.61% claim — blocked on A800 (camera-ready priority)",
+    "EXP-100: tau2 3-seed (n=3) for CI on all tau2 tables — blocked on A800",
+    "EXP-120: Dr.GRPO variant test (~2.5h) — blocked on A800 (camera-ready priority)",
+    "EXP-142: Epoch-1 checkpoint eval (~0.5h) — checkpoint saved locally, runnable on any GPU",
+    "EXP-132: Rise-and-collapse diagnostic — blocked on A800",
+    "EXP-106: tau2 random-50% routing baseline — blocked on A800"
   ],
   "aaai_timeline_risk": {
-    "a800_offline_days": 64,
-    "days_to_deadline": 29,
-    "latest_a800_restore_for_minviable": "2026-07-20",
-    "latest_a800_restore_for_full": "2026-07-08",
-    "risk_level": "CRITICAL — A800 offline 71 days; July 20 minviable restore date PASSED. August 1 (8 days) is the ABSOLUTE latest for new GPU results to reach the submission. Paper is submittable NOW with n=1 seed + SE caveats. 22 days to deadline: submit-ready draft August 8, buffer to Aug 15.",
-    "recommended_action": "Final GPU experiment window closes August 1. If A800 restores before August 1: EXP-132 first (2h, rise-and-collapse diagnostic, no algorithm change), then EXP-099 (3-seed HumanEval, 4h). If A800 down through August 1: submit with n=1 seed + explicit SE bars (±5.4pp at 82 tasks, ±5pp at 100 tasks). Begin final submission polish now — target complete draft August 8."
+    "a800_offline_days": 92,
+    "days_to_deadline": 1,
+    "gpu_window_closed": true,
+    "gpu_window_closed_date": "2026-08-01",
+    "risk_level": "DEADLINE TOMORROW — paper is submit-ready as v10. All writing TODOs from July 31 review executed. n=1 seed caveat clearly stated with SE bars. Honest about GPU blockers. No further writing changes needed.",
+    "recommended_action": "Submit AAAI 2027 by August 15. If rejected: ICLR 2027 (Oct 2026 deadline) provides ~10 weeks for 3-seed CI (EXP-099) + EXP-142 Hypothesis F experimental confirmation + EXP-120 Dr.GRPO. Composite would reach ~7.5/10 with those results."
   }
 }

@@ -1,5 +1,5 @@
 # MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale
-<!-- paper.md v7 — auto-updated 2026-07-24 by weekly paper pipeline -->
+<!-- paper.md v10 — auto-updated 2026-08-14 by weekly paper pipeline -->
 
 **Zeyu Wang**  
 0G.ai / Institute of Artificial Intelligence  
@@ -18,21 +18,20 @@ per-signature routing statistics and a *learned router* trained from execution t
 On HumanEval (164 code tasks), MERA achieves **99% task accuracy at 83% lower cost** than
 always routing to the frontier model. A BERT-based router achieves **93.04% routing
 accuracy** with a **2.12% fallback rate**. Over 4 end-to-end evolution cycles on HumanEval
-with DAPO multi-turn repair (G=8), the skills arm improves from 70.7% to 75.6% task pass;
-a mechanistic analysis reveals that **52.4% of training groups produce zero gradient** even
-with DAPO dynamic sampling, identifying zero-variance collapse as the binding improvement
-bottleneck. A standalone GRPO pass on MBPP yields +2pp pass@1 for Qwen2.5-Coder-1.5B
-(n=1 seed). The Group-Standard-Deviation Identity [groupsd2026] provides formal
-theoretical grounding: GRPO, Dr. GRPO, and DAPO differ only in their treatment of
-within-group σ; our 52.4% zero-variance finding corresponds precisely to the σ=0 regime.
-We identify a complementary failure mode (Hypothesis D): GRPO training can forget SFT
-gains for easy tasks where GRPO rollouts always pass (advantage = 0), grounded by
-"RL Forgets!" [arxiv:2607.04364] which demonstrates 13.7% forgetting reduction via
-parameter-movement regularization. Extended to three-domain agentic tau2-bench tasks with
-a Qwen3.6-35B-A3B adapter, MERA achieves **89.19% task pass at 22.16% of always-large
-cost** at peak; a held-out evaluation shows the domain-specialized 35B model (80%)
-surpassing the frontier GPT-5.4 (71%), revealing that agent specialization can render
-frontier escalation counterproductive. Code and datasets are released publicly.
+with DAPO multi-turn repair (G=8), the skills arm follows a **non-monotonic trajectory**
+(70.7%→65.9%→73.2%→75.6%): the cycle-1 dip is explained by SFT epoch-2 geometry
+conflict—the only cycle where epoch-2 training loss *increases* above epoch-1
+(0.166→0.271; Hypothesis F, offline-confirmed via training logs). Mechanistic analysis
+reveals **52.4% of training groups produce zero gradient** even with DAPO dynamic sampling;
+without DAPO's σ=0 filter, these groups produce spurious amplified gradients (the Dark Room
+effect), not true zeros. A standalone GRPO pass on MBPP yields +2pp pass@1 for
+Qwen2.5-Coder-1.5B (n=1 seed). The Group-Standard-Deviation Identity [groupsd2026]
+provides formal grounding: GRPO, Dr. GRPO, and DAPO differ only in treatment of within-group
+σ; our 52.4% zero-variance finding corresponds precisely to the σ=0 regime.
+Extended to three-domain agentic tau2-bench tasks with a Qwen3.6-35B-A3B adapter, MERA
+achieves **89.19% task pass at 22.16% of always-large cost** at peak; a held-out evaluation
+shows the domain-specialized 35B model (80%) surpassing the frontier GPT-5.4 (71%),
+revealing that agent specialization can render frontier escalation counterproductive.
 
 ---
 

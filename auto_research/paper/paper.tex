@@ -1,5 +1,5 @@
 % MERA: Model Evolution and Routing with Skill Adaptation — AAAI 2027 submission
-% paper.tex — auto-updated 2026-07-31 by weekly pipeline (v9)
+% paper.tex — auto-updated 2026-08-14 by weekly pipeline (v10)
 % DO NOT edit the %% MANUAL-PIN blocks below.
 
 \documentclass[letterpaper]{article}
@@ -128,57 +128,56 @@ Our SkillBook extends routing with \emph{online} statistics from deployment trac
 requiring no offline re-training.
 
 \paragraph{RL for Code Generation.}
-DeepSeek-R1~\cite{deepseekr1} and GRPO~\cite{shao2024deepseekmath} demonstrate strong
-results with verifiable rewards.
-DAPO~\cite{yu2025dapo} removes low-variance groups.
-REINFORCE++~\cite{zeng2025reinforceplusplus} introduces a global EMA baseline.
-GCPO~\cite{chen2026gcpo} addresses winner-takes-all collapse via team-level coverage credit.
-MicroCoder~\cite{microcoder2026} uses per-group diversity-determined temperature to reduce
-diversity collapse; RECRL~\cite{recrl2026} applies adaptive curriculum sampling to
-concentrate gradient on Goldilocks-zone problems.
-EGCA~\cite{egca2026} localizes GRPO advantage to causally responsible token spans via
-execution-trace divergence, yielding $+1.5$pp MBPP.
-TAROT~\cite{tarot2026} introduces intra-problem test-tier curriculum for code RL.
-GMPO~\cite{gmpo2026} replaces GRPO's arithmetic-mean token aggregation with a geometric
-mean, bounding gradient distortion from outlier importance ratios at syntactically critical
-positions and achieving $+4.1\%$ on math benchmarks.
-SRPO~\cite{srpo2026} routes failed-outcome rollouts to a self-distillation correction path
-(SDPO), converting zero-gradient all-fail groups into logit-level learning signal without
-extra rollouts ($+3.2$pp HumanEval, $+4.7$pp MBPP$+$ over DAPO).
-Sign-advantage~\cite{signadv2026} replaces normalized group-mean advantage with $A{=}2r{-}1$
-for binary reward, guaranteeing non-zero gradient per group regardless of outcome uniformity;
-measured degeneracy rate ${\geq}0.69$ at $G{=}4$, consistent with our 52.4\% finding.
-DemoPSD~\cite{demopsd2026} modulates SFT loss weight by disagreement rate to concentrate
-gradient on uncertain tasks.
-The Group-Standard-Deviation Identity~\cite{groupsd2026} unifies GRPO, Dr.~GRPO, and DAPO
-as three operations on $\sigma$: GRPO divides by $\sigma$ (unstable at $\sigma{\to}0$),
-Dr.~GRPO drops the division (update $\propto p(1{-}p)$, natural informativeness weighting),
-and DAPO filters $\sigma{=}0$ groups entirely.
-For binary rewards with $K$ rollouts and per-prompt pass-rate $p$, Dr.~GRPO update magnitude
-is $K/(K{-}1)\cdot p(1{-}p)$, providing gradient to all groups while scaling updates by
-actual prompt informativeness.
-Reward-guided dataset distillation~\cite{zpddistill2026} proposes filtering SFT traces to the
-zone of proximal development (ZPD): tasks where the student pass-rate $r_\text{small}\in[lo, hi]$,
-yielding $+3.1$--$5.6$pp over naive SFT at identical example counts.
-We apply GRPO to a 1.5B code model and quantify zero-variance collapse: 73\% at
-$G{=}4$ (MBPP), reducing to 52.4\% at $G{=}8$ DAPO (HumanEval).
+DeepSeek-R1~\cite{deepseekr1} and GRPO~\cite{shao2024deepseekmath} establish that
+verifiable binary rewards enable strong code-generation improvement.
+We organize the rapidly growing literature by the failure mode each method addresses.
 
-\paragraph{Continual LLM Adaptation.}
-Plasticity loss~\cite{plasticity2026} causes degradation in long RL training horizons.
-We observe this empirically: 400-task GRPO degrades while 200-task GRPO improves.
-Recent work~\cite{rftforgetting2026} formalizes why: RFT's implicit regularization
-is theoretically scaled by within-group reward variance, meaning zero-variance
-groups provably receive zero gradient updates---confirming the silent-group failure mode.
-CPO~\cite{cpo2026} shows RL fine-tuning forgets diverse prior tasks under sequential
-adaptation, motivating replay-free behavioral KL + L2 regularization between cycles.
-SFT overtraining further harms GRPO initialization: overtrained checkpoints have
-compressed output distributions (low entropy) that cause gradient vanishing at the
-start of RL~\cite{sftovertraining2026}, directly explaining our offline-confirmed
-cycle-1 skills arm dip (Hypothesis~F, §\ref{sec:analysis}).
-The Dark Room effect~\cite{darkroom2026} reveals a complementary pathology:
-GRPO's $1/\sigma$ normalization amplifies near-zero $\sigma$ noise in zero-variance
-groups to $\mathcal{O}(1)$ spurious gradient---DAPO's explicit $\sigma{=}0$ filter
-prevents this, converting spurious updates to true zeros.
+\textbf{(a) Zero-variance collapse and remedies.}
+When all $K$ rollouts share the same reward, GRPO's $1/\sigma$ normalization amplifies
+finite-precision noise to $\mathcal{O}(1)$ spurious gradient~\cite{darkroom2026}
+(the Dark Room effect); DAPO~\cite{yu2025dapo} prevents this via an explicit $\sigma{=}0$
+group filter.
+REINFORCE++~\cite{zeng2025reinforceplusplus} uses a global EMA baseline providing
+non-zero gradient on all-same-reward groups.
+GCPO~\cite{chen2026gcpo} applies team-level AST-diversity coverage credit against
+winner-takes-all collapse; MicroCoder~\cite{microcoder2026} uses diversity-determined
+temperature; RECRL~\cite{recrl2026} applies adaptive curriculum to Goldilocks-zone tasks.
+SRPO~\cite{srpo2026} routes all-fail rollouts to a self-distillation correction path,
+converting zero-gradient all-fail groups to logit-level signal ($+3.2$pp HumanEval,
+$+4.7$pp MBPP$+$ over DAPO).
+Sign-advantage~\cite{signadv2026} replaces normalized advantage with $A{=}2r{-}1$,
+guaranteeing non-zero gradient; its measured degeneracy rate ${\geq}0.69$ at $G{=}4$
+is consistent with our 52.4\% ($G{=}8$, DAPO) finding.
+The Group-Standard-Deviation Identity~\cite{groupsd2026} unifies GRPO, Dr.~GRPO, and
+DAPO as three operations on $\sigma$: GRPO divides by $\sigma$ (unstable at
+$\sigma{\to}0$), Dr.~GRPO drops the division (update $\propto p(1{-}p)$, naturally
+weighted by informativeness), and DAPO filters $\sigma{=}0$ entirely.
+We measure zero-variance rates empirically: 73\% at $G{=}4$ (MBPP), 52.4\% at $G{=}8$
+DAPO (HumanEval).
+
+\textbf{(b) Training stability and forgetting.}
+Plasticity loss~\cite{plasticity2026} causes RL degradation in long training horizons
+(empirically: 400-task GRPO degrades while 200-task improves).
+SFT overtraining produces low-entropy checkpoints that cause gradient vanishing at
+RL onset~\cite{sftovertraining2026}, directly explaining our cycle-1 skills arm dip
+(Hypothesis~F, \S\ref{sec:analysis}).
+Geometry conflict in LoRA subspace~\cite{geometry2026} between a mode-collapsed adapter
+and subsequent SFT gradients causes epoch-2 loss inversion---confirmed in our training logs.
+CPO~\cite{cpo2026} shows sequential RFT forgets diverse prior tasks; \citet{rftforgetting2026}
+formalize that RFT regularization scales with within-group variance, so DAPO-zeroed groups
+contribute neither learning \emph{nor} forgetting, explaining tau2 cycle oscillation.
+DemoPSD~\cite{demopsd2026} modulates SFT loss by teacher-student disagreement rate.
+
+\textbf{(c) Token-level credit assignment and data selection.}
+EGCA~\cite{egca2026} assigns GRPO advantage to causally responsible token spans via
+execution-trace divergence ($+1.5$pp MBPP).
+TAROT~\cite{tarot2026} introduces intra-problem test-tier curriculum for code RL.
+GMPO~\cite{gmpo2026} replaces arithmetic-mean token aggregation with geometric mean,
+bounding gradient distortion at syntactically critical positions ($+4.1\%$ math).
+Reward-guided dataset distillation~\cite{zpddistill2026} filters SFT traces to the
+zone of proximal development ($r_\text{small}\in[0.2,\,0.8]$),
+yielding $+3.1$--$5.6$pp over naive SFT; we apply this analysis in
+\S\ref{sec:analysis} to explain our 20.7pp skills gap.
 
 %% SECTION 3 %%
 \section{SkillBook: Signature-Based Routing Evolution}
@@ -539,6 +538,8 @@ adaptive curriculum and diversity-determined temperature.
 SRPO~\cite{srpo2026} routes failed rollouts to a self-distillation correction path.
 Sign-advantage~\cite{signadv2026} eliminates zero-gradient groups ($A{=}2r{-}1$).
 Dr.~GRPO~\cite{groupsd2026} drops $1/\sigma$ entirely; update $\propto p(1{-}p)$.
+A Dr.~GRPO variant is a 5-line change to \texttt{grpo\_train\_simple.py}; GPU access is
+currently blocked (queued as EXP-120 for camera-ready validation).
 No-std-norm~\cite{darkroom2026} (remove only the $\sigma$ division, keep mean subtraction)
 converts spurious amplified gradients in near-zero-$\sigma$ groups to exact zeros,
 the minimal fix to the Dark Room pathology and complementary to DAPO's group-level filter.
