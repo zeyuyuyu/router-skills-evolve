@@ -383,3 +383,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
   DONE: FAILED — A800 unreachable
 ---
 [2026-08-13T20:58:01Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Manual check required.
+[2026-08-14T07:10:36Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Next shepherd run will retry.
