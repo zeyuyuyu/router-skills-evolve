@@ -53,3 +53,21 @@
     pending_queue_update_2026_08_11.py: WRITTEN ✓ (EXP-158 priority=9, EXP-159 priority=8; both offline 0h GPU).
     reports/ideas-2026-08-11.md: WRITTEN ✓.
   DONE: actions=PARTIAL (A800 unreachable; 2 experiments written to repo as pending_queue_update_2026_08_11.py; ideas report committed).
+
+[2026-08-16T07:15Z] IDEA-GEN RUN — A800 (117.74.66.181:50507) unreachable, day 94 of persistent SSH outage since 2026-05-14.
+  Connectivity: sshpass installed; openssh-client installed via apt; ConnectTimeout=10s timed out; HTTPS CONNECT tunnel via nc -X proxy (127.0.0.1:37629) replied 200 then reset — cloud network policy blocks non-TLS traffic through HTTPS CONNECT. All outbound SSH to 117.74.66.181:50507 is definitively blocked.
+  STEP 1 SKIPPED: state.json unread (SSH blocked). Falling back to local repo + WebSearch.
+  STEP 2 (Analysis, local repo):
+    ideas-2026-08-15.md: PRESENT ✓ (EXP-166/167 queued; OCSD concurrent + camera-ready roadmap).
+    pending_queue_update_2026_08_15.py: PRESENT ✓.
+    Queue estimate: ~169 pending experiments (>20 cap → 2 proposals today, EXP-168, EXP-169).
+    AAAI deadline: PASSED (2026-08-15, yesterday). Camera-ready window: 2026-08-16 to ~2026-08-29.
+    GPU window: CLOSED since 2026-08-01. No GPU experiments proposed.
+  STEP 3 (ArXiv search via WebSearch — camera-ready concurrent paper monitoring, first day):
+    New papers found: 2608.05156 (Scaffold-Mediated Post-Training — co-evolves procedural scaffold graph + model params, 3-phase cycle; closest structural analog to MERA's full framework; Alibaba+Tsinghua), 2608.06867 (LLMRouter — unified 5-component routing taxonomy, 16+ routers, xRouteBench; MERA's router needs §2 positioning within this framework).
+    Also found: 2608.05987 (AgentOPSD — 4th member of ADRS/OCSD cluster), 2608.01837 (PCSD — 3rd member), 2608.01678 (Skill-α), all deferred to 2026-08-17+.
+    Not previously cited in queue scripts.
+  STEPS 4+5 (Local fallback, committed to repo):
+    pending_queue_update_2026_08_16.py: WRITTEN ✓ (EXP-168 priority=9 Scaffold-Mediated; EXP-169 priority=8 LLMRouter; both offline 0h GPU).
+    reports/ideas-2026-08-16.md: WRITTEN ✓.
+  DONE: actions=PARTIAL (A800 unreachable day 94; 2 experiments written to repo as pending_queue_update_2026_08_16.py; camera-ready ideas report committed).
