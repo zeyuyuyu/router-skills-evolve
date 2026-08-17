@@ -71,3 +71,10 @@
     pending_queue_update_2026_08_16.py: WRITTEN ✓ (EXP-168 priority=9 Scaffold-Mediated; EXP-169 priority=8 LLMRouter; both offline 0h GPU).
     reports/ideas-2026-08-16.md: WRITTEN ✓.
   DONE: actions=PARTIAL (A800 unreachable day 94; 2 experiments written to repo as pending_queue_update_2026_08_16.py; camera-ready ideas report committed).
+
+--- 2026-08-17T00:00Z shepherd run ---
+A800 SSH TIMEOUT (day 95): port 50507 at 117.74.66.181 unreachable.
+HTTPS CONNECT proxy returns 200 but SSH banner exchange fails (non-TLS filtered).
+Queued: EXP-170 (ADRS/OCSD/PCSD/AgentOPSD cluster, p9) + EXP-171 (u-OPSD, p8).
+Committed: ideas(2026-08-17) + pending_queue_update_2026_08_17.py to main.
+DONE: queued 2 new experiments.
