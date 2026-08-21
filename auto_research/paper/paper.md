@@ -1,5 +1,5 @@
 # MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale
-<!-- paper.md v10 — auto-updated 2026-08-14 by weekly paper pipeline -->
+<!-- paper.md v11 — auto-updated 2026-08-21 by weekly paper pipeline (camera-ready pass) -->
 
 **Zeyu Wang**  
 0G.ai / Institute of Artificial Intelligence  
@@ -85,8 +85,20 @@ scales and modalities — not simultaneous deployments of a single system.
 
 Cost-aware LLM routing has emerged as a practical research area. FrugalGPT [Chen et al., 2023]
 routes queries to cheaper models with a learned cascade. RouterBench [Hu et al., 2024]
-benchmarks routing strategies across 11 LLMs. Recent work explores regret-minimization
-routing [arxiv:2505.16037] and skill-composable routing for agents [arxiv:2603.22455].
+benchmarks routing strategies across 11 LLMs and provides a 7-dimension taxonomy of routing
+strategies. Recent work explores regret-minimization routing [arxiv:2505.16037] and
+skill-composable routing for agents [arxiv:2603.22455]. LLMRouter [arxiv:2608.06867]
+further surveys 50+ routing methods across cascade, embedding, reward, meta-learning,
+multi-agent, contextual bandit, and hybrid families; MERA occupies the "online statistics
++ learned classifier" cell — the only system surveyed where routing statistics accumulate
+from live deployment traces rather than a fixed offline pool.
+
+The closest published system to MERA's router co-evolution is FlyRoute [arxiv:2605.22057],
+which grows agent capability profiles from successful routing traffic via a data flywheel;
+FlyRoute's targeted exploration policy (uncertainty × BM25 relevance × novelty) directs
+force-both runs to the uncertain routing frontier. MERA generalizes this: the SkillBook
+accumulates online execution statistics for all tasks, and the learned router is retrained
+each cycle on the growing trace pool — the data flywheel is the MERA cycle itself.
 Our SkillBook extends routing with *online* statistics accumulated from deployment traces,
 making routing decisions improve automatically without offline re-training.
 
@@ -121,8 +133,35 @@ is more effective for student compression — directly motivating our EXP-112 re
 of hard-label SFT with forward-KL distillation in Phase 3a. RECRL [Yin et al., 2026;
 arxiv:2605.00433] applies execution-difficulty curriculum ordering (easy→hard across epochs)
 to reduce zero-variance group frequency from 52.4% to a predicted ≤15% in early epochs.
+Cue-GRPO [arxiv:2608.03467] identifies a structural failure mode complementary to zero-variance
+collapse: when rollout-correct solutions share the same *solution structure* (e.g., the same
+algorithmic pattern), positive advantage mass concentrates on the over-represented structure,
+under-crediting rare but valid alternatives. Cue-GRPO partitions correct rollouts by
+Strategy Cues (deterministic structural labels) and applies inverse-cluster-size advantage
+reweighting. In MERA's HumanEval setting, correct solutions cluster into a small set of list
+comprehension and string-slicing patterns — Cue-GRPO's rarity reweighting would concentrate
+gradient on novel algorithmic approaches, directly addressing the diversity gap.
+
+G²RPO-A [arxiv:2508.13023] injects domain-relevant procedure text as adaptive guidance
+during GRPO rollout generation, with guidance weight annealed by current-cycle pass@1.
+This is structurally equivalent to MERA's procedure prefix (§3.3), but with dynamic weighting
+rather than a fixed concatenation — validating our design and suggesting a gradient-free
+upgrade path for future cycles.
+
 We quantify zero-variance collapse in our experiments: 73% at G=4 (MBPP) and 52.4% at
 G=8 DAPO (HumanEval multi-turn repair), directly motivating these remedies.
+
+### Self-Evolving Agentic Systems
+
+Recent survey work [arxiv:2608.03392] taxonomizes self-evolving coding agents along five
+axes: *memory*, *skills*, *tools*, *model weights*, and *collaboration structure*. MERA
+evolves three of these jointly per cycle: skills (SkillBook procedure distilled via GPT-5.5),
+weights (SFT Phase 3a + GRPO Phase 3b), and collaboration (TF-IDF+LogReg router). The
+taxonomy identifies MERA as a *full co-evolution* system — the only class where all three
+update axes are coupled through the same execution trace pool. Concurrent CODESKILL
+[arxiv:2605.25430] evolves tool-use skill libraries for coding agents but does not
+co-evolve routing or model weights, representing the "skills only" cell of the taxonomy
+(analogous to MERA's ablated skills arm).
 
 ### Continual Learning of LLMs
 

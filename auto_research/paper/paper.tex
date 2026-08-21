@@ -122,10 +122,19 @@ scales and modalities---not simultaneous deployments of a single system.
 \paragraph{LLM Routing.}
 FrugalGPT~\cite{chen2023frugalgpt} routes queries to cheaper models via a learned cascade.
 RouterBench~\cite{hu2024routerbench} benchmarks routing strategies across 11 LLMs.
-Recent work explores regret-minimization routing~\cite{causal2026routing} and
+LLMRouter~\cite{llmroutertaxonomy2026} surveys 50+ methods across seven routing families
+(cascade, embedding, reward, meta-learning, multi-agent, contextual bandit, hybrid);
+MERA occupies the ``online statistics + learned classifier'' cell---the only system
+in the survey where routing statistics are updated from live deployment traces without
+offline re-training.
+Recent work also explores regret-minimization routing~\cite{causal2026routing} and
 skill-composable routing for agents~\cite{skillrouter2026}.
-Our SkillBook extends routing with \emph{online} statistics from deployment traces,
-requiring no offline re-training.
+The closest system to MERA's router co-evolution is FlyRoute~\cite{flyroute2026},
+which grows agent capability profiles via a data flywheel using uncertainty~$\times$ BM25
+relevance~$\times$ novelty exploration.
+MERA generalizes this: the SkillBook accumulates online statistics for \emph{all} tasks
+each cycle, and the learned router is retrained on the growing trace pool---the data
+flywheel is the MERA cycle itself.
 
 \paragraph{RL for Code Generation.}
 DeepSeek-R1~\cite{deepseekr1} and GRPO~\cite{shao2024deepseekmath} establish that
@@ -178,6 +187,23 @@ Reward-guided dataset distillation~\cite{zpddistill2026} filters SFT traces to t
 zone of proximal development ($r_\text{small}\in[0.2,\,0.8]$),
 yielding $+3.1$--$5.6$pp over naive SFT; we apply this analysis in
 \S\ref{sec:analysis} to explain our 20.7pp skills gap.
+Cue-GRPO~\cite{cuegrpo2026} identifies a failure mode complementary to zero-variance
+collapse: positive advantage concentrates on over-represented correct solution
+\emph{structures}, under-crediting rare valid alternatives; inverse-cluster-size
+reweighting by Strategy Cues redistributes credit to diverse approaches.
+G$^2$RPO-A~\cite{g2rpoa2026} injects procedure text as adaptive guidance during rollout
+generation with guidance weight annealed by per-task pass@1---structurally analogous to
+MERA's fixed procedure prefix (\S\ref{sec:skillbook}), and validating our design.
+
+\paragraph{Self-Evolving Agentic Systems.}
+\citet{selfevolvingagents2026} taxonomize self-evolving coding agents along five axes:
+memory, skills, tools, model weights, and collaboration structure.
+MERA co-evolves three axes jointly per cycle: skills (SkillBook procedure via GPT-5.5
+distillation), weights (SFT Phase~3a + GRPO Phase~3b), and collaboration (TF-IDF +
+LogReg router)---the only class in the taxonomy where all three update axes share the
+same execution trace pool.
+CODESKILL~\cite{codeskill2026} evolves tool-use skill libraries without co-evolving
+routing or model weights, corresponding to MERA's ablated skills arm.
 
 %% SECTION 3 %%
 \section{SkillBook: Signature-Based Routing Evolution}

@@ -1,25 +1,32 @@
 {
-  "paper_version": 10,
+  "paper_version": 11,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
-  "secondary_venue": "ICLR 2027 (fallback if AAAI rejected; multi-seed CI possible with ~10 additional weeks)",
+  "secondary_venue": "ICLR 2027 (fallback; multi-seed CI with EXP-099 possible in 41 days)",
   "rush_mode": true,
   "aaai_deadline": "2026-08-15",
+  "aaai_camera_ready_deadline": "~2026-08-29",
   "emnlp_deadline": "2026-06-19",
   "neurips_deadline": "2026-05-23",
   "iclr_2027_deadline": "~2026-10-01",
   "scores": {
-    "novelty": 6.5,
+    "novelty": 6.7,
     "soundness": 4.5,
-    "significance": 7,
-    "writing": 9.0
+    "significance": 7.0,
+    "writing": 9.2
   },
-  "composite": 6.75,
-  "status": "FINAL POLISH — A800 offline day 92; GRPO results n=1 seed; v10 (2026-08-14): §2 Related Work restructured into 3 labeled subparagraphs (closes W7); EXP-120 Dr.GRPO queued statement added to §7 (closes W4 acknowledgement); paper.md Abstract synced to v9/v10 Hypothesis F and Dark Room content. AAAI deadline TOMORROW (Aug 15). Submit-ready.",
-  "last_updated": "2026-08-14",
+  "composite": 6.85,
+  "status": "CAMERA-READY SPRINT — A800 offline day 99; AAAI 2027 deadline passed Aug 15 (v10 submitted); v11 (2026-08-21): §2 camera-ready pass — Self-Evolving Agents taxonomy (arxiv:2608.03392), FlyRoute (arxiv:2605.22057), Cue-GRPO (arxiv:2608.03467), G²RPO-A (arxiv:2508.13023), LLMRouter survey (arxiv:2608.06867) added; 6 new bib entries. Camera-ready due ~Aug 29 (8 days). Next: §7.3 language refresh.",
+  "last_updated": "2026-08-21",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "a800_offline_days": 92,
-  "queue_size": 149,
+  "a800_offline_days": 99,
+  "queue_size": 182,
+  "new_findings_2026_08_21": {
+    "camera_ready_citations": "§2 camera-ready pass: Self-Evolving Coding Agents survey (arxiv:2608.03392) — new 'Self-Evolving Agentic Systems' paragraph positions MERA as full co-evolution system within 5-axis taxonomy. FlyRoute (arxiv:2605.22057) added to LLM Routing as closest data-flywheel prior. Cue-GRPO (arxiv:2608.03467) added to §2c RL section. G²RPO-A (arxiv:2508.13023) added to §2c. LLMRouter taxonomy survey (arxiv:2608.06867) added to LLM Routing. CODESKILL (arxiv:2605.25430) added to Self-Evolving paragraph.",
+    "references_added": "6 new bib entries: flyroute2026, llmroutertaxonomy2026, cuegrpo2026, g2rpoa2026, selfevolvingagents2026, codeskill2026",
+    "scores_updated": "Novelty 6.5→6.7; Writing 9.0→9.2; Composite 6.75→6.85",
+    "camera_ready_status": "SPRINT — 8 days to ~Aug 29 deadline. Remaining: §7.3 language refresh (CAM-001)."
+  },
   "new_findings_2026_08_14": {
     "section2_restructured": "§2 'RL for Code Generation' single dense paragraph restructured into 3 labeled subparagraphs: (a) zero-variance collapse and remedies (DAPO, REINFORCE++, GCPO, MicroCoder, RECRL, SRPO, Sign-advantage, Group-SD Identity, Dr.GRPO), (b) training stability and forgetting (plasticity, SFT overtraining, geometry conflict, CPO/RFT forgetting, DemoPSD), (c) token-level credit and data selection (EGCA, TAROT, GMPO, ZPD distillation). Raises writing score 8.5→9.0. Closes W7.",
     "exp120_queued_acknowledgement": "Added explicit statement in §7 Remedies: 'A Dr. GRPO variant is a 5-line change to grpo_train_simple.py; GPU access is currently blocked (queued as EXP-120 for camera-ready validation).' Closes W4 acknowledgement gap.",
@@ -65,7 +72,7 @@
     "EXP-106: tau2 random-50% routing baseline — blocked on A800"
   ],
   "aaai_timeline_risk": {
-    "a800_offline_days": 92,
+    "a800_offline_days": 99,
     "days_to_deadline": 1,
     "gpu_window_closed": true,
     "gpu_window_closed_date": "2026-08-01",
