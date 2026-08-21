@@ -393,3 +393,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
 [2026-08-20T02:56:57Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Actions=none.
 [2026-08-20T04:56:37Z] SHEPHERD RUN FAILED: A800 unreachable — TCP connect to 117.74.66.181:50507 timed out (tried 2x, 10s + 45s timeouts). No SSH connection established. No state read, no actions taken. Recommend verifying A800 is online and port 50507 is accessible from this remote environment.
 [2026-08-21 02:56:15 UTC] SHEPHERD: A800 unreachable — ssh -p 50507 117.74.66.181 timed out (ConnectTimeout=20s). No actions taken. Manual investigation required.
+[2026-08-21T08:56:20Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) SSH connection timed out after 15s. Unable to read state.json, check running/queue/GPU/disk, or take any corrective actions. No experiments launched. Manual check required.
