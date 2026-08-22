@@ -78,3 +78,23 @@ HTTPS CONNECT proxy returns 200 but SSH banner exchange fails (non-TLS filtered)
 Queued: EXP-170 (ADRS/OCSD/PCSD/AgentOPSD cluster, p9) + EXP-171 (u-OPSD, p8).
 Committed: ideas(2026-08-17) + pending_queue_update_2026_08_17.py to main.
 DONE: queued 2 new experiments.
+
+--- 2026-08-22T00:00Z shepherd run ---
+A800 SSH TIMEOUT (day 100): port 50507 at 117.74.66.181 unreachable (cloud egress policy blocks all outbound TCP to this host, day 100 consecutive since 2026-05-14).
+STEP 1 SKIPPED: state.json unread. Falling back to local repo + WebSearch.
+STEP 2 (Analysis, local repo):
+  ideas-2026-08-21.md: PRESENT ✓ (EXP-181/182 queued; Cue-GRPO + FlyRoute).
+  pending_queue_update_2026_08_21.py: PRESENT ✓.
+  Queue estimate: ~182 pending experiments (>20 cap → 2 proposals today).
+  AAAI deadline: PASSED. Camera-ready window day 7 of ~14 (due ~2026-08-29). 7 days remain.
+  GPU window: CLOSED (day 100). EXP-184 queued for GPU restoration.
+  ROUTINE HEALTH:
+    ideas-2026-08-22.md: MISSING (expected by 07:00 UTC) → WRITTEN ✓ by this run.
+    hotspots/2026-08-22.json: MISSING (A800 offline, normal).
+STEP 3 (ArXiv search):
+  New papers found: 2608.14641 (Task- and Session-Level Model Routing — 4-router benchmark; 3/4 routers are constant-assignment; direct camera-ready §2 support), 2608.01593 (Latent Thought Credit — multi-answer GRPO advantage for zero-variance groups; addresses ACR=52.4%).
+  Not previously cited.
+STEPS 4+5 (Local fallback, committed to repo):
+  pending_queue_update_2026_08_22.py: WRITTEN ✓ (EXP-183 p8 offline router audit; EXP-184 p6 latent-credit GRPO).
+  reports/ideas-2026-08-22.md: WRITTEN ✓.
+DONE: actions=PARTIAL (A800 unreachable day 100; 2 experiments written to repo as pending_queue_update_2026_08_22.py; ideas report committed).
