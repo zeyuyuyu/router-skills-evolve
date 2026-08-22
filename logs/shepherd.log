@@ -396,3 +396,7 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
 [2026-08-21T08:56:20Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) SSH connection timed out after 15s. Unable to read state.json, check running/queue/GPU/disk, or take any corrective actions. No experiments launched. Manual check required.
 [2026-08-21T$(date -u +%H:%M:%S)Z] SHEPHERD FAILED: Cannot SSH to A800 (117.74.66.181:50507). This remote execution environment only allows outbound HTTPS (port 443) — arbitrary TCP/SSH to custom ports is blocked by the network policy. No state was read, no actions were taken. Manual check required or configure HTTPS-based remote access.
 [2026-08-21T12:56:01Z] SHEPHERD FAILED: Cannot SSH to A800 (117.74.66.181:50507). This remote execution environment only allows outbound HTTPS (port 443) — arbitrary TCP/SSH to custom ports is blocked by the network policy. No state was read, no actions were taken. Manual check required or switch to an HTTPS-based API for remote state access.
+[2026-08-22T12:56:44Z] SHEPHERD RUN — FAILED
+  A800 (117.74.66.181:50507) unreachable: 3 SSH attempts timed out (ConnectTimeout=30s each).
+  Could not read state.json, check GPU util, or inspect experiment results.
+  No actions taken. Manual investigation required.
