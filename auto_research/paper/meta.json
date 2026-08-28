@@ -1,5 +1,5 @@
 {
-  "paper_version": 11,
+  "paper_version": 12,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
   "target_venue": "AAAI 2027",
   "secondary_venue": "ICLR 2027 (fallback; multi-seed CI with EXP-099 possible in 41 days)",
@@ -10,17 +10,26 @@
   "neurips_deadline": "2026-05-23",
   "iclr_2027_deadline": "~2026-10-01",
   "scores": {
-    "novelty": 6.7,
+    "novelty": 7.0,
     "soundness": 4.5,
     "significance": 7.0,
     "writing": 9.2
   },
-  "composite": 6.85,
-  "status": "CAMERA-READY SPRINT — A800 offline day 99; AAAI 2027 deadline passed Aug 15 (v10 submitted); v11 (2026-08-21): §2 camera-ready pass — Self-Evolving Agents taxonomy (arxiv:2608.03392), FlyRoute (arxiv:2605.22057), Cue-GRPO (arxiv:2608.03467), G²RPO-A (arxiv:2508.13023), LLMRouter survey (arxiv:2608.06867) added; 6 new bib entries. Camera-ready due ~Aug 29 (8 days). Next: §7.3 language refresh.",
-  "last_updated": "2026-08-21",
+  "composite": 6.95,
+  "status": "CAMERA-READY FINAL — A800 offline day 106; AAAI 2027 camera-ready due TODAY (~Aug 29); v12 (2026-08-28): CAM-001 executed (§7.3 language refresh: 'AAAI CRITICAL' → 'ICLR 2027 priority'); EXP-196/197 camera-ready §2 citations added: SkillForge (arxiv:2608.24747) + SKILL-KD (arxiv:2607.28048); 2 new bib entries. Paper v12 ready for camera-ready submission.",
+  "last_updated": "2026-08-28",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "a800_offline_days": 99,
-  "queue_size": 182,
+  "a800_offline_days": 106,
+  "queue_size": 197,
+  "new_findings_2026_08_28": {
+    "cam001_executed": "§7.3 Future Work language refreshed: 'AAAI CRITICAL, deadline-blocking' → 'ICLR 2027 priority'. Queue size updated ~141→~197.",
+    "exp196_integrated": "SkillForge (arxiv:2608.24747) added to §2 Self-Evolving Agentic Systems (paper.md + paper.tex). New bib key: skillforge2026. Frames MERA's SkillBook as single-pathway instance of SkillForge paradigm.",
+    "exp197_integrated": "SKILL-KD (arxiv:2607.28048) added to §2 Self-Evolving. New bib key: skillkd2026. Links SKILL-KD contrastive signal to MERA's implicit teacher-pass/student-fail population (20.7%).",
+    "remedies_tex_updated": "paper.tex §7 Remedies: 'camera-ready validation' → 'ICLR 2027 priority' for EXP-120.",
+    "scores_updated": "Novelty 6.7→7.0 (SkillForge positions MERA uniquely in verifiable-skill-evolution space; SKILL-KD situates contrastive gap more concretely); Composite 6.85→6.95.",
+    "references_added": "2 new bib entries: skillforge2026, skillkd2026",
+    "camera_ready_status": "FINAL — paper v12 is camera-ready. All writing TODOs from v11 review executed. Submit today (Aug 29 deadline)."
+  },
   "new_findings_2026_08_21": {
     "camera_ready_citations": "§2 camera-ready pass: Self-Evolving Coding Agents survey (arxiv:2608.03392) — new 'Self-Evolving Agentic Systems' paragraph positions MERA as full co-evolution system within 5-axis taxonomy. FlyRoute (arxiv:2605.22057) added to LLM Routing as closest data-flywheel prior. Cue-GRPO (arxiv:2608.03467) added to §2c RL section. G²RPO-A (arxiv:2508.13023) added to §2c. LLMRouter taxonomy survey (arxiv:2608.06867) added to LLM Routing. CODESKILL (arxiv:2605.25430) added to Self-Evolving paragraph.",
     "references_added": "6 new bib entries: flyroute2026, llmroutertaxonomy2026, cuegrpo2026, g2rpoa2026, selfevolvingagents2026, codeskill2026",

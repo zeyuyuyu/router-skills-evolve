@@ -163,6 +163,16 @@ update axes are coupled through the same execution trace pool. Concurrent CODESK
 co-evolve routing or model weights, representing the "skills only" cell of the taxonomy
 (analogous to MERA's ablated skills arm).
 
+SkillForge [arxiv:2608.24747] proposes a framework for evolving verifiable, task-indexed
+skill libraries for RL agents via automated generation and evidence-based skill filtering;
+MERA's SkillBook operates as a single-pathway instance of this paradigm — the extracted
+procedure is a single global skill verified by unit-test reward, bypassing inter-skill
+routing overhead at the cost of per-cluster resolution. SKILL-KD [arxiv:2607.28048]
+performs contrastive skill distillation by supervising the student specifically on
+teacher-pass/student-fail pairs; MERA's SkillBook already concentrates teacher traces on
+exactly this gap population (≈20.7% of training tasks where teacher passes and student
+fails), making the contrastive signal implicit rather than explicit.
+
 ### Continual Learning of LLMs
 
 Plasticity loss [Lyle et al., 2023; arxiv:2605.12484] causes degradation when LLMs are
@@ -604,9 +614,9 @@ Skills Evolve saves $220,776/year vs. always-large at equivalent or better accur
 
 ### 7.3 Future Work
 
-Priority experiments (currently queued, pending A800 restoration; ~141 pending):
+Priority experiments (currently queued, pending A800 restoration; ~197 pending):
 1. **Multi-seed CI** (EXP-099, EXP-100): 3-seed HumanEval + tau2 reruns for confidence
-   intervals on all tables — AAAI CRITICAL, deadline-blocking (priority 9).
+   intervals on all tables — ICLR 2027 priority (priority 9).
 2. **Sign-advantage GRPO** (EXP-108): 2-line fix (A=2r−1); eliminates ACR gradient
    starvation; ~3h A800; predicted +1–2pp (priority 9).
 3. **CPO-PMP — Parameter-Movement Penalized GRPO** (EXP-130): adds L2-SP regularization
