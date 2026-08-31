@@ -404,3 +404,13 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
 [2026-08-25 02:55:39 UTC] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No actions taken. sshpass installed successfully but ssh connect to host timed out after 20s. Skipping all steps. DONE: actions=none FAILED: A800 unreachable
 [2026-08-25T16:56:26Z] SHEPHERD RUN FAILED — A800 unreachable. TCP connect to 117.74.66.181:50507 timed out from remote execution environment. Network policy likely blocks non-HTTPS outbound. No state read, no actions taken. DONE: actions=none FAILED: A800 unreachable (3rd consecutive failure since 2026-08-23).
 [2026-08-26T10:55:34Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Will retry on next scheduled tick.
+[2026-08-31T06:55:23Z] SHEPHERD RUN FAILED: SSH client not available in remote execution environment (openssh-client install failed — 404 on security.ubuntu.com). Cannot reach A800 (117.74.66.181:50507). No state read, no actions taken. Manual fix required: ensure openssh-client is pre-installed in the remote execution image, or run from a machine with SSH access.
+
+=== SHEPHERD RUN 2026-08-31T06:55:34Z ===
+Status: FAILED (persistent — multiple prior ticks also failed)
+Reason: SSH client not installed in remote execution environment (openssh-client 404 on apt; sshpass installed but ssh binary missing). Cannot reach A800 (117.74.66.181:50507).
+Actions taken: none
+STEP 1 (read state): FAILED — no SSH client
+STEP 2–4: SKIPPED
+Note: Log shows prior failures dating back to at least 2026-06-03 and 2026-06-21. A800 health completely unmonitored. Recommend pre-installing openssh-client in the Claude Code remote execution image or switching shepherd to an environment with network access.
+DONE: actions=none | FAILED: SSH client unavailable in remote execution container
