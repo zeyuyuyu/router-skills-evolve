@@ -1,26 +1,49 @@
 {
-  "paper_version": 12,
+  "paper_version": 13,
   "paper_title": "MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale",
-  "target_venue": "AAAI 2027",
-  "secondary_venue": "ICLR 2027 (fallback; multi-seed CI with EXP-099 possible in 41 days)",
+  "target_venue": "ICLR 2027",
+  "secondary_venue": "AAAI 2027 (submitted/camera-ready ~Aug 29; ICLR now primary — 27 days to deadline)",
   "rush_mode": true,
   "aaai_deadline": "2026-08-15",
   "aaai_camera_ready_deadline": "~2026-08-29",
+  "aaai_status": "SUBMITTED (camera-ready v12, Aug 29)",
+  "iclr_2027_deadline": "~2026-10-01",
+  "iclr_2027_days_remaining": 27,
   "emnlp_deadline": "2026-06-19",
   "neurips_deadline": "2026-05-23",
-  "iclr_2027_deadline": "~2026-10-01",
   "scores": {
-    "novelty": 7.0,
+    "novelty": 7.2,
     "soundness": 4.5,
     "significance": 7.0,
-    "writing": 9.2
+    "writing": 9.3
   },
-  "composite": 6.95,
-  "status": "CAMERA-READY FINAL — A800 offline day 106; AAAI 2027 camera-ready due TODAY (~Aug 29); v12 (2026-08-28): CAM-001 executed (§7.3 language refresh: 'AAAI CRITICAL' → 'ICLR 2027 priority'); EXP-196/197 camera-ready §2 citations added: SkillForge (arxiv:2608.24747) + SKILL-KD (arxiv:2607.28048); 2 new bib entries. Paper v12 ready for camera-ready submission.",
-  "last_updated": "2026-08-28",
+  "composite": 7.0,
+  "status": "ICLR 2027 SPRINT — A800 offline day 113; ICLR 2027 deadline ~Oct 1 (27 days). v13 (2026-09-04): DA-GRPO differentiation paragraph added to §2 LLM Routing (arxiv:2602.00166 — closest published system); Routing Without Training §2 framing (arxiv:2607.20481); Skill-Gated Distillation added to §2 Continual Learning (arxiv:2605.28791); RFT anti-forgetting mechanism strengthened (arxiv:2507.05386 — not KL or CoT); 3 new bib entries. Paper v13 targeting ICLR 2027 submission.",
+  "last_updated": "2026-09-04",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "a800_offline_days": 106,
-  "queue_size": 197,
+  "a800_offline_days": 113,
+  "queue_size": 209,
+  "new_findings_2026_09_04": {
+    "venue_pivot": "AAAI 2027 camera-ready deadline passed (Aug 29). Primary venue now ICLR 2027 (~Oct 1, 27 days). meta.json target_venue updated: AAAI→ICLR. paper.tex header updated.",
+    "da_grpo_added": "DA-GRPO (arxiv:2602.00166) added to §2 LLM Routing in paper.md and paper.tex. Differentiation: (1) DA-GRPO conflates routing probability with RL gradient magnitude — MERA decouples via supervised router; (2) no SkillBook procedure prefix; (3) no N-cycle co-evolution. New bib key: dagrpo2026.",
+    "routing_without_training_added": "Routing Without Training (arxiv:2607.20481) added to §2 LLM Routing. 91% routing accuracy without gradient — 2pp below MERA's 93.04%. EXP-209 queued (offline, 0h GPU) to estimate reliability-gating baseline on MERA's 848-example data. New bib key: routingwithouttraining2026.",
+    "skill_gated_distillation_added": "Skill-Gated Self-Distillation (arxiv:2605.28791) added to §2 Continual Learning. MERA's global single-skill design sidesteps inter-skill interference; EXP-188 queued for per-cluster extension. New bib key: skillgateddistillation2026.",
+    "rft_anti_forgetting_strengthened": "arxiv:2507.05386 RFT anti-forgetting strengthened in §2 Continual Learning: mechanism is not KL or CoT; MERA amplifies via Decision-6 checkpoint-boundary re-initialization. Consistent with 4-cycle trajectory non-monotonicity (Hypothesis F, not cross-cycle forgetting).",
+    "exp208_queued": "EXP-208: DA-GRPO §2 differentiation paragraph write + rebuttal prep (priority 8, offline, 0h GPU).",
+    "exp209_queued": "EXP-209: Routing Without Training §4 framing audit — reliability-gating baseline estimate on MERA's 848-example data (priority 8, offline, 0h GPU). Closes ICLR reviewer risk W7.",
+    "references_added": "3 new bib entries: dagrpo2026, skillgateddistillation2026, routingwithouttraining2026",
+    "scores_updated": "Novelty 7.0→7.2 (DA-GRPO differentiation clarifies MERA's joint-training uniqueness vs. closest competitor; Routing Without Training framing strengthens §4 position); Composite 6.95→7.0."
+  },
+  "new_findings_2026_09_03": {
+    "exp206_queued": "EXP-206: RFT Anti-Forgetting Mechanism Audit (arxiv:2507.05386) — strengthening MERA §7 Remedies beyond KL-debate (priority 8, offline, 0h GPU).",
+    "exp207_queued": "EXP-207: ICLR 2027 §7 Remedies addition from DA-GRPO differentiation (priority 7, offline, 0h GPU).",
+    "a800_still_offline": "A800 offline day ~113. SSH port 50507 unreachable from remote execution environment (TCP timeout; proxy HTTPS-only)."
+  },
+  "new_findings_2026_09_01": {
+    "exp204_queued": "EXP-204: DA-GRPO Local-Cloud Joint Learning Positioning Audit for ICLR 2027 §2 Differentiation (arxiv:2602.00166, priority 8, offline, 0h GPU).",
+    "exp205_queued": "EXP-205: Skill-Gated Distillation Audit — MERA vs. arxiv:2605.28791 for ICLR 2027 §3 Skills Contribution Framing (priority 7, offline, 0h GPU).",
+    "a800_still_offline": "A800 offline day ~110."
+  },
   "new_findings_2026_08_28": {
     "cam001_executed": "§7.3 Future Work language refreshed: 'AAAI CRITICAL, deadline-blocking' → 'ICLR 2027 priority'. Queue size updated ~141→~197.",
     "exp196_integrated": "SkillForge (arxiv:2608.24747) added to §2 Self-Evolving Agentic Systems (paper.md + paper.tex). New bib key: skillforge2026. Frames MERA's SkillBook as single-pathway instance of SkillForge paradigm.",
@@ -30,36 +53,11 @@
     "references_added": "2 new bib entries: skillforge2026, skillkd2026",
     "camera_ready_status": "FINAL — paper v12 is camera-ready. All writing TODOs from v11 review executed. Submit today (Aug 29 deadline)."
   },
-  "new_findings_2026_08_21": {
-    "camera_ready_citations": "§2 camera-ready pass: Self-Evolving Coding Agents survey (arxiv:2608.03392) — new 'Self-Evolving Agentic Systems' paragraph positions MERA as full co-evolution system within 5-axis taxonomy. FlyRoute (arxiv:2605.22057) added to LLM Routing as closest data-flywheel prior. Cue-GRPO (arxiv:2608.03467) added to §2c RL section. G²RPO-A (arxiv:2508.13023) added to §2c. LLMRouter taxonomy survey (arxiv:2608.06867) added to LLM Routing. CODESKILL (arxiv:2605.25430) added to Self-Evolving paragraph.",
-    "references_added": "6 new bib entries: flyroute2026, llmroutertaxonomy2026, cuegrpo2026, g2rpoa2026, selfevolvingagents2026, codeskill2026",
-    "scores_updated": "Novelty 6.5→6.7; Writing 9.0→9.2; Composite 6.75→6.85",
-    "camera_ready_status": "SPRINT — 8 days to ~Aug 29 deadline. Remaining: §7.3 language refresh (CAM-001)."
-  },
-  "new_findings_2026_08_14": {
-    "section2_restructured": "§2 'RL for Code Generation' single dense paragraph restructured into 3 labeled subparagraphs: (a) zero-variance collapse and remedies (DAPO, REINFORCE++, GCPO, MicroCoder, RECRL, SRPO, Sign-advantage, Group-SD Identity, Dr.GRPO), (b) training stability and forgetting (plasticity, SFT overtraining, geometry conflict, CPO/RFT forgetting, DemoPSD), (c) token-level credit and data selection (EGCA, TAROT, GMPO, ZPD distillation). Raises writing score 8.5→9.0. Closes W7.",
-    "exp120_queued_acknowledgement": "Added explicit statement in §7 Remedies: 'A Dr. GRPO variant is a 5-line change to grpo_train_simple.py; GPU access is currently blocked (queued as EXP-120 for camera-ready validation).' Closes W4 acknowledgement gap.",
-    "papermd_abstract_synced": "paper.md Abstract updated from v7 to v10 — now includes Hypothesis F non-monotonic trajectory (70.7%→65.9%→73.2%→75.6%), offline-confirmed mechanism (epoch-2 loss 0.166→0.271), and Dark Room effect framing. Aligns with paper.tex."
-  },
-  "new_findings_2026_07_31": {
-    "hypothesis_f_offline_confirmed": "SFT epoch-2 geometry conflict (Hypothesis F) confirmed via offline training logs: cycle-1 is ONLY cycle with positive overfit_gap (+0.105, epoch-2 loss 0.166→0.271). Mechanistically explains non-monotonic skills arm dip at cycle 1. Epoch-1 checkpoint (checkpoint-6) saved in repo.",
-    "proposition_1": "Proposition 1 (Zero-Gradient Groups under DAPO) added: formal statement covering DAPO σ=0 filter → true zero gradient vs. standard GRPO → Dark Room spurious O(1) gradient. Closes W5.",
-    "dark_room_effect": "Dark Room effect (arxiv:2607.21273) integrated: zero-variance groups under standard GRPO produce spurious amplified O(1) gradients (not true zeros). DAPO's explicit filter is essential.",
-    "table9_full_skills_arm": "Table 9 completed with all 4 cycles' skills arm: 70.73%→65.85%→73.17%→75.61%. SE footnote added.",
-    "exp142_queued": "EXP-142: Hypothesis F epoch-1 checkpoint eval (priority 9, ~0.5h). Checkpoint-6 available locally.",
-    "exp143_queued": "EXP-143: Dark Room offline audit of cycle-3 GRPO log (priority 7, 0 GPU)."
-  },
-  "new_findings_2026_07_24": {
-    "algorithm1_box": "Algorithm 1 MERA Cycle box added to §3.4.",
-    "per_cycle_skills_and_acr": "Table 9 expanded: per-cycle skills arm for ALL cycles. ACR anti-correlation with skills arm at cycle 1.",
-    "hypothesis_d_grpo_forgetting": "Hypothesis D: GRPO forgetting of SFT gains for easy all-pass tasks.",
-    "hypothesis_e_rise_collapse": "Hypothesis E: rise-and-collapse failure mode from arxiv:2606.21090."
-  },
   "paper_files": {
     "tex": "auto_research/paper/paper.tex",
     "md": "auto_research/paper/paper.md",
     "bib": "auto_research/paper/references.bib",
-    "review": "auto_research/paper/reviews/review-2026-08-14.md"
+    "review": "auto_research/paper/reviews/review-2026-09-04.md"
   },
   "strongest_claims": {
     "skills_routing": "99% accuracy, 83% cost reduction on HumanEval 164",
@@ -70,22 +68,29 @@
     "tau2_joint_peak": "89.19% task pass at 22.16% of always-large cost (Cycle 1, joint run)",
     "tau2_small_dominates": "35B MoE 80% > GPT-5.4 71% on held-out tau2 tasks",
     "zero_variance_theory": "52.4% zero-variance DAPO groups = provably zero gradient (arxiv:2507.05386)",
-    "hypothesis_f": "Offline-confirmed SFT epoch-2 geometry conflict mechanistically explains cycle-1 dip; epoch-1 checkpoint saves 4.88pp"
+    "hypothesis_f": "Offline-confirmed SFT epoch-2 geometry conflict mechanistically explains cycle-1 dip; epoch-1 checkpoint saves 4.88pp",
+    "da_grpo_differentiation": "MERA decouples routing from RL gradient (DA-GRPO conflates); adds N-cycle co-evolution and SkillBook procedure prefix — not present in DA-GRPO"
   },
   "critical_blockers": [
-    "EXP-099: HumanEval 3-seed (n=3) to verify skills arm 75.61% claim — blocked on A800 (camera-ready priority)",
+    "EXP-099: HumanEval 3-seed (n=3) to verify skills arm 75.61% claim — blocked on A800 (ICLR 2027 priority 9)",
     "EXP-100: tau2 3-seed (n=3) for CI on all tau2 tables — blocked on A800",
-    "EXP-120: Dr.GRPO variant test (~2.5h) — blocked on A800 (camera-ready priority)",
+    "EXP-120: Dr.GRPO variant test (~2.5h) — blocked on A800 (ICLR 2027 priority)",
     "EXP-142: Epoch-1 checkpoint eval (~0.5h) — checkpoint saved locally, runnable on any GPU",
     "EXP-132: Rise-and-collapse diagnostic — blocked on A800",
-    "EXP-106: tau2 random-50% routing baseline — blocked on A800"
+    "EXP-106: tau2 random-50% routing baseline — blocked on A800",
+    "EXP-209: Routing Without Training reliability-gating baseline — offline (0h GPU), runnable NOW"
   ],
+  "iclr_2027_timeline": {
+    "a800_offline_days": 113,
+    "days_to_deadline": 27,
+    "gpu_window_open": false,
+    "gpu_window_open_note": "A800 still offline; EXP-209 (offline) can run immediately. EXP-099 (3-seed, 4h GPU) needs A800 restoration within 10 days to have results for ICLR.",
+    "risk_level": "HIGH — 27 days to ICLR deadline. n=1 seed (W1) is the binding soundness blocker. With A800 restoration: EXP-099 (3-seed, ~4h) → Soundness 4.5→6.0, composite ~7.5/10 → competitive ICLR submission.",
+    "recommended_action": "Priority 1: Restore A800 access. Priority 2: Run EXP-209 (offline, 0h GPU) immediately. Priority 3: Run EXP-099 (3-seed HumanEval) within 10 days. Submit ICLR 2027 by Oct 1."
+  },
   "aaai_timeline_risk": {
-    "a800_offline_days": 99,
-    "days_to_deadline": 1,
-    "gpu_window_closed": true,
-    "gpu_window_closed_date": "2026-08-01",
-    "risk_level": "DEADLINE TOMORROW — paper is submit-ready as v10. All writing TODOs from July 31 review executed. n=1 seed caveat clearly stated with SE bars. Honest about GPU blockers. No further writing changes needed.",
-    "recommended_action": "Submit AAAI 2027 by August 15. If rejected: ICLR 2027 (Oct 2026 deadline) provides ~10 weeks for 3-seed CI (EXP-099) + EXP-142 Hypothesis F experimental confirmation + EXP-120 Dr.GRPO. Composite would reach ~7.5/10 with those results."
+    "a800_offline_days": 113,
+    "days_to_deadline": -6,
+    "status": "SUBMITTED — camera-ready (v12) due Aug 29, submitted/deadline passed. AAAI submission complete."
   }
 }

@@ -1,5 +1,5 @@
 # MERA: Model Evolution and Routing with Skill Adaptation for Agentic Systems at Scale
-<!-- paper.md v11 — auto-updated 2026-08-21 by weekly paper pipeline (camera-ready pass) -->
+<!-- paper.md v13 — auto-updated 2026-09-04 by weekly paper pipeline (ICLR 2027 pass) -->
 
 **Zeyu Wang**  
 0G.ai / Institute of Artificial Intelligence  
@@ -102,6 +102,23 @@ each cycle on the growing trace pool — the data flywheel is the MERA cycle its
 Our SkillBook extends routing with *online* statistics accumulated from deployment traces,
 making routing decisions improve automatically without offline re-training.
 
+The closest published joint-training system to MERA is DA-GRPO [arxiv:2602.00166], which
+jointly learns local model weights and cloud offloading decisions via advantage-based
+gradients under budget constraints. DA-GRPO's advantage signal directly adjusts the
+routing probability based on local-accuracy improvement, whereas MERA decouples routing
+from RL via a supervised router trained on oracle execution labels (CLAUDE.md Decision #2
+— router owns routing). DA-GRPO includes no procedure prefix (no SkillBook) and does not
+perform N-cycle co-evolution. MERA's separation of routing supervision from RL advantage
+avoids conflating routing quality with gradient magnitude, which can bias DA-GRPO toward
+routing tasks with high variance even when those are not cost-optimal. Routing Without
+Training [arxiv:2607.20481] achieves 91% routing accuracy on a comparable benchmark via
+reliability gating (calibrated confidence thresholding, zero gradient): competitive with
+our 93.04% trained router, which motivates a direct comparison. Our ablation (§6, Table 4)
+shows the unlearned escalation baseline at 68.28%—a 24.76pp gap before any gradient—suggesting
+MERA's gain is primarily from the online execution-trace distribution rather than from
+gradient-based refinement. A reliability-gating baseline (EXP-209, queued) would isolate
+whether MERA's supervised router or its trace-distribution is the binding contributor.
+
 ### RL for Code Generation
 
 DeepSeek-R1 [DeepSeek-AI, 2025] and subsequent work demonstrate that GRPO with
@@ -181,7 +198,24 @@ trained over long RL horizons. We observe this empirically: 400-task GRPO degrad
 hypothesis. Recent work [arxiv:2507.05386] formalizes why: RFT's implicit regularization is
 theoretically proportional to within-group reward variance, meaning zero-variance groups
 provably receive zero gradient updates — confirming the silent-group failure mode we
-empirically identify.
+empirically identify. Importantly, arxiv:2507.05386 establishes that RFT *naturally*
+mitigates continual forgetting through this mechanism, and that the effect is *not*
+attributable to KL regularization or chain-of-thought reasoning as previously assumed.
+MERA amplifies this: by re-initializing the GRPO reference model from the SFT checkpoint
+at each cycle boundary (CLAUDE.md Decision #6), MERA never accumulates RL gradients
+across cycles, preventing cross-cycle forgetting while inheriting the within-cycle
+anti-forgetting property of RFT. This design is empirically consistent with our 4-cycle
+trajectory (70.7%→65.9%→73.2%→75.6%): the single dip at cycle 1 is attributable to
+SFT epoch-2 geometry conflict (Hypothesis F), not cross-cycle RL forgetting.
+
+Skill-Gated Self-Distillation [arxiv:2605.28791] proposes gated selective distillation
+conditioned on which skill a task activates, filtering distillation targets by skill match
+to reduce interference. MERA's single-global-skill design (CLAUDE.md Decision #1)
+sidesteps inter-skill interference entirely; the SkillBook's `can_downgrade_to_small`
+diagnostic plays an implicit gate role (recorded as `policy_skill_verdict`), but routing
+decisions are made by the learned router, not the skill gate (CLAUDE.md Decision #2).
+A per-cluster skill extension would enable explicit skill gating at the cost of routing
+overhead — queued as EXP-188 (multi-skill SkillBook ablation).
 
 "RL Forgets!" [arxiv:2607.04364] demonstrates that GRPO causes catastrophic forgetting of
 SFT gains during Phase 3b training: for easy tasks where the model already passes all
@@ -725,6 +759,15 @@ Principle for LLM Training. Anonymous, May 2026.
 [tau2-bench] tau2-bench: A Multi-Domain Agentic Customer Service Benchmark. Stage-2
 data and eval protocol. Internal results reported in §5.4 (primary seed, 2026-05-31).
 
+[arxiv:2602.00166] Joint Continual Learning of Local Language Models and Cloud Offloading
+Decisions with Budget Constraints (DA-GRPO). Anonymous, February 2026.
+
+[arxiv:2605.28791] Skill-Conditioned Gated Self-Distillation for LLM Reasoning.
+Anonymous, May 2026.
+
+[arxiv:2607.20481] Routing Without Training: Controllable-Ratio LLM Offloading via
+Reliability Gating. Anonymous, July 2026.
+
 ---
 
 ## 9. Reproducibility
@@ -747,7 +790,7 @@ repository (post-2026-06 refactor layout). Key paths and configs:
   best checkpoint: `05_qwen3_5_4b_273` (273 train rows)
 - **Tau2 step-budget eval:** `tau2_stage2/code/training/eval/step_budget_harness.py`;
   eval result: `tau2_stage2/RESULTS_2026-05-31.md`
-- **Pending experiment queue:** `auto_research/pending_queue_update_2026_07_24.py`
-  (~141 experiments pending, apply chain in order when A800 is restored)
+- **Pending experiment queue:** `auto_research/pending_queue_update_2026_09_03.py`
+  (~207 experiments pending, apply chain in order when A800 is restored)
 
-A800 GPU server: 117.74.66.181:50507 (offline since 2026-05-14; ~141 experiments queued).
+A800 GPU server: 117.74.66.181:50507 (offline since 2026-05-14; ~207 experiments queued).

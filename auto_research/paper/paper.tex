@@ -1,5 +1,5 @@
-% MERA: Model Evolution and Routing with Skill Adaptation — AAAI 2027 submission
-% paper.tex — auto-updated 2026-08-14 by weekly pipeline (v10)
+% MERA: Model Evolution and Routing with Skill Adaptation — ICLR 2027 submission
+% paper.tex — auto-updated 2026-09-04 by weekly pipeline (v13)
 % DO NOT edit the %% MANUAL-PIN blocks below.
 
 \documentclass[letterpaper]{article}
@@ -136,6 +136,20 @@ MERA generalizes this: the SkillBook accumulates online statistics for \emph{all
 each cycle, and the learned router is retrained on the growing trace pool---the data
 flywheel is the MERA cycle itself.
 
+The closest published joint-training system to MERA is DA-GRPO~\cite{dagrpo2026}, which
+jointly learns local model weights and cloud offloading decisions via advantage-based
+gradients under budget constraints.
+DA-GRPO's advantage signal directly adjusts routing probability based on local-accuracy
+improvement, whereas MERA decouples routing from RL via a supervised router trained on
+oracle execution labels (Decision~2)---avoiding conflation of routing quality with
+RL gradient magnitude.
+DA-GRPO includes no procedure prefix and does not perform $N$-cycle co-evolution.
+Routing Without Training~\cite{routingwithouttraining2026} achieves 91\% routing accuracy
+via reliability gating (calibrated confidence threshold, zero gradient), competitive with
+our 93.04\% trained router; our ablation (\S\ref{sec:ablation}) shows the unlearned
+baseline at 68.28\%, a 24.76pp gap that motivates EXP-209 (reliability-gating baseline,
+queued) to isolate the contribution of supervised learning vs.\ trace-distribution shift.
+
 \paragraph{RL for Code Generation.}
 DeepSeek-R1~\cite{deepseekr1} and GRPO~\cite{shao2024deepseekmath} establish that
 verifiable binary rewards enable strong code-generation improvement.
@@ -173,8 +187,19 @@ RL onset~\cite{sftovertraining2026}, directly explaining our cycle-1 skills arm 
 Geometry conflict in LoRA subspace~\cite{geometry2026} between a mode-collapsed adapter
 and subsequent SFT gradients causes epoch-2 loss inversion---confirmed in our training logs.
 CPO~\cite{cpo2026} shows sequential RFT forgets diverse prior tasks; \citet{rftforgetting2026}
-formalize that RFT regularization scales with within-group variance, so DAPO-zeroed groups
-contribute neither learning \emph{nor} forgetting, explaining tau2 cycle oscillation.
+establish that RFT \emph{naturally} mitigates continual forgetting via an implicit
+regularization effect proportional to within-group reward variance---\emph{not} attributable
+to KL regularization or chain-of-thought reasoning as previously assumed---so DAPO-zeroed
+groups contribute neither learning \emph{nor} forgetting.
+MERA amplifies this property: re-initializing the GRPO reference model from the fresh SFT
+checkpoint at each cycle boundary (Decision~6) prevents cross-cycle gradient accumulation
+while inheriting the within-cycle anti-forgetting property of RFT, consistent with the
+4-cycle skills arm trajectory (70.7\%$\to$65.9\%$\to$73.2\%$\to$75.6\%; the cycle-1 dip
+is attributable to SFT epoch-2 geometry conflict, not cross-cycle forgetting).
+Skill-Gated Self-Distillation~\cite{skillgateddistillation2026} reduces inter-task
+interference by conditioning distillation targets on which skill a task activates.
+MERA's global single-skill design (Decision~1) sidesteps inter-skill interference entirely;
+a per-cluster extension with explicit skill gating is queued (EXP-188).
 DemoPSD~\cite{demopsd2026} modulates SFT loss by teacher-student disagreement rate.
 
 \textbf{(c) Token-level credit assignment and data selection.}
