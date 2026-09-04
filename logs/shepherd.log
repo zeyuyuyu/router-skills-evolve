@@ -406,3 +406,4 @@ Actions: none — per protocol, writing failure to shepherd.log and exiting.
 [2026-08-26T10:55:34Z] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out after 15s. No state read, no actions taken. Will retry on next scheduled tick.
 [2026-09-01 14:56:35 UTC] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out. No state read, no actions taken. Manual check required.
 [2026-09-02 08:55:37 UTC] SHEPHERD RUN FAILED: A800 (117.74.66.181:50507) unreachable — SSH connection timed out (sshpass unavailable, paramiko timeout after 15s). No state read, no actions taken.
+[2026-09-04 12:55:52 UTC] SHEPHERD RUN — FAILED: A800 (117.74.66.181:50507) unreachable (TCP connect timeout). No state read, no actions taken. Remote execution environment cannot reach the GPU host — check firewall/VPN or SSH tunnel. Actions: none.
