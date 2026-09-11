@@ -18,11 +18,18 @@
     "writing": 9.3
   },
   "composite": 7.0,
-  "status": "ICLR 2027 SPRINT — A800 offline day 113; ICLR 2027 deadline ~Oct 1 (27 days). v13 (2026-09-04): DA-GRPO differentiation paragraph added to §2 LLM Routing (arxiv:2602.00166 — closest published system); Routing Without Training §2 framing (arxiv:2607.20481); Skill-Gated Distillation added to §2 Continual Learning (arxiv:2605.28791); RFT anti-forgetting mechanism strengthened (arxiv:2507.05386 — not KL or CoT); 3 new bib entries. Paper v13 targeting ICLR 2027 submission.",
-  "last_updated": "2026-09-04",
+  "status": "ICLR 2027 SPRINT — A800 offline day ~120; ICLR 2027 deadline ~Oct 1 (20 days). v13 (2026-09-04): DA-GRPO differentiation paragraph added to §2 LLM Routing (arxiv:2602.00166 — closest published system); Routing Without Training §2 framing (arxiv:2607.20481); Skill-Gated Distillation added to §2 Continual Learning (arxiv:2605.28791); RFT anti-forgetting mechanism strengthened (arxiv:2507.05386 — not KL or CoT); 3 new bib entries. Paper v13 targeting ICLR 2027 submission. 2026-09-11: EXP-210 (GRPO-PRM equivalence §3 framing, arxiv:2509.21154) and EXP-211 (DSR §2 positioning, arxiv:2609.05824) queued.",
+  "last_updated": "2026-09-11",
   "a800_outage_since": "2026-05-14T20:03Z",
-  "a800_offline_days": 113,
-  "queue_size": 209,
+  "a800_offline_days": 120,
+  "queue_size": 211,
+  "new_findings_2026_09_11": {
+    "exp210_queued": "EXP-210: GRPO-PRM Equivalence §3 Framing Audit (arxiv:2509.21154) — connecting MERA's 52.4% zero-variance groups to implicit process reward; λ-GRPO one-liner for §7 Remedies (priority 8, offline, 0h GPU).",
+    "exp211_queued": "EXP-211: DSR §2 Self-Evolving Agents Positioning Audit (arxiv:2609.05824, Sep 2026) — diversity-aware skill routing via DPP; MERA complement framing for §2 (priority 7, offline, 0h GPU).",
+    "a800_still_offline": "A800 offline day ~120. SSH port 50507 unreachable from remote execution environment (TCP timeout; proxy HTTPS-only).",
+    "iclr_days_remaining": 20,
+    "hotspot_papers_found": ["arxiv:2509.21154", "arxiv:2609.05824", "arxiv:2609.07255"]
+  },
   "new_findings_2026_09_04": {
     "venue_pivot": "AAAI 2027 camera-ready deadline passed (Aug 29). Primary venue now ICLR 2027 (~Oct 1, 27 days). meta.json target_venue updated: AAAI→ICLR. paper.tex header updated.",
     "da_grpo_added": "DA-GRPO (arxiv:2602.00166) added to §2 LLM Routing in paper.md and paper.tex. Differentiation: (1) DA-GRPO conflates routing probability with RL gradient magnitude — MERA decouples via supervised router; (2) no SkillBook procedure prefix; (3) no N-cycle co-evolution. New bib key: dagrpo2026.",
